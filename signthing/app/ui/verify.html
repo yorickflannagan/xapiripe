@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+
+<!--
+/**
+ * Xapiripë Project
+ * Software components for CAdES signatures
+ * See https://datatracker.ietf.org/doc/html/rfc5126
+ *
+ * Copyleft (C) 2020 The Crypthing Initiative
+ * Authors:
+ * 		yorick.flannagan@gmail.com
+ * 		diego.sohsten@gmail.com
+ *
+ * Signithing - desktop application UI
+ * See https://bitbucket.org/yorick-flannagan/signithing/src/master/
+ * verify.html - signature validation UI
+ * 
+ * This application is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 3.0 of
+ * the License, or (at your option) any later version.
+ *
+ * This application is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * See https://opensource.org/licenses/LGPL-3.0
+ *
+ */
+-->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta http-equiv="Content-Security-Policy" content="script-src *" />
+	<link rel="stylesheet" href="css/global.css" type="text/css" />
+	<link rel="stylesheet" href="css/w3pro.css"  type="text/css" />
+	<link rel="stylesheet" href="css/verify.css" type="text/css" />
+	<style>
+	</style>
+</head>
+<body>
+	<div class="w3-container w3-display-container w3-border w3-border-grey w3-round-large">
+		<p class="title">
+			To verify a digital signature, you must select the CMS signed envelope file. If the signed
+			content was not attached to CMS signed envelope, you must also select the signed file.
+		</p>
+		<!-- Select a CMS Signed Data file -->
+		<p>
+			<label for="txt-envelope">CMS signed envelope file:</label><br>
+			<input name="txt-envelope" id="txt-envelope" type="text" class="w3-border input-dir">
+			<input id="btn-envelope" type="button" class="w3-round button" value="Select...">
+		</p>
+		<!-- Select the signed contents file (if not attached)-->
+		<p>
+			<label for="txt-contents">Signed file (if not attached to envelope):</label><br>
+			<input name="txt-contents" id="txt-contents" type="text" class="w3-border input-dir">
+			<input id="btn-contents" type="button" class="w3-round button" value="Select...">
+		</p>
+		
+		<p>
+			<!-- Validate signature -->
+			<div class="dropdown">
+				<span id="lft-spacer">
+					<label for="btn-signature" class="curtain">Verify signature:</label>
+					<input name="btn-signature" id="btn-signature" type="button" class="w3-circle" value="+">
+				</span>
+				<div id="div-sig" class="dropdown-content">
+					<p id="txt-signature"></p>
+				</div>
+			</div>
+			<!-- Verify signing certificate -->
+			<div class="dropdown">
+				<span id="crt-spacer">
+					<label for="btn-certificate" class="curtain">Verify certificate trustworthy:</label>
+					<input name="btn-certificate" id="btn-certificate" type="button" class="w3-circle" value="+">
+				</span>
+				<div id="div-cert" class="dropdown-content">
+					<p id="txt-certificate"></p>
+				</div>
+			</div>
+		</p>
+		
+		<p>
+			<!-- Show signed identifier -->
+			<div class="dropdown">
+				<span id="lft-spacer">
+					<label for="btn-sid" class="curtain">Signer identifier:</label>
+					<input name="btn-sid" id="btn-sid" type="button" class="w3-circle" value="+">
+				</span>
+				<div id="div-sid" class="dropdown-content">
+					<p id="txt-sid"></p>
+				</div>
+			</div>
+			<!-- Show signed contents (if attached)-->
+			<div class="dropdown">
+				<span id="cts-spacer">
+					<label for="btn-showEncap" class="curtain">Show signed contents:</label>
+					<input name="btn-showEncap" id="btn-showEncap" type="button" class="w3-circle" value="+">
+				</span>
+				<div id="div-encap" class="dropdown-content">
+					<p>
+						<span id="doc-not-loaded" style="display: none;">Document not attached to signed envelope</span>
+						<div id="doc-loaded" style= "display: none;">
+							<label>Document loaded by default application</label>
+						</div>
+					</p>
+				</div>
+			</div>
+		</p>
+
+		<!-- Close indow -->
+		<div class="w3-panel w3-right">
+			<input id="close" class="w3-round button" type="button" value="Close">
+		</div>
+	</div>
+</body>
+</html>

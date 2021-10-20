@@ -6,6 +6,7 @@
 # Node artifact files
 node_modules/
 dist/
+package-lock.json
 
 # Compiled Java class files
 *.class
@@ -48,7 +49,8 @@ Thumbs.db
 *.mov
 *.wmv
 
-*.zargo
-resources/
+# Visual Studio Code
+.vscode
 
-*.*~
+# Runtime files
+options.json

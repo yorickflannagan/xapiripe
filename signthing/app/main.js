@@ -1,0 +1,373 @@
+/**
+ * Xapiripë Project
+ * Software components for CAdES signatures
+ * See https://datatracker.ietf.org/doc/html/rfc5126
+ *
+ * Copyleft (C) 2020 The Crypthing Initiative
+ * Authors:
+ * 		yorick.flannagan@gmail.com
+ * 		diego.sohsten@gmail.com
+ *
+ * Signithing - desktop application UI
+ * See https://bitbucket.org/yorick-flannagan/signithing/src/master/
+ * main.js - Electron main process
+ * 
+ * This application is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 3.0 of
+ * the License, or (at your option) any later version.
+ *
+ * This application is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * See https://opensource.org/licenses/LGPL-3.0
+ *
+ */
+'use strict';
+
+const {
+	app,
+	BrowserWindow,
+	Menu,
+	shell,
+	ipcMain,
+	dialog
+} = require('electron');
+const path = require('path');
+const fs = require('fs');
+const {
+	Config,
+	SigningData,
+	OperationResult,
+	VerifyData,
+	TempFile
+} = require('./module');
+const {
+	XPEListCertificates,
+	XPEBasicSign,
+	XPEParseCMSSignedData,
+	XPEVerifySignature,
+	XPEGetSigningTime,
+	XPEVerifyCertificate,
+	XPEGetSignerIdentifier,
+	XPEGetEncapContent,
+	XPEReleaseCMSSignedData
+} = require('./native');
+const tmp = require('tmp');
+tmp.setGracefulCleanup();
+
+
+/** * * * * * * * * * * * *
+ * UI
+ *  * * * * * * * * * * * */
+const optionsFile = path.join(app.getAppPath(), 'options.json');
+const template = [
+	{
+		label: 'File',
+		submenu: [
+			{ label: 'Sign', click: () => {
+				main.webContents.send('open-sign');
+			}},
+			{ label: 'Verify', click: () => {
+				main.webContents.send('open-verify');
+			}},
+			{ 'type': 'separator' },
+			{ label: 'Exit', role: 'quit'}
+		]
+	},
+	{
+		label: 'Certificates',
+		submenu: [
+			{ label: 'Request' },
+			{ label: 'Import' }
+		]
+	},
+	{
+		label: 'Help',
+		submenu: [
+			{ label: 'License', click: async () => {
+				shell.openExternal('https://opensource.org/licenses/LGPL-3.0');
+			}},
+			{ label: 'Privacy Policy', click: async () => {
+				shell.openExternal('https://bitbucket.org/yorick-flannagan/signithing/src/master/privacy.md');
+			}},
+			{ 'type': 'separator' },
+			{ label: 'About', click: () => {
+				const abt = new BrowserWindow({
+					width: 400,
+					height: 260,
+					resizable: false,
+					modal: true,
+					webPreferences: { preload: path.join(__dirname, 'about.js') }
+				});
+				abt.setMenu(null);
+				abt.loadFile(path.join(__dirname, 'ui', 'about.html'));
+			}}
+		]
+	}
+];
+let main = null;			// Main window
+let cfg = null;				// Application customizations
+let tempFiles = new Map();	// Temporary files (to view contents)
+
+app.on('ready', () => {
+	try { cfg = Config.load(optionsFile); }
+	catch (err)
+	{
+		dialog.showMessageBoxSync(main, {
+			message: err.message ? err.message : err,
+			type: 'error',
+			title: 'Error on loading configuration',
+			detail: 'The application will assume its default values'
+		});
+		cfg = new Config();
+	}
+	const menu = Menu.buildFromTemplate(template);
+	main = new BrowserWindow({
+		minWidth: 600,
+		minHeight: 400,
+		icon: path.join(__dirname, 'ui', 'res', 'signature.png'),
+		webPreferences: { preload: path.join(__dirname, 'preload.js')}
+	});
+	main.setMenu(menu);
+	main.webContents.loadFile(path.join(__dirname, 'ui', 'index.html'));
+	// main.webContents.openDevTools();
+});
+
+app.on('window-all-closed', () => {
+	try { cfg.store(optionsFile); }
+	catch (err)
+	{
+		dialog.showMessageBoxSync(main, {
+			message: err.message ? err.message : err,
+			type: 'error',
+			title: 'Error on saving configuration',
+			detail: 'Current values will be lost'
+		});
+	}
+	app.quit();
+});
+
+
+/** * * * * * * * * * * * * * * *
+ * Services provided to renderer
+ *  * * * * * * * * * * * * * * */
+
+/**
+ * Application version
+ */
+ipcMain.on('get-version',  (evt) => { evt.returnValue = app.getVersion(); });
+
+/**
+ * Load user signing certificates
+ */
+ipcMain.on('get-certificates', (evt) => {
+
+	let certs;
+	try { certs = XPEListCertificates(); }
+	catch (err)
+	{
+		dialog.showMessageBoxSync(main, {
+			message: err.message ? err.message : err,
+			type: 'error',
+			title: 'Error on loading certificates',
+			detail: 'Cannot sign any document'
+		});
+	}
+	evt.returnValue = certs;
+});
+
+/**
+ * Provide application options
+ */
+ipcMain.on('get-config', (evt) => { evt.returnValue = cfg; });
+
+/**
+ * Open file dialog
+ * 	options: see https://www.electronjs.org/docs/api/dialog#dialogshowopendialogsyncbrowserwindow-options
+ */
+ipcMain.on('open-file', (evt, options) =>{ evt.returnValue = dialog.showOpenDialogSync(main, options); });
+
+/**
+ * Save file dialog
+ *	options: see https://www.electronjs.org/docs/api/dialog#dialogshowsavedialogsyncbrowserwindow-options
+ */
+ipcMain.on('save-file', (evt, options) => { evt.returnValue = dialog.showSaveDialogSync(main, options); });
+
+/**
+ * Update current application options
+ *	newCfg: instance of module.Config
+ */
+ipcMain.on('update-config', (evt, newCfg) => {
+	cfg = Object.setPrototypeOf(newCfg, Config.prototype); 
+	evt.returnValue = true;
+});
+
+/**
+ * Message box dialog
+ *	options: see https://www.electronjs.org/docs/api/dialog#dialogshowmessageboxbrowserwindow-options
+ */
+ ipcMain.on('show-message', (evt, options) => { 
+	dialog.showMessageBox(main, options);
+	evt.returnValue = true;
+});
+
+/**
+ * Signs a file with selected certificate
+ *	options: instance of module.SigningData
+ * Returns a CMS Signed Data envelope
+ *
+ */
+ipcMain.on('sign-document', (evt, options) => {
+	let args = Object.setPrototypeOf(options, SigningData.prototype);
+	let ret;
+	try
+	{
+		let buff = fs.readFileSync(options.signedContents);
+		let contents = new Uint8Array(buff.buffer);
+		let pkcs7 = XPEBasicSign(options.signingCert, args.algorithmAsNumber(), options.attachContents ? 1 : 0, contents);
+		fs.writeFileSync(options.signedEnvelope, pkcs7);
+		ret = new OperationResult(true, 'Signature operation successful', 'Signed envelope was saved at ' + options.signedEnvelope);
+	}
+	catch (err) { ret = new OperationResult(false, 'Signature operation failure', err.message ? err.message : err); }
+	evt.returnValue = ret;
+});
+
+/**
+ * Parses specified CMS Signed Data envelope
+ *	data: instance of modules.VerifyData
+ * Returns a state handle for further operations
+ */
+ipcMain.on('parse-signed-data', (evt, data) => {
+	let arg = Object.setPrototypeOf(data, VerifyData.prototype);
+	let ret = 0;
+	try
+	{
+		let envelopeBuff = arg.loadEnvelope();
+		let contentsBuff = null;
+		if (data.contents) arg.loadContents();
+		ret = XPEParseCMSSignedData(envelopeBuff, contentsBuff);
+	}
+	catch (err) { ret = new OperationResult(false, 'Parse CMS file operation failure', err.message ? err.message : err); }
+	evt.returnValue = ret;
+});
+
+/**
+ * Verifies cryptographic signature of a parsed CS Signed Data document
+ *	handle: state handle returned by parse-signed-data message
+ * Returns true for successful verification; otherwise, false.
+ */
+ipcMain.on('verify-signature', (evt, handle) => {
+	evt.returnValue = XPEVerifySignature(handle);
+});
+
+/**
+ * Returns signing time signed attribute value
+ *	handle: state handle returned by parse-signed-data message
+ * Returns a string in the form yyyy-MM-ddThh:mm:ss.sssZ or null if the attribute is not presents
+ */
+ipcMain.on('get-signing-time', (evt, handle) => {
+	evt.returnValue = XPEGetSigningTime(handle);
+});
+
+/**
+ * Checks if signing certificate is trusted. The certificate must be embedded in the envelope.
+ *	handle: state handle returned by parse-signed-data message
+ * Returns true for successful verification; otherwise, false. A signing certificate
+ * must be associated with a complete and trusted certificate chain in the system repository to be trusted
+ */
+ipcMain.on('verfify-signing-certificate', (evt, handle) => {
+	evt.returnValue = XPEVerifyCertificate(handle);
+});
+
+/**
+ * Gets CMS Signer Info signer identifier field
+ *	handle: state handle returned by parse-signed-data message
+ * Returns an instance of module.SignerIdentifier
+ */
+ipcMain.on('get-signer-identifier', (evt, handle) => {
+	evt.returnValue = XPEGetSignerIdentifier(handle);
+});
+
+/**
+ * Gets the encapsulated content info, if it is attached
+ *	handle: state handle returned by parse-signed-data message
+ * Returns the contents as an Uint8Array
+ */
+ipcMain.on('get-content-info', (evt, handle) => {
+	evt.returnValue = XPEGetEncapContent(handle);
+});
+
+/**
+ * Releases CMS Signed Data parsed file handle
+ *	handle: state handle returned by parse-signed-data message
+ * Returns 0, if succeeded
+ */
+ipcMain.on('release-cms-handle', (evt, handle) => {
+	evt.returnValue = XPEReleaseCMSSignedData(handle);
+});
+
+/**
+ * Creates a temporary file
+ * Returns a file handle (where handle > 0)
+ */
+ipcMain.on('create-tmp-file', (evt) => {
+	let env = new TempFile(tmp.fileSync());
+	tempFiles.set(env.handle, env);
+	evt.returnValue = env.handle;
+});
+
+/**
+ * Writes contents to temporary file
+ *	data: write data object, where:
+ *		handle: temporary file handle
+ *		contents: the contents to write
+ * Returns true if succeded; otherwise, false.
+ */
+ipcMain.on('write-file', (evt, data) => {
+	let ret = false;
+	try {
+		let tf = tempFiles.get(data.handle);
+		if (!tf) throw 'Invalid temporary file handle';
+		fs.writeFileSync(tf.tmp.fd, data.contents);
+		ret = true;
+	}
+	catch (err) {
+		dialog.showMessageBoxSync(main, {
+			message: err.message ? err.message : err,
+			type: 'error',
+			title: 'Error on writing to file',
+			detail: 'Could not write to temporary file ' + handle.name
+		});
+	}
+	evt.returnValue = ret;
+});
+
+/**
+ * Opens a temporary file using platform default application
+ *	handle: temporary file handle
+ * Returns true if handle is valid; otherwise, false.
+ */
+ipcMain.on('open-uri', (evt, handle) => {
+	let tf = tempFiles.get(handle);
+	let ret = tf ? true : false;
+	if (tf) shell.openExternal('file://' + tf.tmp.name);
+	evt.returnValue = ret;
+});
+
+/**
+ * Releases created temporary file
+ *	handle: temporary file handle
+ * Returns true if handle is valid; otherwise, false.
+ */
+ipcMain.on('release-tmp-file', (evt, handle) => {
+	let tf = tempFiles.get(handle);
+	let ret = tf ? true : false;
+	if (tf)
+	{
+		tf.tmp.removeCallback();
+		tempFiles.delete(handle);
+	}
+	evt.returnValue = ret;
+});

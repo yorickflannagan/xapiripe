@@ -1,0 +1,35 @@
+{
+  "name": "signithing",
+  "version": "1.0.0",
+  "description": "Desktop application interface",
+  "main": "./app/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://bitbucket.org/yorick-flannagan/signithing.git"
+  },
+  "keywords": [
+    "digital signature",
+    "CAdES",
+    "CAdES-B",
+    "certificate enrollment",
+    "signature verification"
+  ],
+  "author": "Marco Gutierrez <yorick.flannagan@gmail.com>",
+  "license": "LGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://bitbucket.org/yorick-flannagan/signithing/issues",
+    "email": "yorick.flannagan@gmail.org"
+  },
+  "homepage": "https://bitbucket.org/yorick-flannagan/signithing#readme",
+  "devDependencies": {
+    "electron": "^13.1.6"
+  },
+  "dependencies": {
+    "tmp": "^0.2.1",
+    "w3-css": "^4.1.0"
+  }
+}

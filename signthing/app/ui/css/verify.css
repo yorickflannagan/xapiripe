@@ -1,0 +1,62 @@
+/**
+ * Xapiripë Project
+ * Software components for CAdES signatures
+ * See https://datatracker.ietf.org/doc/html/rfc5126
+ *
+ * Copyleft (C) 2020 The Crypthing Initiative
+ * Authors:
+ * 		yorick.flannagan@gmail.com
+ * 		diego.sohsten@gmail.com
+ *
+ * Signithing - desktop application UI
+ * See https://bitbucket.org/yorick-flannagan/signithing/src/master/
+ * verify.css - verify.html styles sheet
+ * 
+ * This application is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 3.0 of
+ * the License, or (at your option) any later version.
+ *
+ * This application is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * See https://opensource.org/licenses/LGPL-3.0
+ *
+ */
+
+label.curtain {
+	padding-right: 8px;
+}
+span#lft-spacer {
+	padding-left: 88px;
+}
+span#crt-spacer {
+	padding-left: 50px;
+}
+span#cts-spacer {
+	padding-left: 86px;
+}
+.input-dir {
+	width: 390px;
+}
+
+.dropdown-content {
+	display: none;
+	padding: 1em;
+	position: absolute;
+	background-color: #f1f1f1;
+	min-width: 320px;
+	box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+	z-index: 1;
+}
+.dropdown {
+	position: relative;
+	display: inline-block;
+}
+.show { 
+	  display: block;
+}
+button#btn-show {
+	padding: 3px 10px 3px 10px;
+}
