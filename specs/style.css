@@ -20,6 +20,13 @@ ul {
 	list-style-type: square;
 	margin-left: 2em;
 }
+ol {
+	list-style-type: lower-roman;
+	margin-left: 2em;
+}
+ol.space {
+	line-height: 200%;
+}
 h2 {
 	margin-top: 2em;
 	margin-bottom: 1em;
@@ -35,4 +42,16 @@ td, th {
 
 tr:nth-child(even) {
   background-color: #dddddd;
+}
+p.countermeasure {
+	font-style: italic;
+	font-size: 12pt;
+	margin-left: 4em;
+	margin-right: 4em;
+}
+p.date {
+	font-style: italic;
+	font-size: 9pt;
+	text-align: right;
+	margin-right: 4em;
 }
