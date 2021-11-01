@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://bitbucket.org/yorick-flannagan/signithing.git"
+    "url": "git+https://bitbucket.org/yakoana/xapiripe.git"
   },
   "keywords": [
     "digital signature",
@@ -21,10 +21,10 @@
   "author": "Marco Gutierrez <yorick.flannagan@gmail.com>",
   "license": "LGPL-3.0-or-later",
   "bugs": {
-    "url": "https://bitbucket.org/yorick-flannagan/signithing/issues",
-    "email": "yorick.flannagan@gmail.org"
+    "url": "https://bitbucket.org/yakoana/xapiripe/issues",
+    "email": "yorick.flannagan@gmail.com"
   },
-  "homepage": "https://bitbucket.org/yorick-flannagan/signithing#readme",
+  "homepage": "https://bitbucket.org/yakoana/xapiripe#readme",
   "devDependencies": {
     "electron": "^13.1.6"
   },
