@@ -42,6 +42,7 @@ td, th {
 
 tr:nth-child(even) {
   background-color: #dddddd;
+  
 }
 p.countermeasure {
 	font-style: italic;

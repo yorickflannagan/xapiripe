@@ -209,10 +209,33 @@
 			favoreçam a autenticidade da operação que ajudam a realizar. Em outras palavras, a
 			contramedida se baseia no fato de a solução se comportar como uma <i>terceira parte confiável</i>
 			mediando a transação. Assim, jamais devemos admitir uma assinatura silenciosa, salvo por
-			interesse expresso pelo usuário. Ao exibir o conteúdo a ser assinado (ou permitir sua inspeção),
+			decisão expressa do usuário. Ao exibir o conteúdo a ser assinado (ou permitir sua inspeção),
 			Xapiripë parte da premissa de que o usuário é capaz de distinguir um conteúdo legítimo de um
 			falso. Como ele é capaz de saber o que deveria assinar, um eventual ataque à aplicação web não
 			será bem sucedido no intento de que o usuário assine um conteúdo falso.
+			</p>
+			<p>
+			Essa contramedida abre uma outra via de ataque à solução: a exploração de vulnerabilidades
+			decorrentes de falhas no processamento de diversos formatos de arquivo. Exemplos bem documentados
+			são a execução remota de código permitida por vulnerabilidade no processamento de arquivos
+			<a href="https://docs.microsoft.com/en-us/security-updates/securitybulletins/2005/ms05-009"
+			target="_blank">PNG</a> ou a vulnerabilidade na formatação de strings do
+			<a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2004-1153" target="_blank">Adobe
+			Acrobat Reader</a>.
+			</p>
+			<p>
+			O problema aqui não é lidar com as vulnerabilidades conhecidas, mas a verdadeira batalha de
+			gato e rato que ocorre entre os defensores e atacantes. Novas possibilidades são
+			constantemente exploradas e corrigi-las é uma tarefa permanente. Lidar com esse tipo de
+			problema não pode ser especialidade dos desenvolvedores de Xapiripë, seja por falta de
+			condições materiais, seja por falta de conhecimento especializado. Ora, os fabricantes de
+			browsers já travam essa batalha diariamente, contando com uma rede de conhecimentos e
+			habilidades muito além da nossa capacidade. Assim, a melhor contramedida para esse vetor de
+			ataques é confiar no navegador, como declarado inicialmente: 
+			</p>
+			<p class="countermeasure">
+			(iv) A tarefa de visualizar os conteúdos a serem assinadas deverá ser delegada ao navegador
+			utilizado pelo usuário, através do conhecimento prévio do suposto tipo de arquivo fornecido.
 			</p>
 			<p>
 			Passemos agora a tratar de uma ameaça a Xapiripë que não envolve diretamente o processo de 
@@ -265,7 +288,7 @@
 			implementar a seguinte contramedida:
 			</p>
 			<p class="countermeasure">
-			(iv) Xapiripë somente instalará certificados de ACs diretamente associados ao certificado
+			(v) Xapiripë somente instalará certificados de ACs diretamente associados ao certificado
 			do assinante cujas chaves foram geradas pelo componente, verificando previamente sua
 			autenticidade.
 			</p>
