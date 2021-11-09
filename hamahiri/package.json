@@ -1,21 +1,28 @@
 {
 	"name": "hamahiri",
 	"version": "1.0.0",
-	"description": "Native component to access underlying cryptographic devices",
-	"main": "index.js",
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
+	"description": "Native node.js module to interact with cryptographic devices",
 	"keywords": [
-		"smart card access",
-		"Windows cryptographic providers",
-		"RSA key pair generation",
-		"digital signature"
+		"digital signature",
+		"certificate enrollment",
+		"cryptographic smart card"
 	],
+	"author": "Marco Antonio Gutierrez",
+	"license": "LGPL-3.0-or-later",
 	"repository": {
 		"type": "git",
 		"url": "git+https://bitbucket.org/yakoana/xapiripe.git"
 	},
-	"author": "Marco Gutierrez <yorick.flannagan@gmail.com>",
-	"license": "LGPL-3.0-or-later"
+	"bugs": {
+		"email": "yorick.flannagan@gmail.com"
+	  },
+	
+	"main": "lib/hamahiri.js",
+	"gypfile": true,
+	"scripts": {
+		"test": "node --napi-modules ./test/unit_test.js"
+	},
+	"dependencies": {
+		"node-addon-api": "^1.1.0"
+	}
 }

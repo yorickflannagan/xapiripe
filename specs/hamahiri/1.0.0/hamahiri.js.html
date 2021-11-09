@@ -26,23 +26,14 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>'use strict';
-
-/**
+            <pre class="prettyprint source linenums"><code>/**
  * @file Módulo nativo Node.js para acesso aos dispositivos criptográficos
  * @copyright Copyleft &amp;copy; 2021 by The Crypthing Initiative - All rights reversed
  * @author Marco Antonio Gutierrez&lt;yorick.flannagan@gmail.com>
  */
 
-/**
- * Referência externa à API Node para C++
- * @namespace Napi
- */
-/**
- * Referência externa à classe Napi::Error (implementa a classe Javascript Error)
- * @class Error
- * @memberof Napi
- */
+'use strict';
+const addon = require('../build/Release/hamahiri-native');
 
 /**
  * Global objects
@@ -54,91 +45,86 @@
  * @memberof Xapiripe
  * @property { string } subject - Titular do certificado
  * @property { string } issuer  - Emissor do certificado
- * @property { string } serial  - Número de série do certificado, encodado em Base64
+ * @property { string } serial  - Número de série do certificado, onde os bytes são representados em hexadecimal
  * @property { Number } handle  - Handle para acesso à chave privada associada ao certificado
  */
+
 
 /**
  * Acesso aos dispositivos criptográficos instalados no computador local
  * @namespace Hamahiri
  */
-
-
-/**
- * Constante para o algoritmo sha1WithRSAEncryption
- * @constant
- * @memberof Hamahiri
- * @type { Number }
- * @default
- */
-const CKM_SHA1_RSA_PKCS = 0x00000006;
-/**
- * Constante para o algoritmo sha256WithRSAEncryption
- * @constant
- * @memberof Hamahiri
- * @type { Number }
- * @default
- */
- const CKM_SHA256_RSA_PKCS = 0x00000040;
-/**
- * Constante para o algoritmo sha384WithRSAEncryption
- * @constant
- * @memberof Hamahiri
- * @type { Number }
- * @default
- */
- const CKM_SHA384_RSA_PKCS = 0x00000041;
-/**
- * Constante para o algoritmo sha512WithRSAEncryption
- * @constant
- * @memberof Hamahiri
- * @type { Number }
- * @default
- */
- const CKM_SHA512_RSA_PKCS = 0x00000042;
-/**
- * Constante PKCS #11 para os algoritmos de assinatura suportados
- * @memberof Hamahiri
- * @typedef { Number } SignMechanism
- */
-
-
 /**
  * Detalhamento dos erros ocorridos no processamento nativo
- * @extends Napi.Error
+ * @class Failure
+ * @extends Error
  * @memberof Hamahiri
  * @property { string } component - Componente que disparou o erro
  * @property { string } method    - Método ou função que disparou o erro
  * @property { Number } errorCode - Código Xapiripë do erro
  * @property { Number } apiError  - Código do erro gerado pela API de terceiros (por exemplo, a Windows CryptoAPI)
  */
-class Failure extends Error
-{
-	component;
-	method;
-	errorCode;
-	apiError;
-}
-
 /**
  * Representação interna de um par de chaves RSA
+ * @class KeyPair
  * @memberof Hamahiri
  * @property { Uint8Array } privKey - Chave pública (campo SubjectPublicKeyInfo do PKCS #10) encodada em DER
  * @property { Number     } privKey - Handle para a chave privada
  */
-class KeyPair
-{
-	pubKey;
-	privKey;
-}
 
+ 
+/**
+ * Constante PKCS #11 para os algoritmos de assinatura suportados
+ * @memberof Hamahiri
+ * @typedef { Number } SignMechanism
+ */
+ class SignMechanism
+{
+	/**
+	 * Constante para o algoritmo sha1WithRSAEncryption
+	 * @constant
+	 * @memberof Hamahiri
+	 * @type { Number }
+	 * @default
+	 */
+	static CKM_SHA1_RSA_PKCS   = 0x00000006;
+
+	/**
+	 * Constante para o algoritmo sha256WithRSAEncryption
+	 * @constant
+	 * @memberof Hamahiri
+	 * @type { Number }
+	 * @default
+	 */
+	static CKM_SHA256_RSA_PKCS = 0x00000040;
+
+	/**
+	 * Constante para o algoritmo sha384WithRSAEncryption
+	 * @constant
+	 * @memberof Hamahiri
+	 * @type { Number }
+	 * @default
+	 */
+	static CKM_SHA384_RSA_PKCS = 0x00000041;
+
+	/**
+	 * Constante para o algoritmo sha512WithRSAEncryption
+	 * @constant
+	 * @memberof Hamahiri
+	 * @type { Number }
+	 * @default
+	 */
+	static CKM_SHA512_RSA_PKCS = 0x00000042;
+}
 
 /**
  * Implementa as operações de acesso a dispositivos criptográficos
  * @memberof Hamahiri
  */
-class Hamahiri
+ class Hamahiri
 {
+	constructor() { this._addon = new addon.Hamahiri(); }
+
 	/**
 	 * Assina o buffer contendo o hash do conteúdo
 	 * @throws  { Failure } Dispara uma instância de Failure em caso de falha
@@ -147,7 +133,19 @@ class Hamahiri
 	 * @param   { Number        } key       Handle para a chave privada de assinatura, obtido previamente
 	 * @returns { Uint8Array } Buffer assinado.
 	 */
-	sign() {}
+	 sign(hash, algorithm, key) {
+		return this._addon.sign(hash, algorithm, key);
+	}
+
+	/**
+	 * Libera o handle para uma chave privada
+	 * @throws  { Failure } Dispara uma instância de Failure em caso de falha
+	 * @param { Number } hHandle Handle retornado anteriormente
+	 * @returns { boolean } Indicador de sucesso
+	 */
+	 releaseKeyHandle(hHandle) {
+		return this._addon.releaseKeyHandle(hHandle);
+	}
 }
 
 /**
@@ -155,15 +153,18 @@ class Hamahiri
  * @memberof Hamahiri
  * @extends Hamahiri
  */
-class Enroll extends Hamahiri
+ class Enroll extends Hamahiri
 {
+	constructor() { super(); }
 
 	/**
 	 * Enumera os dispositivos criptográficos presentes (Cryptographic Services Providers para RSA)
 	 * @throws { Failure } Dispara uma instância de Failure em caso de falha
 	 * @return { Array } Lista de strings contendo os nomes dos dispositivos presentes
 	 */
-	enumerateDevices() {}
+	 enumerateDevices() {
+		return this._addon.enumerateDevices();
+	};
 
 	/**
 	 * Gera um par de chaves RSA
@@ -172,7 +173,9 @@ class Enroll extends Hamahiri
 	 * @param { Number } keySize Tamanho (em bits) das chaves RSA
 	 * @returns { KeyPair } Retorna o par de chaves gerado como uma instância de {@link Hamahiri.KeyPair}.
 	 */
-	generateKeyPair() {};
+	 generateKeyPair(device, keySize) {
+		return this._addon.generateKeyPair(device, keySize);
+	}
 
 	/**
 	 * Instala o certificado de usuário, caso a chave pública esteja associada a uma chave privada existente
@@ -182,7 +185,9 @@ class Enroll extends Hamahiri
 	 * @returns { boolean } Indicador de sucesso da operação. Caso o certificado tenha sido instalado
 	 * anteriormente, retorna false
 	 */
-	installCertificate() {}
+	 installCertificate(userCert) {
+		return this._addon.installCertificate(userCert);
+	}
 
 	/**
 	 * Instala a cadeia de certificados de Autoridade Certificadora emissora de um certificado
@@ -193,7 +198,9 @@ class Enroll extends Hamahiri
 	 * @returns { boolean } Indicador de sucesso da operação. Caso a cadeia tenha sido instalada
 	 * anteriormente, retorna false
 	 */
-	installChain() {}
+	 installChain(chain) {
+		return this._addon.installChain(chain);
+	}
 }
 
 /**
@@ -201,14 +208,24 @@ class Enroll extends Hamahiri
  * @memberof Hamahiri
  * @extends Hamahiri
  */
-class Sign extends Hamahiri
+ class Sign extends Hamahiri
 {
+	constructor() { super(); }
+
 	/**
 	 * Enumera os certificados em vigor que estejam associados a chaves privadas RSA nos repositórios criptográficos
      * @throws { Failure } Dispara uma instância de Failure em caso de falha
 	 * @returns { Array } Um array de objetos {@link Xapiripe.Certificate}
 	 */
-	enumerateCertificates() {}
+	 enumerateCertificates() {
+		return this._addon.enumerateCertificates();
+	}
+}
+
+module.exports = {
+	SignMechanism: SignMechanism,
+	Enroll:        Enroll,
+	Sign:          Sign
 }
 </code></pre>
         </article>
@@ -220,13 +237,13 @@ class Sign extends Hamahiri
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hamahiri.html">Hamahiri</a></li><li><a href="Napi.html">Napi</a></li><li><a href="Xapiripe.html">Xapiripe</a></li></ul><h3>Classes</h3><ul><li><a href="Hamahiri.Enroll.html">Enroll</a></li><li><a href="Hamahiri.Failure.html">Failure</a></li><li><a href="Hamahiri.Hamahiri.html">Hamahiri</a></li><li><a href="Hamahiri.KeyPair.html">KeyPair</a></li><li><a href="Hamahiri.Sign.html">Sign</a></li><li><a href="Napi.Error.html">Error</a></li><li><a href="Xapiripe.Certificate.html">Certificate</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hamahiri.html">Hamahiri</a></li><li><a href="Xapiripe.html">Xapiripe</a></li></ul><h3>Classes</h3><ul><li><a href="Hamahiri.Enroll.html">Enroll</a></li><li><a href="Hamahiri.Failure.html">Failure</a></li><li><a href="Hamahiri.Hamahiri.html">Hamahiri</a></li><li><a href="Hamahiri.KeyPair.html">KeyPair</a></li><li><a href="Hamahiri.Sign.html">Sign</a></li><li><a href="Xapiripe.Certificate.html">Certificate</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Nov 04 2021 09:05:26 GMT-0300 (GMT-03:00)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Nov 09 2021 10:55:26 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>
