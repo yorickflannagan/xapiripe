@@ -1,6 +1,9 @@
 #include "hamahiri.h"
+#include <ncrypt.h>
 
-
+// * * * * * * * * * * * * * * *
+// Javascript exception facility
+// * * * * * * * * * * * * * * *
 void THROW_JS_ERROR(Napi::Env env, Napi::Error& cause, char* method, unsigned long errorCode, unsigned long apiError)
 {
 	cause.Set("component", Napi::String::New(env, "Hamahiri"));
@@ -24,6 +27,70 @@ void THROW_JS_ERROR(Napi::Env env, char* message, char* method, unsigned long er
 }
 
 
+// * * * * * * * * * * * * * * *
+// Windows native functions
+// * * * * * * * * * * * * * * *
+void capiEnumerateProviders(const Napi::Env env, const DWORD dwProvType, std::vector<std::string>& out)
+{
+	DWORD cbName, dwType, dwIndex = 0;
+	while (CryptEnumProvidersA(dwIndex, NULL, 0, &dwType, NULL, &cbName))
+	{
+		if (dwType == dwProvType)
+		{
+			LPSTR pszName = (LPSTR) LocalAlloc(LMEM_ZEROINIT, cbName);
+			if (!pszName)
+			{
+				THROW_JS_ERROR(env, "Out of memory", "capiEnumerateProviders", HH_OUT_OF_MEM_ERROR);
+				return;
+			}
+			if (!(CryptEnumProvidersA(dwIndex, NULL, 0, &dwType, pszName, &cbName)))
+			{
+				THROW_JS_ERROR(env, "Error enumerating legacy providers", "capiEnumerateProviders", HH_ENUM_PROV_ERROR, GetLastError());
+				LocalFree(pszName);
+				return;
+			}
+			out.push_back(pszName);
+			LocalFree(pszName);
+		}
+		dwIndex++;
+	}
+	DWORD dwError = GetLastError();
+	if (dwError != ERROR_NO_MORE_ITEMS) THROW_JS_ERROR(env, "Error enumerating legacy providers", "capiEnumerateProviders", HH_ENUM_PROV_ERROR, dwError);
+}
+
+void cngEnumerateProviders(const Napi::Env env, std::vector<std::string>& out)
+{
+	DWORD dwCount = 0, i = 0;
+	NCryptProviderName *pProviderList = NULL;
+	bool bOK = true;
+	size_t ulLen;
+	CHAR* pszProvider;
+	SECURITY_STATUS lRet = NCryptEnumStorageProviders(&dwCount, &pProviderList, 0);
+	if (lRet != ERROR_SUCCESS)
+	{
+		THROW_JS_ERROR(env, "Error enumerating CNG providers", "cngEnumerateProviders", HH_ENUM_PROV_ERROR, lRet);
+		return;
+	}
+	while (bOK && i < dwCount)
+	{
+		ulLen = wcstombs(NULL, pProviderList[i].pszName, 0);
+		pszProvider = (CHAR*) LocalAlloc(LMEM_ZEROINIT, ulLen + 1);
+		if ((bOK = pszProvider ? true : false))
+		{
+			wcstombs(pszProvider, pProviderList[i].pszName, ulLen + 1);
+			out.push_back(pszProvider);
+			LocalFree(pszProvider);
+		}
+		i++;
+	}
+	NCryptFreeBuffer(pProviderList);
+	if (!bOK) THROW_JS_ERROR(env, "Out of memory", "cngEnumerateProviders", HH_OUT_OF_MEM_ERROR);
+}
+
+
+// * * * * * * * * * * * * * * *
+// Key/Certificates wrapper
+// * * * * * * * * * * * * * * *
 KeyWrap::KeyWrap(const ULONG_PTR hKey)
 {
 	this->isKey = true;
@@ -103,6 +170,9 @@ std::map<int, KeyWrap*>& KeyHandler::GetHandlers()
 }
 
 
+// * * * * * * * * * * * * * * *
+// The API itself
+// * * * * * * * * * * * * * * *
 Hamahiri::Hamahiri(const Napi::CallbackInfo& info) : ObjectWrap(info)
 {
 	Napi::Env env = info.Env();
@@ -111,15 +181,13 @@ Hamahiri::Hamahiri(const Napi::CallbackInfo& info) : ObjectWrap(info)
 Napi::Value Hamahiri::EnumerateDevices(const Napi::CallbackInfo& info)
 {
 	Napi::Env env = info.Env();
-
-	// TODO: Get providers from CryptoAPI
 	std::vector<std::string> providers;
-	providers.push_back(MS_DEF_PROV_A);
-	providers.push_back(MS_SCARD_PROV_A);
-	providers.push_back(MS_ENHANCED_PROV_A);
-	providers.push_back(MS_STRONG_PROV_A);
-	providers.push_back(MS_ENH_RSA_AES_PROV_A);
-	
+	capiEnumerateProviders(env, PROV_RSA_FULL, providers);
+	if (env.IsExceptionPending()) return env.Null();
+	capiEnumerateProviders(env, PROV_RSA_AES, providers);
+	if (env.IsExceptionPending()) return env.Null();
+	cngEnumerateProviders(env, providers);
+	if (env.IsExceptionPending()) return env.Null();
 	Napi::Array ret = Napi::Array::New(env, providers.size());
 	for (unsigned int i = 0; i < providers.size(); i++) ret[i] = Napi::String::New(env, providers.at(i).c_str());
 	return ret;
