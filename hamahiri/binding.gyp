@@ -19,7 +19,10 @@
 			'<!(echo %WindowsCNGInstallDir%)/Include'
 		],
 		'dependencies': [ "<!(node -p \"require('node-addon-api').gyp\")" ],
-		'libraries': [ 'ncrypt.lib'],
+		'libraries': [
+			'ncrypt.lib',
+			'crypt32.lib'
+		],
 		'cflags!': [ '-fno-exceptions' ],
 		'cflags_cc!': [ '-fno-exceptions' ],
 		'conditions': [

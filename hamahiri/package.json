@@ -15,8 +15,7 @@
 	},
 	"bugs": {
 		"email": "yorick.flannagan@gmail.com"
-	  },
-	
+	},
 	"main": "lib/hamahiri.js",
 	"gypfile": true,
 	"scripts": {
@@ -24,5 +23,8 @@
 	},
 	"dependencies": {
 		"node-addon-api": "^1.1.0"
+	},
+	"devDependencies": {
+		"asn1js": "^2.1.1"
 	}
 }

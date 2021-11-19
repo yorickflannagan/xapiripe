@@ -99,7 +99,7 @@ const addon = require('../build/Release/hamahiri-native');
 
 	/**
 	 * Assina o buffer contendo o hash do conteúdo
-	 * @throws  { Failure } Dispara uma instância de Failure em caso de falha
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param   { Uint8Array    } hash      Hash do conteúdo. Deve ter o tamanho apropriado às chaves RSA e ao algoritmo especificado.
 	 * @param   { SignMechanism } algorithm Constante PKCS #11 do algoritmo de assinatura
 	 * @param   { Number        } key       Handle para a chave privada de assinatura, obtido previamente
@@ -111,12 +111,22 @@ const addon = require('../build/Release/hamahiri-native');
 
 	/**
 	 * Libera o handle para uma chave privada
-	 * @throws  { Failure } Dispara uma instância de Failure em caso de falha
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param { Number } hHandle Handle retornado anteriormente
 	 * @returns { boolean } Indicador de sucesso
 	 */
 	 releaseKeyHandle(hHandle) {
 		return this._addon.releaseKeyHandle(hHandle);
+	}
+
+	/**
+	 * Remove do repositório criptográfico um par de chaves criado por generateKeyPair
+	 * @throws {Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de argumentos inválidos
+	 * @param { Number } key Handle para a chave gerada, obtido por {@link Enroll.generateKeyPair}
+	 * @returns Indicador de sucesso da operação. Uma chave inexistente não é considerada uma falha.
+	 */
+	 deleteKeyPair(key) {
+		return this._addon.deleteKeyPair(key);
 	}
 }
 
@@ -131,7 +141,7 @@ const addon = require('../build/Release/hamahiri-native');
 
 	/**
 	 * Enumera os dispositivos criptográficos presentes (Cryptographic Services Providers para RSA)
-	 * @throws { Failure } Dispara uma instância de Failure em caso de falha
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @return { Array } Lista de strings contendo os nomes dos dispositivos presentes
 	 */
 	 enumerateDevices() {
@@ -140,19 +150,18 @@ const addon = require('../build/Release/hamahiri-native');
 
 	/**
 	 * Gera um par de chaves RSA
-	 * @throws { Failure } Dispara uma instância de Failure em caso de falha
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param { string } device  Cryptographic Service Provider a ser utilizado para gerar as chaves
 	 * @param { Number } keySize Tamanho (em bits) das chaves RSA
 	 * @returns { KeyPair } Retorna o par de chaves gerado como uma instância de {@link Hamahiri.KeyPair}.
 	 */
-	 generateKeyPair(device, keySize) {
+	generateKeyPair(device, keySize) {
 		return this._addon.generateKeyPair(device, keySize);
 	}
 
 	/**
 	 * Instala o certificado de usuário, caso a chave pública esteja associada a uma chave privada existente
-	 * @throws { Failure } Dispara uma instância de Failure em caso de falha ou caso o certificado não possa
-	 * ser associado a uma chave existente
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param { Uint8Array } userCertificate Certificado do usuário codificado em DER
 	 * @returns { boolean } Indicador de sucesso da operação. Caso o certificado tenha sido instalado
 	 * anteriormente, retorna false
@@ -162,10 +171,9 @@ const addon = require('../build/Release/hamahiri-native');
 	}
 
 	/**
-	 * Instala a cadeia de certificados de Autoridade Certificadora emissora de um certificado
-	 * previamente instalado.
-	 * @throws { Failure } Dispara uma instância de Failure em caso de falha ou caso a cadeia não corresponda
-	 * a um certificado de usuário instalado
+	 * Instala a cadeia de certificados emissores confiáveis. Deve-se verificar previamente se a cadeia é válida e se sua
+	 * AC final assinou um certificado de usuário com instalação prévia bem sucedida.
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param { Array } chain  Cadeia de certificados codificada em DER, representada como uma matriz de Uint8Array
 	 * @returns { boolean } Indicador de sucesso da operação. Caso a cadeia tenha sido instalada
 	 * anteriormente, retorna false
@@ -186,7 +194,7 @@ const addon = require('../build/Release/hamahiri-native');
 
 	/**
 	 * Enumera os certificados em vigor que estejam associados a chaves privadas RSA nos repositórios criptográficos
-     * @throws { Failure } Dispara uma instância de Failure em caso de falha
+     * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @returns { Array } Um array de objetos {@link Xapiripe.Certificate}
 	 */
 	 enumerateCertificates() {
