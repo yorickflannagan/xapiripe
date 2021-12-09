@@ -1,6 +1,8 @@
 #include "hamahiri.h"
 #include <ncrypt.h>
 
+#include <fstream>
+
 // * * * * * * * * * * * * * * *
 // Javascript exception facility
 // * * * * * * * * * * * * * * *
@@ -30,7 +32,59 @@ void THROW_JS_ERROR(Napi::Env env, char* message, char* method, unsigned long er
 // * * * * * * * * * * * * * * *
 // Windows native functions
 // * * * * * * * * * * * * * * *
-void capiEnumerateProviders(const Napi::Env env, const DWORD dwProvType, std::vector<std::string>& out)
+void cngDeleteKey(const Napi::Env env, const std::wstring& provider, const std::wstring& keyName)
+{
+	NCRYPT_PROV_HANDLE hProv;
+	NCRYPT_KEY_HANDLE hKey;
+	SECURITY_STATUS stat = NCryptOpenStorageProvider(&hProv, provider.c_str(), 0);
+	if (stat != ERROR_SUCCESS)
+	{
+		THROW_JS_ERROR(env, "Could not open CNG provider", "cngDeleteKey", HH_CNG_PROVIDER_ERROR, stat);
+		return;
+	}
+	stat = NCryptOpenKey(hProv, &hKey, keyName.c_str(), AT_SIGNATURE, 0);
+	if (stat != ERROR_SUCCESS)
+	{
+		THROW_JS_ERROR(env, "Could not open CNG key container", "cngDeleteKey", HH_CNG_OPEN_KEY_ERROR, stat);
+		NCryptFreeObject(hProv);
+		return;
+	}
+	stat = NCryptDeleteKey(hKey, 0);
+	if (stat != ERROR_SUCCESS)
+	{
+		THROW_JS_ERROR(env, "Could not delete CNG key", "cngDeleteKey", HH_CNG_DELETE_KEY_ERROR, stat);
+		NCryptFreeObject(hKey);
+		NCryptFreeObject(hProv);
+		return;
+	}
+	NCryptFreeObject(hProv);
+}
+void capiDeleteKey(const Napi::Env env, const std::string& provider, const DWORD dwProvType, const std::string& keyContainer)
+{
+	HCRYPTPROV hProv;
+	BOOL ret = CryptAcquireContextA(&hProv, keyContainer.c_str(), provider.c_str(), dwProvType, CRYPT_DELETEKEYSET);
+	if (!ret) THROW_JS_ERROR(env, "Could not delete legacy key", "capiDeleteKey", HH_CAPI_DELETE_KEY_ERROR,  GetLastError());
+}
+
+void cngEnumerateProviders(const Napi::Env env, std::vector<std::wstring>& list)
+{
+	DWORD dwCount = 0;
+	NCryptProviderName* pProviderList = NULL;
+	SECURITY_STATUS lRet = NCryptEnumStorageProviders(&dwCount, &pProviderList, 0);
+	if (lRet != ERROR_SUCCESS)
+	{
+		THROW_JS_ERROR(env, "Error enumerating CNG providers", "cngEnumerateProviders", HH_ENUM_PROV_ERROR, lRet);
+		return;
+	}
+	list.resize(dwCount);
+	for (DWORD i = 0; i < dwCount; i++)
+	{
+		std::wstring provName(pProviderList[i].pszName);
+		list.push_back(provName);
+	}
+	NCryptFreeBuffer(pProviderList);
+}
+void capiEnumerateProviders(const Napi::Env env, const DWORD dwProvType, std::vector<std::string>& list)
 {
 	DWORD cbName, dwType, dwIndex = 0;
 	while (CryptEnumProvidersA(dwIndex, NULL, 0, &dwType, NULL, &cbName))
@@ -49,44 +103,17 @@ void capiEnumerateProviders(const Napi::Env env, const DWORD dwProvType, std::ve
 				LocalFree(pszName);
 				return;
 			}
-			out.push_back(pszName);
+			list.push_back(pszName);
 			LocalFree(pszName);
 		}
 		dwIndex++;
 	}
 	DWORD dwError = GetLastError();
-	if (dwError != ERROR_NO_MORE_ITEMS) THROW_JS_ERROR(env, "Error enumerating legacy providers", "capiEnumerateProviders", HH_ENUM_PROV_ERROR, dwError);
-}
-void cngEnumerateProviders(const Napi::Env env, std::vector<std::string>& out)
-{
-	DWORD dwCount = 0, i = 0;
-	NCryptProviderName *pProviderList = NULL;
-	bool bOK = true;
-	size_t ulLen;
-	CHAR* pszProvider;
-	SECURITY_STATUS lRet = NCryptEnumStorageProviders(&dwCount, &pProviderList, 0);
-	if (lRet != ERROR_SUCCESS)
-	{
-		THROW_JS_ERROR(env, "Error enumerating CNG providers", "cngEnumerateProviders", HH_ENUM_PROV_ERROR, lRet);
-		return;
-	}
-	while (bOK && i < dwCount)
-	{
-		ulLen = wcstombs(NULL, pProviderList[i].pszName, 0);
-		pszProvider = (CHAR*) LocalAlloc(LMEM_ZEROINIT, ulLen + 1);
-		if ((bOK = pszProvider ? true : false))
-		{
-			wcstombs(pszProvider, pProviderList[i].pszName, ulLen + 1);
-			out.push_back(pszProvider);
-			LocalFree(pszProvider);
-		}
-		i++;
-	}
-	NCryptFreeBuffer(pProviderList);
-	if (!bOK) THROW_JS_ERROR(env, "Out of memory", "cngEnumerateProviders", HH_OUT_OF_MEM_ERROR);
+	if (dwError != ERROR_NO_MORE_ITEMS)
+		THROW_JS_ERROR(env, "Error enumerating legacy providers", "capiEnumerateProviders", HH_ENUM_PROV_ERROR, dwError);
 }
 
-Napi::Value capiGenerateKeyPair(const Napi::Env env, const std::string provider, const DWORD dwType, const DWORD ulKeyLen, KeyHandler& handler, int* hHandle)
+Napi::Value capiGenerateKeyPair(const Napi::Env& env, std::string& provider, const DWORD dwType, const DWORD ulKeyLen, std::string& keyContainer)
 {
 	BOOL bSuccess = FALSE;
 	int i = 0;
@@ -169,18 +196,16 @@ Napi::Value capiGenerateKeyPair(const Napi::Env env, const std::string provider,
 		THROW_JS_ERROR(env, "Public key encoding failure", "capiGenerateKeyPair", HH_PUBKEY_ENCODING_ERROR, dwError);
 		return env.Null();
 	}
-	
-	std::string container(szContainer);
-	*hHandle = handler.AddKey(hKey, container, dwType, provider);
-	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded);
 
+	keyContainer.assign(szContainer);
+	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded);
 	LocalFree(pbEncoded);
 	LocalFree(pInfo);
+	CryptDestroyKey(hKey);
 	CryptReleaseContext(hProv, 0);
 	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
 }
-
-Napi::Value cngGenerateKeyPair(const Napi::Env env, const std::wstring& provider, const DWORD ulKeyLen, KeyHandler& handler, int* hHandle)
+Napi::Value cngGenerateKeyPair(const Napi::Env& env, const std::wstring& provider, const DWORD ulKeyLen, std::wstring& keyName)
 {
 	NCRYPT_PROV_HANDLE hProv;
 	SECURITY_STATUS stat = NCryptOpenStorageProvider(&hProv, provider.c_str(), 0);
@@ -211,11 +236,11 @@ Napi::Value cngGenerateKeyPair(const Napi::Env env, const std::wstring& provider
 	NCRYPT_UI_POLICY pPolicy = { 1, NCRYPT_UI_PROTECT_KEY_FLAG | NCRYPT_UI_FORCE_HIGH_PROTECTION_FLAG, NULL, NULL, NULL };
 	if
 	(
-		(stat = NCryptSetProperty(hKey, NCRYPT_EXPORT_POLICY_PROPERTY, (BYTE*) &dwExport, sizeof(DWORD), NCRYPT_PERSIST_FLAG)) != ERROR_SUCCESS ||
-		(stat = NCryptSetProperty(hKey, NCRYPT_KEY_USAGE_PROPERTY, (BYTE*) &dwKeyUsage, sizeof(DWORD), NCRYPT_PERSIST_FLAG)) != ERROR_SUCCESS ||
-		(stat = NCryptSetProperty(hKey, NCRYPT_LENGTH_PROPERTY, (BYTE*) &ulKeyLen, sizeof(DWORD), NCRYPT_PERSIST_FLAG)) != ERROR_SUCCESS ||
-		(stat = NCryptSetProperty(hKey, NCRYPT_UI_POLICY_PROPERTY, (BYTE*) &pPolicy, sizeof(NCRYPT_UI_POLICY), NCRYPT_PERSIST_FLAG)) != ERROR_SUCCESS ||
-		(stat = NCryptFinalizeKey(hKey, NCRYPT_WRITE_KEY_TO_LEGACY_STORE_FLAG)) != ERROR_SUCCESS
+		(stat = NCryptSetProperty(hKey, NCRYPT_EXPORT_POLICY_PROPERTY, (BYTE*)&dwExport, sizeof(DWORD), NCRYPT_PERSIST_FLAG)) != ERROR_SUCCESS ||
+		(stat = NCryptSetProperty(hKey, NCRYPT_KEY_USAGE_PROPERTY, (BYTE*)&dwKeyUsage, sizeof(DWORD), NCRYPT_PERSIST_FLAG)) != ERROR_SUCCESS ||
+		(stat = NCryptSetProperty(hKey, NCRYPT_LENGTH_PROPERTY, (BYTE*)&ulKeyLen, sizeof(DWORD), NCRYPT_PERSIST_FLAG)) != ERROR_SUCCESS ||
+		(stat = NCryptSetProperty(hKey, NCRYPT_UI_POLICY_PROPERTY, (BYTE*)&pPolicy, sizeof(NCRYPT_UI_POLICY), NCRYPT_PERSIST_FLAG)) != ERROR_SUCCESS ||
+		(stat = NCryptFinalizeKey(hKey, 0)) != ERROR_SUCCESS
 	)
 	{
 		NCryptDeleteKey(hKey, 0);
@@ -267,120 +292,266 @@ Napi::Value cngGenerateKeyPair(const Napi::Env env, const std::wstring& provider
 		return env.Null();
 	}
 
-	std::wstring temp(szName);
-	std::string keyName(temp.cbegin(), temp.cend());
-	std::string provName(provider.cbegin(), provider.cend());
-	*hHandle = handler.AddKey(hKey, keyName, 0, provName);
+	keyName.assign(szName);
 	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded);
+
 	LocalFree(pbEncoded);
 	LocalFree(pInfo);
+	NCryptFreeObject(hKey);
 	NCryptFreeObject(hProv);
 	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
+}
+
+void cngSign(const Napi::Env env, const NCRYPT_KEY_HANDLE hKey, const uint32_t mechanism, BYTE* pbData, DWORD cbData, std::vector<uint8_t>& signature)
+{
+	BCRYPT_PKCS1_PADDING_INFO paddingInfo = { NULL };
+	switch (mechanism)
+	{
+	case CKM_SHA1_RSA_PKCS:
+		paddingInfo.pszAlgId = NCRYPT_SHA1_ALGORITHM;
+		break;
+	case CKM_SHA256_RSA_PKCS:
+		paddingInfo.pszAlgId = NCRYPT_SHA256_ALGORITHM;
+		break;
+	case CKM_SHA384_RSA_PKCS:
+		paddingInfo.pszAlgId = NCRYPT_SHA384_ALGORITHM;
+		break;
+	case CKM_SHA512_RSA_PKCS:
+		paddingInfo.pszAlgId = NCRYPT_SHA512_ALGORITHM;
+		break;
+	default:
+		THROW_JS_ERROR(env, "Unsupported signing algorithm", "cngSign", HH_UNSUPPORTED_MECHANISM_ERROR);
+		return;
+	}
+
+	DWORD cbResult;
+	BYTE* bSignature;
+	SECURITY_STATUS stat = NCryptSignHash(hKey, &paddingInfo, pbData, cbData, NULL, 0, &cbResult, NCRYPT_PAD_PKCS1_FLAG);
+	if (stat != ERROR_SUCCESS)
+	{
+		THROW_JS_ERROR(env, "Could not initialize hash signature", "cngSign", HH_CNG_SIGN_HASH_ERROR, stat);
+		return;
+	}
+	bSignature = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbResult);
+	if (!bSignature)
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "cngSign", HH_OUT_OF_MEM_ERROR, GetLastError());
+		return;
+	}
+	stat = NCryptSignHash(hKey, &paddingInfo, pbData, cbData, bSignature, cbResult, &cbResult, NCRYPT_PAD_PKCS1_FLAG);
+	if (stat == ERROR_SUCCESS)
+	{
+		signature.resize(cbResult);
+		for (DWORD i = 0; i < cbResult; i++) signature[i] = bSignature[i];
+	}
+	else THROW_JS_ERROR(env, "Could not sign hash", "cngSign", HH_CNG_SIGN_HASH_ERROR, stat);
+	LocalFree(bSignature);
+}
+void cngEnrollSign(const Napi::Env env, const std::wstring& provider, const std::wstring& keyName, const uint32_t mechanism, BYTE* pbData, DWORD cbData, std::vector<uint8_t>& signature)
+{
+	NCRYPT_PROV_HANDLE hProv;
+	NCRYPT_KEY_HANDLE hKey;
+	SECURITY_STATUS stat = NCryptOpenStorageProvider(&hProv, provider.c_str(), 0);
+	if (stat != ERROR_SUCCESS)
+	{
+		THROW_JS_ERROR(env, "Could not open CNG provider", "cngEnrollSign", HH_CNG_PROVIDER_ERROR, stat);
+		return;
+	}
+	stat = NCryptOpenKey(hProv, &hKey, keyName.c_str(), AT_SIGNATURE, 0);
+	if (stat != ERROR_SUCCESS)
+	{
+		NCryptFreeObject(hProv);
+		THROW_JS_ERROR(env, "Could not open generated CNG private key", "cngEnrollSign", HH_CNG_OPEN_KEY_ERROR, stat);
+		return;
+	}
+	cngSign(env, hKey, mechanism, pbData, cbData, signature);
+	NCryptFreeObject(hKey);
+	NCryptFreeObject(hProv);
+}
+void capiSign(const Napi::Env env, const HCRYPTPROV hProv, const uint32_t mechanism, BYTE* pbData, std::vector<uint8_t>& signature)
+{
+	ALG_ID algID;
+	switch (mechanism)
+	{
+	case CKM_SHA1_RSA_PKCS:
+		algID = CALG_SHA1;
+		break;
+	case CKM_SHA256_RSA_PKCS:
+		algID = CALG_SHA_256;
+		break;
+	case CKM_SHA384_RSA_PKCS:
+		algID = CALG_SHA_384;
+		break;
+	case CKM_SHA512_RSA_PKCS:
+		algID = CALG_SHA_512;
+		break;
+	default:
+		THROW_JS_ERROR(env, "Unsupported signing algorithm", "capiSign", HH_UNSUPPORTED_MECHANISM_ERROR);
+		return;
+	}
+
+	HCRYPTHASH hHash;
+	BOOL ret = CryptCreateHash(hProv, algID, NULL, 0, &hHash);
+	if (!ret)
+	{
+		THROW_JS_ERROR(env, "Could not create legacy hash object", "capiSign", HH_CAPI_CRETE_HASH_ERROR, GetLastError());
+		return;
+	}
+	ret = CryptSetHashParam(hHash, HP_HASHVAL, pbData, 0);
+	if (!ret)
+	{
+		THROW_JS_ERROR(env, "Could not set legacy hash object", "capiSign", HH_CAPI_SET_HASH_ERROR, GetLastError());
+		CryptDestroyHash(hHash);
+		return;
+	}
+	BYTE* bSignature;
+	DWORD cbResult;
+	ret = CryptSignHash(hHash, AT_SIGNATURE, NULL, 0, NULL, &cbResult);
+	if (!ret)
+	{
+		THROW_JS_ERROR(env, "Could not initialize legacy hash signature", "capiSign", HH_CAPI_SIGN_HASH_ERROR, GetLastError());
+		CryptDestroyHash(hHash);
+		return;
+	}
+	bSignature = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbResult);
+	if (!bSignature)
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "capiSign", HH_OUT_OF_MEM_ERROR, GetLastError());
+		CryptDestroyHash(hHash);
+		return;
+	}
+	ret = CryptSignHash(hHash, AT_SIGNATURE, NULL, 0, bSignature, &cbResult);
+	if (ret)
+	{
+		signature.resize(cbResult);
+		for (DWORD i = 0; i < cbResult; i++) signature[i] = bSignature[i];
+	}
+	else THROW_JS_ERROR(env, "Could not sign legacy hash", "capiSign", HH_CAPI_SIGN_HASH_ERROR, GetLastError());
+	LocalFree(bSignature);
+	CryptDestroyHash(hHash);
+}
+void capiEnrollSign(const Napi::Env env, const std::string& provider, const DWORD dwProvType, const std::string& keyContainer, const uint32_t mechanism, BYTE* pbData, std::vector<uint8_t>& signature)
+{
+	HCRYPTPROV hProv;
+	BOOL ret = CryptAcquireContextA(&hProv, keyContainer.c_str(), provider.c_str(), dwProvType, 0);
+	DWORD dwError;
+	if (!ret)
+	{
+		dwError = GetLastError();
+		THROW_JS_ERROR(env, "Could not open legacy private key", "capiEnrollSign", HH_CAPI_OPEN_KEY_ERROR, GetLastError());
+		return;
+	}
+	capiSign(env, hProv, mechanism, pbData, signature);
+	CryptReleaseContext(hProv, 0);
 }
 
 
 // * * * * * * * * * * * * * * *
 // Key/Certificates wrapper
 // * * * * * * * * * * * * * * *
-KeyWrap::KeyWrap(const ULONG_PTR hKey, const std::string& container, const DWORD dwType, const std::string& provider)
+KeyWrap::KeyWrap(const std::string& provider, const DWORD dwType, const std::string& container)
 {
-	this->isKey = true;
-	this->hKey = hKey;
+	this->isEnroll = true;
+	this->provider.dwProvType = dwType;
+	this->provider.name.assign(provider);
 	this->keyName.assign(container);
-	this->dwType = dwType;
-	this->provider.assign(provider);
+}
+KeyWrap::KeyWrap(const char* szProvider, const DWORD dwType, const char* szContainer)
+{
+	this->isEnroll = true;
+	this->provider.dwProvType = dwType;
+	this->provider.name.assign(szProvider);
+	this->keyName.assign(szContainer);
 }
 KeyWrap::KeyWrap(const std::string& subject, const std::string& issuer, const std::string& serial)
 {
-	this->isKey = false;
-	this->hKey = NULL;
+	this->isEnroll = false;
 	this->subject.assign(subject);
 	this->issuer.assign(issuer);
 	this->serial.assign(serial);
 }
 KeyWrap::KeyWrap(const char* subject, const char* issuer, const char* serial)
 {
-	this->isKey = false;
-	this->hKey = NULL;
+	this->isEnroll = false;
 	this->subject.assign(subject);
 	this->issuer.assign(issuer);
 	this->serial.assign(serial);
 }
-KeyWrap::~KeyWrap()
-{
-	if(this->isKey && this->hKey)
-	{
-		if (this->dwType != 0) CryptDestroyKey(this->hKey);
-		else NCryptFreeObject(this->hKey);
-	}
-}
+
 KeyHandler::KeyHandler()
 {
-	this->__handlers = 0;
+	this->handlers = 0;
 }
 KeyHandler::~KeyHandler()
 {
-	for (std::map<int, KeyWrap*>::iterator it = this->__keys.begin(); it != this->__keys.end(); ++it) delete it->second;
+	for (std::map<int, KeyWrap*>::iterator it = this->keys.begin(); it != this->keys.end(); ++it) delete it->second;
 }
-int KeyHandler::AddKey(const ULONG_PTR hKey, const std::string& keyName, const DWORD dwType, const std::string& provider)
+int KeyHandler::AddKey(const std::string& provider, const DWORD dwType, const std::string& keyName)
 {
-	KeyWrap* key = new KeyWrap(hKey, keyName, dwType, provider);
-	int hHandle = ++this->__handlers;
-	this->__keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
+	KeyWrap* key = new KeyWrap(provider, dwType, keyName);
+	int hHandle = ++this->handlers;
+	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
+	return hHandle;
+}
+int KeyHandler::AddKey(const char* szProvider, const DWORD dwType, const char* szContainer)
+{
+	KeyWrap* key = new KeyWrap(szProvider, dwType, szContainer);
+	int hHandle = ++this->handlers;
+	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
 	return hHandle;
 }
 int KeyHandler::AddKey(const std::string& subject, const std::string& issuer, const std::string& serial)
 {
 	KeyWrap* key = new KeyWrap(subject, issuer, serial);
-	int hHandle = ++this->__handlers;
-	this->__keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
+	int hHandle = ++this->handlers;
+	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
 	return hHandle;
 }
 int KeyHandler::AddKey(const char* subject, const char* issuer, const char* serial)
 {
 	KeyWrap* key = new KeyWrap(subject, issuer, serial);
-	int hHandle = ++this->__handlers;
-	this->__keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
+	int hHandle = ++this->handlers;
+	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
 	return hHandle;
 }
 void KeyHandler::ReleaseKey(const int hHandle)
 {
-	std::map<int, KeyWrap*>::iterator it = this->__keys.find(hHandle);
-	if (it != this->__keys.end())
+	std::map<int, KeyWrap*>::iterator it = this->keys.find(hHandle);
+	if (it != this->keys.end())
 	{
 		delete it->second;
-		this->__keys.erase(hHandle);
+		this->keys.erase(hHandle);
 	}
 }
-void KeyHandler::DeleteKey(const int hHandle)
+void KeyHandler::DeleteKey(const Napi::Env& env, const int hHandle)
 {
-	std::map<int, KeyWrap*>::iterator it = this->__keys.find(hHandle);
-	if (it != this->__keys.end())
+	std::map<int, KeyWrap*>::iterator it = this->keys.find(hHandle);
+	if (it != this->keys.end())
 	{
-		if (it->second->isKey)
+		if (it->second->isEnroll)
 		{
-			if (it->second->dwType != 0)
+			if (it->second->provider.dwProvType == 0)
 			{
-				HCRYPTPROV hProv;
-				CryptAcquireContextA(&hProv, it->second->keyName.c_str(), it->second->provider.c_str(), it->second->dwType, CRYPT_DELETEKEYSET);
+				std::wstring provider(it->second->provider.name.cbegin(), it->second->provider.name.cend());
+				std::wstring keyName(it->second->keyName.cbegin(), it->second->keyName.cend());
+				cngDeleteKey(env, provider, keyName);
 			}
-			else NCryptDeleteKey(it->second->hKey, 0);
-			it->second->hKey = NULL;
+			else capiDeleteKey(env, it->second->provider.name, it->second->provider.dwProvType, it->second->keyName);
 		}
 		delete it->second;
-		this->__keys.erase(hHandle);
+		this->keys.erase(hHandle);
 	}
 }
 KeyWrap* KeyHandler::GetKey(const int hHandle)
 {
 	KeyWrap* ret = NULL;
-	std::map<int, KeyWrap*>::iterator it = this->__keys.find(hHandle);
-	if (it != this->__keys.end()) ret = it->second;
+	std::map<int, KeyWrap*>::iterator it = this->keys.find(hHandle);
+	if (it != this->keys.end()) ret = it->second;
 	return ret;
 }
 std::map<int, KeyWrap*>& KeyHandler::GetHandlers()
 {
-	return this->__keys;
+	return this->keys;
 }
 
 
@@ -392,28 +563,70 @@ Hamahiri::Hamahiri(const Napi::CallbackInfo& info) : ObjectWrap(info)
 	Napi::Env env = info.Env();
 	// TODO: What else?
 }
+void Hamahiri::enumProviders(const Napi::Env& env)
+{
+	std::vector<Provider> provs;
+	std::vector<std::wstring> cng;
+	cngEnumerateProviders(env, cng);
+	if (env.IsExceptionPending()) return;
+	for (size_t i = 0; i < cng.size(); i++)
+	{
+		std::string provName(cng.at(i).cbegin(), cng.at(i).cend());
+		Provider prov;
+		prov.dwProvType = 0;
+		prov.name.assign(provName);
+		provs.push_back(prov);
+	}
+
+	std::vector<std::string> legacy;
+	capiEnumerateProviders(env, PROV_RSA_FULL, legacy);
+	if (env.IsExceptionPending()) return;
+	for (size_t i = 0; i < legacy.size(); i++)
+	{
+		Provider prov;
+		prov.dwProvType = PROV_RSA_FULL;
+		prov.name.assign(legacy.at(i));
+		provs.push_back(prov);
+	}
+
+	legacy.clear();
+	capiEnumerateProviders(env, PROV_RSA_AES, legacy);
+	if (env.IsExceptionPending()) return;
+	for (size_t i = 0; i < legacy.size(); i++)
+	{
+		Provider prov;
+		prov.dwProvType = PROV_RSA_AES;
+		prov.name.assign(legacy.at(i));
+		provs.push_back(prov);
+	}
+
+	this->providers.clear();
+	for (size_t i = 0; i < provs.size(); i++) if (!provs.at(i).name.empty()) this->providers.push_back(provs.at(i));
+}
 Napi::Value Hamahiri::EnumerateDevices(const Napi::CallbackInfo& info)
 {
 	Napi::Env env = info.Env();
-	this->__rsaProviders.clear();
-	this->__aesProviders.clear();
-	this->__CNGProviders.clear();
-	capiEnumerateProviders(env, PROV_RSA_FULL, this->__rsaProviders);
+	this->enumProviders(env);
 	if (env.IsExceptionPending()) return env.Null();
-	capiEnumerateProviders(env, PROV_RSA_AES, this->__aesProviders);
-	if (env.IsExceptionPending()) return env.Null();
-	cngEnumerateProviders(env, this->__CNGProviders);
-	if (env.IsExceptionPending()) return env.Null();
-	Napi::Array ret = Napi::Array::New(env, this->__rsaProviders.size() + this->__aesProviders.size() + this->__CNGProviders.size());
-	size_t i = 0, j = 0;
-	while (i < this->__rsaProviders.size()) ret[j++] = Napi::String::New(env, this->__rsaProviders.at(i++).c_str());
-	i = 0;
-	while (i < this->__aesProviders.size()) ret[j++] = Napi::String::New(env, this->__aesProviders.at(i++).c_str());
-	i = 0;
-	while (i < this->__CNGProviders.size()) ret[j++] = Napi::String::New(env, this->__CNGProviders.at(i++).c_str());
+	Napi::Array ret = Napi::Array::New(env, this->providers.size());
+	for (size_t i = 0; i < this->providers.size(); i++) ret[i] = Napi::String::New(env, this->providers.at(i).name.c_str());
 	return ret;
 }
 
+Napi::Value convert(const Napi::Env& env, const std::vector<uint8_t>& from)
+{
+	DWORD cbEncoded = from.size();
+	BYTE* pbEncoded = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbEncoded);
+	if (!pbEncoded)
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "Hamahiri::convert", HH_OUT_OF_MEM_ERROR, GetLastError());
+		return env.Null();
+	}
+	for (DWORD i = 0; i < cbEncoded; i++) pbEncoded[i] = from.at(i);
+	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded);
+	LocalFree(pbEncoded);
+	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
+}
 Napi::Value Hamahiri::GenerateKeyPair(const Napi::CallbackInfo& info)
 {
 	Napi::Env env = info.Env();
@@ -432,33 +645,15 @@ Napi::Value Hamahiri::GenerateKeyPair(const Napi::CallbackInfo& info)
 		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument keySize required"), "generateKeyPair", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
-
-	if (this->__rsaProviders.size() == 0 && this->__aesProviders.size() == 0 && this->__CNGProviders.size() == 0)
-	{
-		capiEnumerateProviders(env, PROV_RSA_FULL, this->__rsaProviders);
-		if (env.IsExceptionPending()) return env.Null();
-		capiEnumerateProviders(env, PROV_RSA_AES, this->__aesProviders);
-		if (env.IsExceptionPending()) return env.Null();
-		cngEnumerateProviders(env, this->__CNGProviders);
-		if (env.IsExceptionPending()) return env.Null();
-	}
+	if (this->providers.size() == 0) this->enumProviders(env);
 	std::string provider = info[0].As<Napi::String>().Utf8Value();
-	bool bLegacy = true, bFound = false;
-	DWORD dwType = PROV_RSA_FULL;
 	size_t i = 0;
-	while (!bFound && i < this->__rsaProviders.size()) bFound = this->__rsaProviders.at(i++).compare(provider) == 0;
-	if (!bFound)
+	DWORD dwProvType = 0;
+	bool bFound = false;
+	while (!bFound && i < this->providers.size())
 	{
-		i = 0;
-		dwType = PROV_RSA_AES;
-		while (!bFound && i < this->__aesProviders.size()) bFound = this->__aesProviders.at(i++).compare(provider) == 0;
-		if (!bFound)
-		{
-			bLegacy = false;
-			dwType = 0;
-			i = 0;
-			while (!bFound && i < this->__CNGProviders.size()) bFound = this->__CNGProviders.at(i++).compare(provider) == 0;
-		}
+		if ((bFound = this->providers.at(i).name.compare(provider) == 0)) dwProvType = this->providers.at(i).dwProvType;
+		i++;
 	}
 	if (!bFound)
 	{
@@ -467,18 +662,27 @@ Napi::Value Hamahiri::GenerateKeyPair(const Napi::CallbackInfo& info)
 	}
 
 	int hHandle = 0;
-	Napi::Value pubKey;
-	if (bLegacy) pubKey = capiGenerateKeyPair(env, provider, dwType, info[1].As<Napi::Number>().Int32Value(), this->__handler, &hHandle);
+	std::string keyContainer;
+	Napi::Value retPubKey;
+	if (dwProvType != 0) 
+	{
+		retPubKey = capiGenerateKeyPair(env, provider, dwProvType,  info[1].As<Napi::Number>().Int32Value(), keyContainer);
+		if (env.IsExceptionPending()) return env.Null();
+	}
 	else
 	{
 		std::wstring cngProv(provider.cbegin(), provider.cend());
-		pubKey = cngGenerateKeyPair(env, cngProv, info[1].As<Napi::Number>().Int32Value(), this->__handler, &hHandle);
+		std::wstring keyName;
+		retPubKey = cngGenerateKeyPair(env, cngProv, info[1].As<Napi::Number>().Int32Value(), keyName);
+		if (env.IsExceptionPending()) return env.Null();
+		keyContainer.assign(keyName.cbegin(), keyName.cend());
 	}
 	if (env.IsExceptionPending()) return env.Null();
+	hHandle = this->handlers.AddKey(provider, dwProvType, keyContainer);
 
 	Napi::Object ret = Napi::Object::New(env);
 	ret.Set("privKey", hHandle);
-	ret.Set("pubKey", pubKey.As<Napi::TypedArrayOf<uint8_t>>());
+	ret.Set("pubKey", retPubKey.As<Napi::TypedArrayOf<uint8_t>>());
 	return ret;
 }
 
@@ -495,7 +699,7 @@ Napi::Value Hamahiri::ReleaseKeyHandle(const Napi::CallbackInfo& info)
 		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument handle required"), "releaseKeyHandle", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
-	this->__handler.ReleaseKey(info[0].As<Napi::Number>().Int32Value());
+	this->handlers.ReleaseKey(info[0].As<Napi::Number>().Int32Value());
 	return Napi::Boolean::New(env, true);
 }
 
@@ -512,7 +716,7 @@ Napi::Value Hamahiri::DeleteKeyPair(const Napi::CallbackInfo& info)
 		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument handle required"), "releaseKeyHandle", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
-	this->__handler.DeleteKey(info[0].As<Napi::Number>().Int32Value());
+	this->handlers.DeleteKey(env, info[0].As<Napi::Number>().Int32Value());
 	return Napi::Boolean::New(env, true);
 }
 
@@ -539,40 +743,34 @@ Napi::Value Hamahiri::Sign(const Napi::CallbackInfo& info)
 		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument key must be a number"), "sign", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
-	switch (info[1].As<Napi::Number>().Uint32Value())
-	{
-	case CKM_SHA1_RSA_PKCS:
-	case CKM_SHA256_RSA_PKCS:
-	case CKM_SHA384_RSA_PKCS:
-	case CKM_SHA512_RSA_PKCS:
-		break;
-	default:
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Unsupported signing algorithm"), "sign", HH_UNSUPPORTED_MECHANISM_ERROR);
-		return env.Null();
-	}
-	KeyWrap* wrapper = this->__handler.GetKey(info[2].As<Napi::Number>().Int32Value());
+	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
+	unsigned char* pbData = (unsigned char*) data.Data();
+	DWORD cbData = data.ByteLength();
+	uint32_t mechanism = info[1].As<Napi::Number>().Uint32Value();
+	KeyWrap* wrapper = this->handlers.GetKey(info[2].As<Napi::Number>().Int32Value());
 	if (!wrapper)
 	{
 		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Invaid signing key handle"), "sign", HH_INVALID_KEY_HANDLE);
 		return env.Null();
 	}
-	ULONG_PTR hKey;
-	if (wrapper->isKey) hKey = wrapper->hKey;
+
+	std::vector<uint8_t> signature;
+	if (wrapper->isEnroll)
+	{
+		if (wrapper->provider.dwProvType == 0)
+		{
+			std::wstring cngProv(wrapper->provider.name.cbegin(), wrapper->provider.name.cend());
+			std::wstring cngKey(wrapper->keyName.cbegin(), wrapper->keyName.cend());
+			cngEnrollSign(env, cngProv, cngKey, mechanism, pbData, cbData, signature);
+		}
+		else capiEnrollSign(env, wrapper->provider.name, wrapper->provider.dwProvType, wrapper->keyName, mechanism, pbData, signature);
+	}
 	else
 	{
-		// TODO: Get private key using the signer certificate
-		hKey = NULL;
+		// TODO:
 	}
-
-	// TODO: Sign hash with CryptoAPI
-	uint8_t signature[] = {
-		(uint8_t) 0x73, (uint8_t) 0x69, (uint8_t) 0x6d, (uint8_t) 0x75, (uint8_t) 0x6c, (uint8_t) 0x61, (uint8_t) 0xc3, (uint8_t) 0xa7,
-		(uint8_t) 0xc3, (uint8_t) 0xa3, (uint8_t) 0x6f, (uint8_t) 0x20, (uint8_t) 0x64, (uint8_t) 0x65, (uint8_t) 0x20, (uint8_t) 0x61,
-		(uint8_t) 0x73, (uint8_t) 0x73, (uint8_t) 0x69, (uint8_t) 0x6e, (uint8_t) 0x61, (uint8_t) 0x74, (uint8_t) 0x75, (uint8_t) 0x72,
-		(uint8_t) 0x61, (uint8_t) 0x20, (uint8_t) 0x64, (uint8_t) 0x69, (uint8_t) 0x67, (uint8_t) 0x69, (uint8_t) 0x74, (uint8_t) 0x61
-	};
-	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, signature, 32);
-	return Napi::TypedArrayOf<uint8_t>::New(env, 32, buffer, 0, napi_uint8_array);
+	if (env.IsExceptionPending()) return env.Null();
+	return convert(env, signature);
 }
 
 Napi::Value Hamahiri::InstallCertificate(const Napi::CallbackInfo& info)
@@ -626,13 +824,13 @@ Napi::Value Hamahiri::EnumerateCertificates(const Napi::CallbackInfo& info)
 	Napi::Env env = info.Env();
 
 	// TODO: Enumerate signing certificates with CryptoAPI
-	this->__handler.AddKey("CN = Francisvaldo Genevaldo das Torres 1601581365803", "CN = Common Name for All Cats End User CA, OU = PKI Ruler for All Cats, O = PKI Brazil, C = BR", "1A");
+	this->handlers.AddKey("CN = Francisvaldo Genevaldo das Torres 1601581365803", "CN = Common Name for All Cats End User CA, OU = PKI Ruler for All Cats, O = PKI Brazil, C = BR", "1A");
 
-	std::map<int, KeyWrap*> keys = this->__handler.GetHandlers();
+	std::map<int, KeyWrap*> keys = this->handlers.GetHandlers();
 	std::vector<Napi::Object> certs;
 	for (std::map<int, KeyWrap*>::iterator it = keys.begin(); it != keys.end(); ++it)
 	{
-		if (!it->second->isKey)
+		if (!it->second->isEnroll)
 		{
 			Napi::Object cert = Napi::Object::New(env);
 			cert.Set("subject", it->second->subject);

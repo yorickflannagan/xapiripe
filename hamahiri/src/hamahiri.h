@@ -3,43 +3,51 @@
 #include <napi.h>
 #include <string>
 #include <map>
+#include <vector>
 #include <windows.h>
+
+class Provider
+{
+public:
+	DWORD dwProvType;	// Legacy CSP type; 0 if provider is CNG
+	std::string name;	// Enroll provider if isEnroll
+};
 
 class KeyWrap
 {
 public:
-	boolean     isKey;		// Windows handle to private key
-	ULONG_PTR   hKey;		// Windows handle to private key if isKey; othwise NULL
-	std::string keyName;	// Windows key container or key name if isKey
-	DWORD       dwType;		// CSP type, if hKey is legacy; otherwise, 0;
-	std::string provider;	// Windows CSP, if hKey is a CNG key
+	boolean isEnroll;		// True if it wraps an enroll key
+	Provider provider;		// Cryptographic provider
+	std::string keyName;	// Windows key container or CNG key name if isEnroll
 
-	std::string subject;	// Signing certificate subject, if !isKey
-	std::string issuer;		// Signing certificate issuer, if !isKey
-	std::string serial;		// Signing certificate serial number, encoded as hexadecimal, if !isKeys
+	std::string subject;	// Signing certificate subject, if !isEnroll
+	std::string issuer;		// Signing certificate issuer, if !isEnroll
+	std::string serial;		// Signing certificate serial number, encoded as hexadecimal, if !isEnroll
 
-	KeyWrap(const ULONG_PTR, const std::string&, const DWORD, const std::string&);
+	KeyWrap(const std::string&, const DWORD, const std::string&);
+	KeyWrap(const char*, const DWORD, const char*);
 	KeyWrap(const std::string&, const std::string&, const std::string&);
 	KeyWrap(const char*, const char*, const char*);
-	~KeyWrap();
 };
+
 class KeyHandler
 {
 public:
 	KeyHandler();
 	~KeyHandler();
 
-	int AddKey(const ULONG_PTR, const std::string&, const DWORD, const std::string&);
+	int AddKey(const std::string&, const DWORD, const std::string&);
+	int AddKey(const char*, const DWORD, const char*);
 	int AddKey(const std::string&, const std::string&, const std::string&);
 	int AddKey(const char*, const char*, const char*);
 	void ReleaseKey(const int);
-	void DeleteKey(const int);
+	void DeleteKey(const Napi::Env&, const int);
 	KeyWrap* GetKey(const int);
 	std::map<int, KeyWrap*>& GetHandlers();
 
 private:
-	int __handlers;
-	std::map<int, KeyWrap*> __keys;
+	int handlers;
+	std::map<int, KeyWrap*> keys;
 };
 
 
@@ -61,10 +69,10 @@ public:
 	static Napi::Function GetClass(Napi::Env);
 
 private:
-	KeyHandler __handler;
-	std::vector<std::string> __rsaProviders;
-	std::vector<std::string> __aesProviders;
-	std::vector<std::string> __CNGProviders;
+	KeyHandler handlers;
+	std::vector<Provider> providers;
+
+	void enumProviders(const Napi::Env&);
 };
 
 // Supported signing algorithms
@@ -80,16 +88,24 @@ enum SignMechanism
 #define HH_KEY_NAME							L"Hamahiri RSA key "
 
 // Error codes
-#define HH_SUCCESS							0x0000000000000000L
-#define HH_ARGUMENT_ERROR					0x0000000000000001L
-#define HH_UNSUPPORTED_MECHANISM_ERROR		0x0000000000000002L
-#define HH_INVALID_KEY_HANDLE				0x0000000000000003L
-#define HH_OUT_OF_MEM_ERROR					0x0000000000000004L
-#define HH_ENUM_PROV_ERROR					0x0000000000000005L
-#define HH_KEY_CONTAINER_ERROR				0x0000000000000006L
-#define HH_KEY_PAIR_GEN_ERROR				0x0000000000000007L
-#define HH_PUBKEY_EXPORT_ERROR				0x0000000000000008L
-#define HH_PUBKEY_ENCODING_ERROR			0x0000000000000009L
-#define HH_CNG_PROVIDER_ERROR				0x000000000000000AL
-#define HH_CNG_CREATE_KEY_ERROR				0x000000000000000BL
-#define HH_CNG_FINALIZE_KEY_ERROR			0x000000000000000CL
+#define HH_SUCCESS							0L
+#define HH_ARGUMENT_ERROR					1L
+#define HH_UNSUPPORTED_MECHANISM_ERROR		2L
+#define HH_INVALID_KEY_HANDLE				3L
+#define HH_OUT_OF_MEM_ERROR					4L
+#define HH_ENUM_PROV_ERROR					5L
+#define HH_KEY_CONTAINER_ERROR				6L
+#define HH_KEY_PAIR_GEN_ERROR				7L
+#define HH_PUBKEY_EXPORT_ERROR				8L
+#define HH_PUBKEY_ENCODING_ERROR			9L
+#define HH_CNG_PROVIDER_ERROR				10L
+#define HH_CNG_CREATE_KEY_ERROR				11L
+#define HH_CNG_FINALIZE_KEY_ERROR			12L
+#define HH_CAPI_CRETE_HASH_ERROR			13L
+#define HH_CAPI_SET_HASH_ERROR				14L
+#define HH_CAPI_SIGN_HASH_ERROR				15L
+#define HH_CNG_SIGN_HASH_ERROR				16L
+#define HH_CNG_OPEN_KEY_ERROR				17L
+#define HH_CNG_DELETE_KEY_ERROR				18L
+#define HH_CAPI_DELETE_KEY_ERROR			19L
+#define HH_CAPI_OPEN_KEY_ERROR				20L
