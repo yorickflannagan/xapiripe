@@ -182,13 +182,10 @@ class EnrollTest
 		let hash = crypto.createHash('sha256');
 		hash.update(toBeSigned);
 		assert(this.enroll.sign, 'The expected Enroll.sign() method is undefined');
-		let signed = this.enroll.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, keyPair.privKey, { cn: cn });
+		let signed = this.enroll.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, keyPair.privKey);
 		assert(signed, 'Signature failure');
-		assert(typeof signed.isSignature != 'undefined' && typeof signed.data != 'undefined', 'Invalid fields in sign() returned object');
-		assert(typeof signed.isSignature == 'boolean', 'isSignature returned member must be a boolean');
-		assert(signed.data instanceof Uint8Array, 'data returned member must be a Uint8Array');
-		let request = signed.isSignature ? this.#makeCertificationRequest(certificateRequestInfo, signed.data) : signed.data;
-		return request;
+		assert(signed instanceof Uint8Array, 'Data returned member must be a Uint8Array');
+		return this.#makeCertificationRequest(certificateRequestInfo, signed);
 	}
 	checkSignLegacyRequest() {
 		LOG.write('Testing a certificate request signature with a legacy key...');

@@ -103,11 +103,10 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @param   { Uint8Array    } hash      Hash do conteúdo. Deve ter o tamanho apropriado às chaves RSA e ao algoritmo especificado.
 	 * @param   { SignMechanism } algorithm Constante PKCS #11 do algoritmo de assinatura
 	 * @param   { Number        } key       Handle para a chave privada de assinatura, obtido previamente
-	 * @param   { Object        } param     Parâmetro opcional: { "cn": <value> }, onde value é o CN do titular. Requerido para providers legados.
 	 * @returns { Uint8Array } Buffer assinado.
 	 */
-	 sign(hash, algorithm, key, param) {
-		return this._addon.sign(hash, algorithm, key, param);
+	 sign(hash, algorithm, key) {
+		return this._addon.sign(hash, algorithm, key);
 	}
 
 	/**
