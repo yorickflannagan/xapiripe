@@ -30,6 +30,15 @@ void THROW_JS_ERROR(Napi::Env env, char* message, char* method, unsigned long er
 
 
 // * * * * * * * * * * * * * * *
+// Javascript ArrayBuffer free
+// * * * * * * * * * * * * * * *
+void cleanupHook(Napi::Env env, void* arg)
+{
+	LocalFree(arg);
+}
+
+
+// * * * * * * * * * * * * * * *
 // Windows native functions
 // * * * * * * * * * * * * * * *
 void cngDeleteKey(const Napi::Env env, const std::wstring& provider, const std::wstring& keyName)
@@ -113,98 +122,6 @@ void capiEnumerateProviders(const Napi::Env env, const DWORD dwProvType, std::ve
 		THROW_JS_ERROR(env, "Error enumerating legacy providers", "capiEnumerateProviders", HH_ENUM_PROV_ERROR, dwError);
 }
 
-Napi::Value capiGenerateKeyPair(const Napi::Env& env, std::string& provider, const DWORD dwType, const DWORD ulKeyLen, std::string& keyContainer)
-{
-	BOOL bSuccess = FALSE;
-	int i = 0;
-	CHAR szNumber[32], szContainer[1024];
-	HCRYPTPROV hProv = NULL;
-	DWORD dwError;
-
-	while (!bSuccess)
-	{
-		_itoa(i++, szNumber, 10);
-		strcpy(szContainer, HH_KEY_CONTAINER);
-		strcat(szContainer, szNumber);
-		bSuccess = CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_NEWKEYSET);
-		if (!bSuccess)
-		{
-			dwError = GetLastError();
-			if (dwError != NTE_EXISTS)
-			{
-				THROW_JS_ERROR(env, "Windows key container creation failure", "capiGenerateKeyPair", HH_KEY_CONTAINER_ERROR, dwError);
-				return env.Null();
-			}
-		}
-	}
-
-	DWORD dwFlags = ((ulKeyLen << 16) | CRYPT_FORCE_KEY_PROTECTION_HIGH | CRYPT_USER_PROTECTED | CRYPT_EXPORTABLE);
-	HCRYPTKEY hKey = NULL;
-	bSuccess = CryptGenKey(hProv, AT_SIGNATURE, dwFlags, &hKey);
-	if (!bSuccess)
-	{
-		dwError = GetLastError();
-		CryptReleaseContext(hProv, 0);
-		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
-		THROW_JS_ERROR(env, "Key pair generation failure", "capiGenerateKeyPair", HH_KEY_PAIR_GEN_ERROR, dwError);
-		return env.Null();
-	}
-
-	DWORD cbInfo;
-	bSuccess = CryptExportPublicKeyInfo(hProv, AT_SIGNATURE, PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, NULL, &cbInfo);
-	if (!bSuccess)
-	{
-		dwError = GetLastError();
-		CryptDestroyKey(hKey);
-		CryptReleaseContext(hProv, 0);
-		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
-		THROW_JS_ERROR(env, "Public key export failure", "capiGenerateKeyPair", HH_PUBKEY_EXPORT_ERROR, dwError);
-		return env.Null();
-	}
-	CERT_PUBLIC_KEY_INFO* pInfo = NULL;
-	bSuccess = (pInfo = (CERT_PUBLIC_KEY_INFO*) LocalAlloc(LMEM_ZEROINIT, cbInfo)) ? TRUE : FALSE;
-	if (!bSuccess)
-	{
-		dwError = GetLastError();
-		CryptDestroyKey(hKey);
-		CryptReleaseContext(hProv, 0);
-		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
-		THROW_JS_ERROR(env, "Out of memory error", "capiGenerateKeyPair", HH_OUT_OF_MEM_ERROR, dwError);
-		return env.Null();
-	}
-	bSuccess = CryptExportPublicKeyInfo(hProv, AT_SIGNATURE, PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, pInfo, &cbInfo);
-	if (!bSuccess)
-	{
-		dwError = GetLastError();
-		LocalFree(pInfo);
-		CryptDestroyKey(hKey);
-		CryptReleaseContext(hProv, 0);
-		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
-		THROW_JS_ERROR(env, "Public key export failure", "capiGenerateKeyPair", HH_PUBKEY_EXPORT_ERROR, dwError);
-		return env.Null();
-	}
-	BYTE* pbEncoded;
-	DWORD cbEncoded;
-	bSuccess = CryptEncodeObjectEx(X509_ASN_ENCODING, X509_PUBLIC_KEY_INFO, pInfo, CRYPT_ENCODE_ALLOC_FLAG, NULL, &pbEncoded, &cbEncoded);
-	if (!bSuccess)
-	{
-		dwError = GetLastError();
-		LocalFree(pInfo);
-		CryptDestroyKey(hKey);
-		CryptReleaseContext(hProv, 0);
-		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
-		THROW_JS_ERROR(env, "Public key encoding failure", "capiGenerateKeyPair", HH_PUBKEY_ENCODING_ERROR, dwError);
-		return env.Null();
-	}
-
-	keyContainer.assign(szContainer);
-	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded);
-	LocalFree(pbEncoded);
-	LocalFree(pInfo);
-	CryptDestroyKey(hKey);
-	CryptReleaseContext(hProv, 0);
-	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
-}
 Napi::Value cngGenerateKeyPair(const Napi::Env& env, const std::wstring& provider, const DWORD ulKeyLen, std::wstring& keyName)
 {
 	NCRYPT_PROV_HANDLE hProv;
@@ -281,7 +198,7 @@ Napi::Value cngGenerateKeyPair(const Napi::Env& env, const std::wstring& provide
 	}
 	BYTE* pbEncoded;
 	DWORD cbEncoded;
-	bSuccess = CryptEncodeObjectEx(X509_ASN_ENCODING, X509_PUBLIC_KEY_INFO, pInfo, CRYPT_ENCODE_ALLOC_FLAG, NULL, &pbEncoded, &cbEncoded);
+	bSuccess = CryptEncodeObjectEx(PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, X509_PUBLIC_KEY_INFO, pInfo, CRYPT_ENCODE_ALLOC_FLAG, NULL, &pbEncoded, &cbEncoded);
 	if (!bSuccess)
 	{
 		dwError = GetLastError();
@@ -293,16 +210,105 @@ Napi::Value cngGenerateKeyPair(const Napi::Env& env, const std::wstring& provide
 	}
 
 	keyName.assign(szName);
-	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded);
-
-	LocalFree(pbEncoded);
+	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded, cleanupHook);
 	LocalFree(pInfo);
 	NCryptFreeObject(hKey);
 	NCryptFreeObject(hProv);
 	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
 }
+Napi::Value capiGenerateKeyPair(const Napi::Env& env, std::string& provider, const DWORD dwType, const DWORD ulKeyLen, std::string& keyContainer)
+{
+	BOOL bSuccess = FALSE;
+	int i = 0;
+	CHAR szNumber[32], szContainer[1024];
+	HCRYPTPROV hProv = NULL;
+	DWORD dwError;
 
-void cngSign(const Napi::Env env, const NCRYPT_KEY_HANDLE hKey, const uint32_t mechanism, BYTE* pbData, DWORD cbData, std::vector<uint8_t>& signature)
+	while (!bSuccess)
+	{
+		_itoa(i++, szNumber, 10);
+		strcpy(szContainer, HH_KEY_CONTAINER);
+		strcat(szContainer, szNumber);
+		bSuccess = CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_NEWKEYSET);
+		if (!bSuccess)
+		{
+			dwError = GetLastError();
+			if (dwError != NTE_EXISTS)
+			{
+				THROW_JS_ERROR(env, "Windows key container creation failure", "capiGenerateKeyPair", HH_KEY_CONTAINER_ERROR, dwError);
+				return env.Null();
+			}
+		}
+	}
+
+	DWORD dwFlags = ((ulKeyLen << 16) | CRYPT_FORCE_KEY_PROTECTION_HIGH | CRYPT_USER_PROTECTED | CRYPT_EXPORTABLE);
+	HCRYPTKEY hKey = NULL;
+	bSuccess = CryptGenKey(hProv, AT_SIGNATURE, dwFlags, &hKey);
+	if (!bSuccess)
+	{
+		dwError = GetLastError();
+		CryptReleaseContext(hProv, 0);
+		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
+		THROW_JS_ERROR(env, "Key pair generation failure", "capiGenerateKeyPair", HH_KEY_PAIR_GEN_ERROR, dwError);
+		return env.Null();
+	}
+
+	DWORD cbInfo;
+	bSuccess = CryptExportPublicKeyInfo(hProv, AT_SIGNATURE, PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, NULL, &cbInfo);
+	if (!bSuccess)
+	{
+		dwError = GetLastError();
+		CryptDestroyKey(hKey);
+		CryptReleaseContext(hProv, 0);
+		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
+		THROW_JS_ERROR(env, "Public key export failure", "capiGenerateKeyPair", HH_PUBKEY_EXPORT_ERROR, dwError);
+		return env.Null();
+	}
+	CERT_PUBLIC_KEY_INFO* pInfo = NULL;
+	bSuccess = (pInfo = (CERT_PUBLIC_KEY_INFO*) LocalAlloc(LMEM_ZEROINIT, cbInfo)) ? TRUE : FALSE;
+	if (!bSuccess)
+	{
+		dwError = GetLastError();
+		CryptDestroyKey(hKey);
+		CryptReleaseContext(hProv, 0);
+		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
+		THROW_JS_ERROR(env, "Out of memory error", "capiGenerateKeyPair", HH_OUT_OF_MEM_ERROR, dwError);
+		return env.Null();
+	}
+	bSuccess = CryptExportPublicKeyInfo(hProv, AT_SIGNATURE, PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, pInfo, &cbInfo);
+	if (!bSuccess)
+	{
+		dwError = GetLastError();
+		LocalFree(pInfo);
+		CryptDestroyKey(hKey);
+		CryptReleaseContext(hProv, 0);
+		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
+		THROW_JS_ERROR(env, "Public key export failure", "capiGenerateKeyPair", HH_PUBKEY_EXPORT_ERROR, dwError);
+		return env.Null();
+	}
+	BYTE* pbEncoded;
+	DWORD cbEncoded;
+	bSuccess = CryptEncodeObjectEx(PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, X509_PUBLIC_KEY_INFO, pInfo, CRYPT_ENCODE_ALLOC_FLAG, NULL, &pbEncoded, &cbEncoded);
+	if (!bSuccess)
+	{
+		dwError = GetLastError();
+		LocalFree(pInfo);
+		CryptDestroyKey(hKey);
+		CryptReleaseContext(hProv, 0);
+		CryptAcquireContextA(&hProv, szContainer, provider.c_str(), dwType, CRYPT_DELETEKEYSET);
+		THROW_JS_ERROR(env, "Public key encoding failure", "capiGenerateKeyPair", HH_PUBKEY_ENCODING_ERROR, dwError);
+		return env.Null();
+	}
+
+	keyContainer.assign(szContainer);
+	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded, cleanupHook);
+	LocalFree(pInfo);
+	CryptDestroyKey(hKey);
+	CryptReleaseContext(hProv, 0);
+	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
+}
+
+Napi::Value cngSign(const Napi::Env env, const NCRYPT_KEY_HANDLE hKey, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
 {
 	BCRYPT_PKCS1_PADDING_INFO paddingInfo = { NULL };
 	switch (mechanism)
@@ -321,33 +327,34 @@ void cngSign(const Napi::Env env, const NCRYPT_KEY_HANDLE hKey, const uint32_t m
 		break;
 	default:
 		THROW_JS_ERROR(env, "Unsupported signing algorithm", "cngSign", HH_UNSUPPORTED_MECHANISM_ERROR);
-		return;
+		return env.Null();
 	}
 
-	DWORD cbResult;
-	BYTE* bSignature;
-	SECURITY_STATUS stat = NCryptSignHash(hKey, &paddingInfo, pbData, cbData, NULL, 0, &cbResult, NCRYPT_PAD_PKCS1_FLAG);
+	DWORD cbSignature;
+	BYTE* pbSignature;
+	SECURITY_STATUS stat = NCryptSignHash(hKey, &paddingInfo, pbData, cbData, NULL, 0, &cbSignature, NCRYPT_PAD_PKCS1_FLAG);
 	if (stat != ERROR_SUCCESS)
 	{
 		THROW_JS_ERROR(env, "Could not initialize hash signature", "cngSign", HH_CNG_SIGN_HASH_ERROR, stat);
-		return;
+		return env.Null();
 	}
-	bSignature = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbResult);
-	if (!bSignature)
+	pbSignature = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbSignature);
+	if (!pbSignature)
 	{
 		THROW_JS_ERROR(env, "Out of memory error", "cngSign", HH_OUT_OF_MEM_ERROR, GetLastError());
-		return;
+		return env.Null();
 	}
-	stat = NCryptSignHash(hKey, &paddingInfo, pbData, cbData, bSignature, cbResult, &cbResult, NCRYPT_PAD_PKCS1_FLAG);
-	if (stat == ERROR_SUCCESS)
+	stat = NCryptSignHash(hKey, &paddingInfo, pbData, cbData, pbSignature, cbSignature, &cbSignature, NCRYPT_PAD_PKCS1_FLAG);
+	if (stat != ERROR_SUCCESS)
 	{
-		signature.resize(cbResult);
-		for (DWORD i = 0; i < cbResult; i++) signature[i] = bSignature[i];
+		LocalFree(pbSignature);
+		THROW_JS_ERROR(env, "Could not sign hash", "cngSign", HH_CNG_SIGN_HASH_ERROR, stat);
+		return env.Null();
 	}
-	else THROW_JS_ERROR(env, "Could not sign hash", "cngSign", HH_CNG_SIGN_HASH_ERROR, stat);
-	LocalFree(bSignature);
+	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbSignature, cbSignature, cleanupHook);
+	return Napi::TypedArrayOf<uint8_t>::New(env, cbSignature, buffer, 0, napi_uint8_array);
 }
-void cngEnrollSign(const Napi::Env env, const std::wstring& provider, const std::wstring& keyName, const uint32_t mechanism, BYTE* pbData, DWORD cbData, std::vector<uint8_t>& signature)
+Napi::Value cngEnrollSign(const Napi::Env env, const std::wstring& provider, const std::wstring& keyName, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
 {
 	NCRYPT_PROV_HANDLE hProv;
 	NCRYPT_KEY_HANDLE hKey;
@@ -355,20 +362,157 @@ void cngEnrollSign(const Napi::Env env, const std::wstring& provider, const std:
 	if (stat != ERROR_SUCCESS)
 	{
 		THROW_JS_ERROR(env, "Could not open CNG provider", "cngEnrollSign", HH_CNG_PROVIDER_ERROR, stat);
-		return;
+		return env.Null();
 	}
 	stat = NCryptOpenKey(hProv, &hKey, keyName.c_str(), AT_SIGNATURE, 0);
 	if (stat != ERROR_SUCCESS)
 	{
 		NCryptFreeObject(hProv);
 		THROW_JS_ERROR(env, "Could not open generated CNG private key", "cngEnrollSign", HH_CNG_OPEN_KEY_ERROR, stat);
-		return;
+		return env.Null();
 	}
-	cngSign(env, hKey, mechanism, pbData, cbData, signature);
+	Napi::Value ret = cngSign(env, hKey, mechanism, pbData, cbData);
 	NCryptFreeObject(hKey);
 	NCryptFreeObject(hProv);
+	return ret;
 }
-void capiSign(const Napi::Env env, const HCRYPTPROV hProv, const uint32_t mechanism, BYTE* pbData, std::vector<uint8_t>& signature)
+Napi::Value capiGenerateCSR(const Napi::Env env, const std::string& provider, const DWORD dwProvType, const std::string container, const uint32_t mechanism, const Napi::Object slot)
+{
+	LPSTR szAlgOID = szOID_RSA_SHA256RSA;
+	switch (mechanism)
+	{
+	case CKM_SHA1_RSA_PKCS:
+		szAlgOID = szOID_RSA_SHA1RSA;
+		break;
+	case CKM_SHA256_RSA_PKCS:
+		szAlgOID = szOID_RSA_SHA256RSA;
+		break;
+	case CKM_SHA384_RSA_PKCS:
+		szAlgOID = szOID_RSA_SHA384RSA;
+		break;
+	case CKM_SHA512_RSA_PKCS:
+		szAlgOID = szOID_RSA_SHA512RSA;
+		break;
+	default:
+		THROW_JS_ERROR(env, "Unsupported signing algorithm", "capiGenerateCSR", HH_UNSUPPORTED_MECHANISM_ERROR);
+		return env.Null();
+	}
+	if (!slot.Has("cn") || !slot.Get("cn").IsString())
+	{
+		THROW_JS_ERROR(env, "Argument param must include a String field named cn", "capiGenerateCSR", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	const char* szUserName = slot.Get("cn").As<Napi::String>().Utf8Value().c_str();
+
+	HCRYPTPROV hProv;
+	if (!CryptAcquireContextA(&hProv, container.c_str(), provider.c_str(), dwProvType, 0))
+	{
+		THROW_JS_ERROR(env, "Could not acquire context to private key", "capiGenerateCSR", HH_CAPI_OPEN_KEY_ERROR, GetLastError());
+		return env.Null();
+	}
+	CERT_PUBLIC_KEY_INFO* pInfo;
+	DWORD cbInfo;
+	if (!CryptExportPublicKeyInfoEx(hProv, AT_SIGNATURE, PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, szOID_RSA_RSA, 0, NULL, NULL, &cbInfo))
+	{
+		THROW_JS_ERROR(env, "Could not export subject public key info", "capiGenerateCSR", HH_PUBKEY_EXPORT_ERROR, GetLastError());
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+	}
+	if (!(pInfo = (CERT_PUBLIC_KEY_INFO*) LocalAlloc(LMEM_ZEROINIT, cbInfo)))
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "capiGenerateCSR", HH_OUT_OF_MEM_ERROR, GetLastError());
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+	}
+	if (!CryptExportPublicKeyInfoEx(hProv, AT_SIGNATURE, PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, szOID_RSA_RSA, 0, NULL, pInfo, &cbInfo))
+	{
+		THROW_JS_ERROR(env, "Could not export subject public key info", "capiGenerateCSR", HH_PUBKEY_EXPORT_ERROR, GetLastError());
+		LocalFree(pInfo);
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+	}
+	CERT_RDN_ATTR rgName[] = { (LPSTR) szOID_COMMON_NAME, CERT_RDN_PRINTABLE_STRING, 0, NULL };
+	CERT_RDN rgRDN[] = { 1, NULL };
+	CERT_NAME_INFO Name = { 1, NULL };
+	rgName[0].Value.cbData = strlen(szUserName);
+	rgName[0].Value.pbData = (BYTE*) szUserName;
+	rgRDN->rgRDNAttr = &rgName[0];
+	Name.rgRDN = rgRDN;
+	BYTE* pbName;
+	DWORD cbName;
+	if (!CryptEncodeObject(PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, X509_NAME, &Name, NULL, &cbName))
+	{
+		THROW_JS_ERROR(env, "Could not encode Name object", "capiGenerateCSR", HH_CAPI_ENCODE_ERROR, GetLastError());
+		LocalFree(pInfo);
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+
+	}
+	if (!(pbName = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbName)))
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "capiGenerateCSR", HH_OUT_OF_MEM_ERROR, GetLastError());
+		LocalFree(pInfo);
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+	}
+	if (!CryptEncodeObject(PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, X509_NAME, &Name, pbName, &cbName))
+	{
+		THROW_JS_ERROR(env, "Could not encode Name object", "capiGenerateCSR", HH_CAPI_ENCODE_ERROR, GetLastError());
+		LocalFree(pbName);
+		LocalFree(pInfo);
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+
+	}
+	CERT_NAME_BLOB subject;
+	CERT_REQUEST_INFO request;
+	CRYPT_ALGORITHM_IDENTIFIER hAlg;
+	CRYPT_OBJID_BLOB parms = { 0, NULL };
+	BYTE* pbEncoded;
+	DWORD cbEncoded;
+	subject.cbData = cbName;
+	subject.pbData = pbName;
+	request.Subject = subject;
+	request.cAttribute = 0;
+	request.rgAttribute = NULL;
+	request.dwVersion = CERT_REQUEST_V1;
+	request.SubjectPublicKeyInfo.Algorithm = pInfo->Algorithm;
+	request.SubjectPublicKeyInfo.PublicKey = pInfo->PublicKey;
+	hAlg.pszObjId = szAlgOID;
+	hAlg.Parameters = parms;
+	if (!CryptSignAndEncodeCertificate(hProv, AT_SIGNATURE, PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, X509_CERT_REQUEST_TO_BE_SIGNED, &request, &hAlg, NULL, NULL, &cbEncoded))
+	{
+		THROW_JS_ERROR(env, "Could not initialize request signing", "capiGenerateCSR", HH_CAPI_INIT_REQUEST_ERROR, GetLastError());
+		LocalFree(pbName);
+		LocalFree(pInfo);
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+	}
+	if (!(pbEncoded = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbEncoded)))
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "capiGenerateCSR", HH_OUT_OF_MEM_ERROR, GetLastError());
+		LocalFree(pbName);
+		LocalFree(pInfo);
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+	}
+	if (!CryptSignAndEncodeCertificate(hProv, AT_SIGNATURE, PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, X509_CERT_REQUEST_TO_BE_SIGNED, &request, &hAlg, NULL, pbEncoded, &cbEncoded))
+	{
+		THROW_JS_ERROR(env, "Could not sign request", "capiGenerateCSR", HH_CAPIT_SIGN_REQUEST_ERROR, GetLastError());
+		LocalFree(pbEncoded);
+		LocalFree(pbName);
+		LocalFree(pInfo);
+		CryptReleaseContext(hProv, 0);
+		return env.Null();
+	}
+
+	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded, cleanupHook);
+	LocalFree(pbName);
+	LocalFree(pInfo);
+	CryptReleaseContext(hProv, 0);
+	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
+}
+Napi::Value capiSign(const Napi::Env env, const HCRYPTPROV hProv, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
 {
 	ALG_ID algID;
 	switch (mechanism)
@@ -387,63 +531,79 @@ void capiSign(const Napi::Env env, const HCRYPTPROV hProv, const uint32_t mechan
 		break;
 	default:
 		THROW_JS_ERROR(env, "Unsupported signing algorithm", "capiSign", HH_UNSUPPORTED_MECHANISM_ERROR);
-		return;
+		return env.Null();
 	}
 
-	HCRYPTHASH hHash;
+	HCRYPTHASH hHash = NULL;
 	BOOL ret = CryptCreateHash(hProv, algID, NULL, 0, &hHash);
 	if (!ret)
 	{
 		THROW_JS_ERROR(env, "Could not create legacy hash object", "capiSign", HH_CAPI_CRETE_HASH_ERROR, GetLastError());
-		return;
+		return env.Null();
 	}
 	ret = CryptSetHashParam(hHash, HP_HASHVAL, pbData, 0);
 	if (!ret)
 	{
 		THROW_JS_ERROR(env, "Could not set legacy hash object", "capiSign", HH_CAPI_SET_HASH_ERROR, GetLastError());
 		CryptDestroyHash(hHash);
-		return;
+		return env.Null();
 	}
-	BYTE* bSignature;
-	DWORD cbResult;
-	ret = CryptSignHash(hHash, AT_SIGNATURE, NULL, 0, NULL, &cbResult);
+	BYTE* pbSignature;
+	DWORD cbSignature;
+	ret = CryptSignHash(hHash, AT_SIGNATURE, NULL, 0, NULL, &cbSignature);
 	if (!ret)
 	{
 		THROW_JS_ERROR(env, "Could not initialize legacy hash signature", "capiSign", HH_CAPI_SIGN_HASH_ERROR, GetLastError());
 		CryptDestroyHash(hHash);
-		return;
+		return env.Null();
 	}
-	bSignature = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbResult);
-	if (!bSignature)
+	pbSignature = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbSignature);
+	if (!pbSignature)
 	{
 		THROW_JS_ERROR(env, "Out of memory error", "capiSign", HH_OUT_OF_MEM_ERROR, GetLastError());
 		CryptDestroyHash(hHash);
-		return;
+		return env.Null();
 	}
-	ret = CryptSignHash(hHash, AT_SIGNATURE, NULL, 0, bSignature, &cbResult);
-	if (ret)
-	{
-		signature.resize(cbResult);
-		for (DWORD i = 0; i < cbResult; i++) signature[i] = bSignature[i];
-	}
-	else THROW_JS_ERROR(env, "Could not sign legacy hash", "capiSign", HH_CAPI_SIGN_HASH_ERROR, GetLastError());
-	LocalFree(bSignature);
-	CryptDestroyHash(hHash);
-}
-void capiEnrollSign(const Napi::Env env, const std::string& provider, const DWORD dwProvType, const std::string& keyContainer, const uint32_t mechanism, BYTE* pbData, std::vector<uint8_t>& signature)
-{
-	HCRYPTPROV hProv;
-	BOOL ret = CryptAcquireContextA(&hProv, keyContainer.c_str(), provider.c_str(), dwProvType, 0);
-	DWORD dwError;
+	ret = CryptSignHash(hHash, AT_SIGNATURE, NULL, 0, pbSignature, &cbSignature);
 	if (!ret)
 	{
-		dwError = GetLastError();
-		THROW_JS_ERROR(env, "Could not open legacy private key", "capiEnrollSign", HH_CAPI_OPEN_KEY_ERROR, GetLastError());
-		return;
+		THROW_JS_ERROR(env, "Could not sign legacy hash", "capiSign", HH_CAPI_SIGN_HASH_ERROR, GetLastError());
+		LocalFree(pbSignature);
+		CryptDestroyHash(hHash);
+		return env.Null();
 	}
-	capiSign(env, hProv, mechanism, pbData, signature);
-	CryptReleaseContext(hProv, 0);
+
+	BYTE* pbBigEndian = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbSignature);
+	if (!pbBigEndian)
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "capiSign", HH_OUT_OF_MEM_ERROR, GetLastError());
+		LocalFree(pbSignature);
+		CryptDestroyHash(hHash);
+		return env.Null();
+	}
+	for (DWORD i = 0, j = cbSignature - 1; i < cbSignature; i++, j--) pbBigEndian[i] = pbSignature[j];
+	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbBigEndian, cbSignature, cleanupHook);
+	LocalFree(pbSignature);
+	CryptDestroyHash(hHash);
+	return Napi::TypedArrayOf<uint8_t>::New(env, cbSignature, buffer, 0, napi_uint8_array);
 }
+Napi::Value capiEnrollSign(const Napi::Env env, const std::string& provider, const DWORD dwProvType, const std::string& keyContainer, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
+{
+	HCRYPTPROV hProv = NULL;
+	Napi::Value ret;
+	if (CryptAcquireContextA(&hProv, keyContainer.c_str(), provider.c_str(), dwProvType, 0))
+	{
+		ret = capiSign(env, hProv, mechanism, pbData, cbData);
+		CryptReleaseContext(hProv, 0);
+	}
+	else
+	{
+		THROW_JS_ERROR(env, "Could not open legacy private key", "capiEnrollSign", HH_CAPI_OPEN_KEY_ERROR, GetLastError());
+		ret = env.Null();
+	}
+	return ret;
+}
+
 
 
 // * * * * * * * * * * * * * * *
@@ -613,36 +773,22 @@ Napi::Value Hamahiri::EnumerateDevices(const Napi::CallbackInfo& info)
 	return ret;
 }
 
-Napi::Value convert(const Napi::Env& env, const std::vector<uint8_t>& from)
-{
-	DWORD cbEncoded = from.size();
-	BYTE* pbEncoded = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbEncoded);
-	if (!pbEncoded)
-	{
-		THROW_JS_ERROR(env, "Out of memory error", "Hamahiri::convert", HH_OUT_OF_MEM_ERROR, GetLastError());
-		return env.Null();
-	}
-	for (DWORD i = 0; i < cbEncoded; i++) pbEncoded[i] = from.at(i);
-	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, cbEncoded);
-	LocalFree(pbEncoded);
-	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
-}
 Napi::Value Hamahiri::GenerateKeyPair(const Napi::CallbackInfo& info)
 {
 	Napi::Env env = info.Env();
 	if (info.Length() < 2)
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Wrong number of arguments"), "generateKeyPair", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Wrong number of arguments", "generateKeyPair", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
     if (!info[0].IsString())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument device required"), "generateKeyPair", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument device required", "generateKeyPair", HH_ARGUMENT_ERROR);
 		return env.Null();
     }
 	if (!info[1].IsNumber())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument keySize required"), "generateKeyPair", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument keySize required", "generateKeyPair", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	if (this->providers.size() == 0) this->enumProviders(env);
@@ -657,7 +803,7 @@ Napi::Value Hamahiri::GenerateKeyPair(const Napi::CallbackInfo& info)
 	}
 	if (!bFound)
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "The device argument does not correspond to an installed cryptographic device"), "generateKeyPair", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "The device argument does not correspond to an installed cryptographic device", "generateKeyPair", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 
@@ -666,8 +812,7 @@ Napi::Value Hamahiri::GenerateKeyPair(const Napi::CallbackInfo& info)
 	Napi::Value retPubKey;
 	if (dwProvType != 0) 
 	{
-		retPubKey = capiGenerateKeyPair(env, provider, dwProvType,  info[1].As<Napi::Number>().Int32Value(), keyContainer);
-		if (env.IsExceptionPending()) return env.Null();
+		retPubKey = capiGenerateKeyPair(env, provider, dwProvType, info[1].As<Napi::Number>().Int32Value(), keyContainer);
 	}
 	else
 	{
@@ -691,12 +836,12 @@ Napi::Value Hamahiri::ReleaseKeyHandle(const Napi::CallbackInfo& info)
 	Napi::Env env = info.Env();
 	if (info.Length() < 1)
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Wrong number of arguments"), "releaseKeyHandle", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Wrong number of arguments", "releaseKeyHandle", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	if (!info[0].IsNumber())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument handle required"), "releaseKeyHandle", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument handle required", "releaseKeyHandle", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	this->handlers.ReleaseKey(info[0].As<Napi::Number>().Int32Value());
@@ -708,12 +853,12 @@ Napi::Value Hamahiri::DeleteKeyPair(const Napi::CallbackInfo& info)
 	Napi::Env env = info.Env();
 	if (info.Length() < 1)
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Wrong number of arguments"), "releaseKeyHandle", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Wrong number of arguments", "releaseKeyHandle", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	if (!info[0].IsNumber())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument handle required"), "releaseKeyHandle", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument handle required", "releaseKeyHandle", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	this->handlers.DeleteKey(env, info[0].As<Napi::Number>().Int32Value());
@@ -725,52 +870,74 @@ Napi::Value Hamahiri::Sign(const Napi::CallbackInfo& info)
 	Napi::Env env = info.Env();
 	if (info.Length() < 3)
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Wrong number of arguments"), "sign", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Wrong number of arguments", "sign", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	if (!info[0].IsTypedArray())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument hash must be Uint8Array"), "sign", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument hash must be Uint8Array", "sign", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	if (!info[1].IsNumber())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument algorithm must be a number"), "sign", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument algorithm must be a number", "sign", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	if (!info[2].IsNumber())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument key must be a number"), "sign", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument key must be a number", "sign", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
+	Napi::Object slot;
+	if (info.Length() == 4)
+	{
+		if (!info[3].IsObject())
+		{
+			THROW_JS_ERROR(env, "Argument param, if present, must be an Object", "sign", HH_ARGUMENT_ERROR);
+			return env.Null();
+		}
+		slot = info[3].As<Napi::Object>();
+	}
+	else slot = Napi::Object::Object();
 	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
-	unsigned char* pbData = (unsigned char*) data.Data();
+	BYTE* pbData = (BYTE*) data.Data();
 	DWORD cbData = data.ByteLength();
 	uint32_t mechanism = info[1].As<Napi::Number>().Uint32Value();
 	KeyWrap* wrapper = this->handlers.GetKey(info[2].As<Napi::Number>().Int32Value());
 	if (!wrapper)
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Invaid signing key handle"), "sign", HH_INVALID_KEY_HANDLE);
+		THROW_JS_ERROR(env, "Invaid signing key handle", "sign", HH_INVALID_KEY_HANDLE);
 		return env.Null();
 	}
 
-	std::vector<uint8_t> signature;
+	Napi::Boolean isSignature;
+	Napi::Value ret;
 	if (wrapper->isEnroll)
 	{
 		if (wrapper->provider.dwProvType == 0)
 		{
 			std::wstring cngProv(wrapper->provider.name.cbegin(), wrapper->provider.name.cend());
 			std::wstring cngKey(wrapper->keyName.cbegin(), wrapper->keyName.cend());
-			cngEnrollSign(env, cngProv, cngKey, mechanism, pbData, cbData, signature);
+			ret = cngEnrollSign(env, cngProv, cngKey, mechanism, pbData, cbData);
+			if (env.IsExceptionPending()) return env.Null();
+			isSignature = Napi::Boolean::New(env, true);
 		}
-		else capiEnrollSign(env, wrapper->provider.name, wrapper->provider.dwProvType, wrapper->keyName, mechanism, pbData, signature);
+		else
+		{
+			ret = capiEnrollSign(env, wrapper->provider.name, wrapper->provider.dwProvType, wrapper->keyName, mechanism, pbData, cbData);
+			// ret = capiGenerateCSR(env, wrapper->provider.name, wrapper->provider.dwProvType, wrapper->keyName, mechanism, slot);
+			if (env.IsExceptionPending()) return env.Null();
+			isSignature = Napi::Boolean::New(env, true);
+		}
 	}
 	else
 	{
 		// TODO:
 	}
-	if (env.IsExceptionPending()) return env.Null();
-	return convert(env, signature);
+	Napi::Object ob = Napi::Object::New(env);
+	ob.Set("isSignature", isSignature);
+	ob.Set("data", ret.As<Napi::TypedArrayOf<uint8_t>>());
+	return ob;
 }
 
 Napi::Value Hamahiri::InstallCertificate(const Napi::CallbackInfo& info)
@@ -778,12 +945,12 @@ Napi::Value Hamahiri::InstallCertificate(const Napi::CallbackInfo& info)
 	Napi::Env env = info.Env();
 	if (info.Length() < 1)
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Wrong number of arguments"), "installCertificate", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Wrong number of arguments", "installCertificate", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	if (!info[0].IsTypedArray())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument userCert must be an Uint8Array"), "installCertificate", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument userCert must be an Uint8Array", "installCertificate", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 
@@ -796,12 +963,12 @@ Napi::Value Hamahiri::InstallChain(const Napi::CallbackInfo& info)
 	Napi::Env env = info.Env();
 	if (info.Length() < 1)
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Wrong number of arguments"), "installChain", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Wrong number of arguments", "installChain", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	if (!info[0].IsArray())
 	{
-		THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument chain must be an Array object"), "installChain", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument chain must be an Array object", "installChain", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
 	Napi::Array arg = info[0].As<Napi::Array>();
@@ -809,7 +976,7 @@ Napi::Value Hamahiri::InstallChain(const Napi::CallbackInfo& info)
 	{
 		if (!arg.Get(i).IsTypedArray())
 		{
-			THROW_JS_ERROR(env, Napi::TypeError::New(env, "Argument chain must be an array of Uint8Array"), "installChain", HH_ARGUMENT_ERROR);
+			THROW_JS_ERROR(env, "Argument chain must be an array of Uint8Array", "installChain", HH_ARGUMENT_ERROR);
 			return env.Null();
 		}
 	}

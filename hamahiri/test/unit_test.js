@@ -10,60 +10,110 @@ const fs = require('fs');
 
 const LOG = process.stdout;
 const LEGACY_PROVIDER = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
-const CNG_PROVIDER = "Microsoft Software Key Storage Provider";
+const CNG_PROVIDER = 'Microsoft Software Key Storage Provider';
 let indexCN = 0;
+const encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function toBase64(bytes)
+{
+	var base64        = '';
+	var byteLength    = bytes.byteLength;
+	var byteRemainder = byteLength % 3;
+	var mainLength    = byteLength - byteRemainder;
+	var a, b, c, d;
+	var chunk;
+	for (var i = 0; i < mainLength; i = i + 3)
+	{
+		chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+		a = (chunk & 16515072) >> 18;
+		b = (chunk & 258048)   >> 12;
+		c = (chunk & 4032)     >>  6;
+		d = chunk & 63;
+		base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
+	}
+	if (byteRemainder == 1)
+	{
+		chunk = bytes[mainLength];
+		a = (chunk & 252) >> 2;
+		b = (chunk & 3)   << 4;
+		base64 += encodings[a] + encodings[b] + '==';
+	}
+	else if (byteRemainder == 2)
+	{
+		chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
+		a = (chunk & 64512) >> 10;
+		b = (chunk & 1008)  >>  4;
+		c = (chunk & 15)    <<  2;
+		base64 += encodings[a] + encodings[b] + encodings[c] + '=';
+	}
+	return base64;
+}
 
 class EnrollTest
 {
 	constructor()
 	{
-		this.__tests = 0;
-		this.__legacyKeyPair = null;
-		this.__cngKeyPair = null;
+		this.tests = 0;
+		this.legacyKeyPair = null;
+		this.cngKeyPair = null;
 
-		this.__csr = null;
-		this.__pkcs7 = null;
+		this.legacyCSR = null;
+		this.cngCSR = null;
+		this.pkcs7 = null;
 
 		LOG.write('Testing certificate enrollment initialization...');
-		this.__enroll = new Hamahiri.Enroll();
-		assert(this.__enroll, 'Failure on Hamahiri.Enroll initialization');
+		this.enroll = new Hamahiri.Enroll();
+		assert(this.enroll, 'Failure on Hamahiri.Enroll initialization');
 		LOG.write(' done!\n');
-		this.__tests++;
+		this.tests++;
 	}
 	checkEnumDevices() {
 		LOG.write('Testing cryptographic devices enumeration...');
-		assert(this.__enroll.enumerateDevices, 'The expected Enroll.enumerateDevices() method is undefined');
-		const devices = this.__enroll.enumerateDevices();
+		assert(this.enroll.enumerateDevices, 'The expected Enroll.enumerateDevices() method is undefined');
+		const devices = this.enroll.enumerateDevices();
 		let found = devices.find((value) => { return value ===  LEGACY_PROVIDER; });
 		assert(found, 'The minimum required legacy provider is not present');
-
 		LOG.write(' done!\n');
 		console.log('Installed providers:');
 		console.log(devices);
-		this.__tests++;
+		this.tests++;
+	}
+	#assertGenKeyPair(provider)
+	{
+		assert(this.enroll.generateKeyPair, 'The expected Enroll.generateKeyPair() method is undefined');
+		let keyPair = this.enroll.generateKeyPair(provider, 2048);
+		assert(keyPair, 'Failed to generate key pair');
+		assert(keyPair.privKey && keyPair.pubKey, 'The required members of KeyPair object are not defined');
+		assert.equal(isNaN(keyPair.privKey), false, 'privKey member of KeyPair object must be a number');
+		assert(keyPair.privKey > 0, 'privKey member of KeyPair object must be positive number');
+		assert(keyPair.pubKey instanceof Uint8Array, 'pubKey member of KeyPair object must be an instance of ArrayBuffer');
+		let decoded = asn1js.fromBER(keyPair.pubKey.buffer);
+		assert(decoded.offset != -1, 'pubKey member of KeyPair object must be a DER encoded SubjectPublicKeyInfo');
+		let pubKeyInfo = decoded.result;
+		assert(pubKeyInfo instanceof asn1js.Sequence, 'pubKeyInfo must be an ASN.1 SEQUENCE');
+		assert(pubKeyInfo.valueBlock.value.length == 2, 'SubjectPublicKeyInfo must have two child nodes');
+		let algorithm = pubKeyInfo.valueBlock.value[0];
+		assert(algorithm instanceof asn1js.Sequence, 'AlgorithmIdentifier field must be an ASN.1 SEQUENCE');
+		assert(algorithm.valueBlock.value.length == 2, 'AlgorithmIdentifier must have two child nodes');
+		let oid = algorithm.valueBlock.value[0];
+		assert(oid instanceof asn1js.ObjectIdentifier, 'algorithm must be an ASN.1 OBJECT IDENTIFIER');
+		assert(oid.valueBlock.toString() === '1.2.840.113549.1.1.1', 'AlgorithmIdentifier must be rsaEncription OID');
+		let param = algorithm.valueBlock.value[1];
+		assert(param instanceof asn1js.Null, 'AlgorithmIdentifier parameter field must be an ASN.1 NULL');
+		let subjectPublicKey = pubKeyInfo.valueBlock.value[1];
+		assert(subjectPublicKey instanceof asn1js.BitString, 'subjectPublicKey field must be an ASN.1 BIT STRING');
+		assert(subjectPublicKey.valueBlock.valueHex.byteLength == 270, 'subjectPublicKey must have the proper size');
+		return keyPair;
 	}
 	checkLegacyGenKeyPair() {
 		LOG.write('Testing legacy RSA key pair generation...');
-		assert(this.__enroll.generateKeyPair, 'The expected Enroll.generateKeyPair() method is undefined');
-		this.__legacyKeyPair = this.__enroll.generateKeyPair(LEGACY_PROVIDER, 2048);
-		assert(this.__legacyKeyPair, 'Failed to generate key pair');
-		assert(this.__legacyKeyPair.privKey && this.__legacyKeyPair.pubKey, 'The required members of KeyPair object are not defined');
-		assert.equal(isNaN(this.__legacyKeyPair.privKey), false, 'privKey member of KeyPair object must be a number');
-		assert(this.__legacyKeyPair.privKey > 0, 'privKey member of KeyPair object must be positive number');
-		assert(this.__legacyKeyPair.pubKey instanceof Uint8Array, 'pubKey member of KeyPair object must be an instance of Uint8Array');
-		this.__tests++;
+		this.legacyKeyPair = this.#assertGenKeyPair(LEGACY_PROVIDER);
+		this.tests++;
 		LOG.write(' done!\n');
 	}
 	checkCNGGenKeyPair() {
 		LOG.write('Testing CNG RSA key pair generation...');
-		assert(this.__enroll.generateKeyPair, 'The expected Enroll.generateKeyPair() method is undefined');
-		this.__cngKeyPair = this.__enroll.generateKeyPair(CNG_PROVIDER, 2048);
-		assert(this.__cngKeyPair, 'Failed to generate key pair');
-		assert(this.__cngKeyPair.privKey && this.__cngKeyPair.pubKey, 'The required members of KeyPair object are not defined');
-		assert.equal(isNaN(this.__cngKeyPair.privKey), false, 'privKey member of KeyPair object must be a number');
-		assert(this.__cngKeyPair.privKey > 0, 'privKey member of KeyPair object must be positive number');
-		assert(this.__cngKeyPair.pubKey instanceof Uint8Array, 'pubKey member of KeyPair object must be an instance of Uint8Array');
-		this.__tests++;
+		this.cngKeyPair = this.#assertGenKeyPair(CNG_PROVIDER);
+		this.tests++;
 		LOG.write(' done!\n');
 	}
 	#makeCertificationRequestInfo(rawPubKey, cn) {
@@ -105,7 +155,9 @@ class EnrollTest
 			value: [
 				new asn1js.Sequence({ value: [
 					new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.20'}),
-					new asn1js.Utf8String({ value: cn })
+					new asn1js.Set({ value: [
+						new asn1js.Utf8String({ value: cn })
+					]})
 				]})
 			]
 		});
@@ -120,40 +172,39 @@ class EnrollTest
 			]}),
 			new asn1js.BitString({ valueHex: signed.buffer })
 		] });
-		return request.toBER(false);
+		return new Uint8Array(request.toBER(false));
 	}
-	checkSignLegacyRequest() {
-		LOG.write('Testing a certificate request signature with a legacy key...');
+	#assertSignRequest(keyPair)
+	{
 		let cn = 'Unit test user certificate common name number ' + ++indexCN;
-		let certificateRequestInfo = this.#makeCertificationRequestInfo(this.__legacyKeyPair.pubKey, cn);
+		let certificateRequestInfo = this.#makeCertificationRequestInfo(keyPair.pubKey, cn);
 		let toBeSigned = Buffer.from(certificateRequestInfo.toBER(false));
 		let hash = crypto.createHash('sha256');
 		hash.update(toBeSigned);
-		assert(this.__enroll.sign, 'The expected Enroll.sign() method is undefined');
-		let signed = this.__enroll.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, this.__legacyKeyPair.privKey);
+		assert(this.enroll.sign, 'The expected Enroll.sign() method is undefined');
+		let signed = this.enroll.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, keyPair.privKey, { cn: cn });
 		assert(signed, 'Signature failure');
-		assert(signed instanceof Uint8Array, 'The signed buffer must be an instance of Uint8Array');
-		this.__csr = this.#makeCertificationRequest(certificateRequestInfo, signed);
-		this.__tests++;
+		assert(typeof signed.isSignature != 'undefined' && typeof signed.data != 'undefined', 'Invalid fields in sign() returned object');
+		assert(typeof signed.isSignature == 'boolean', 'isSignature returned member must be a boolean');
+		assert(signed.data instanceof Uint8Array, 'data returned member must be a Uint8Array');
+		let request = signed.isSignature ? this.#makeCertificationRequest(certificateRequestInfo, signed.data) : signed.data;
+		return request;
+	}
+	checkSignLegacyRequest() {
+		LOG.write('Testing a certificate request signature with a legacy key...');
+		this.legacyCSR = this.#assertSignRequest(this.legacyKeyPair);
+		this.tests++;
 		LOG.write(' done!\n');
 	}
 	checkSignCNGRequest() {
 		LOG.write('Testing a certificate request signature with a CNG key...');
-		let cn = 'Unit test user certificate common name number ' + ++indexCN;
-		let certificateRequestInfo = this.#makeCertificationRequestInfo(this.__cngKeyPair.pubKey, cn);
-		let toBeSigned = Buffer.from(certificateRequestInfo.toBER(false));
-		let hash = crypto.createHash('sha256');
-		hash.update(toBeSigned);
-		assert(this.__enroll.sign, 'The expected Enroll.sign() method is undefined');
-		let signed = this.__enroll.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, this.__cngKeyPair.privKey);
-		assert(signed, 'Signature failure');
-		assert(signed instanceof Uint8Array, 'The signed buffer must be an instance of Uint8Array');
-		this.__csr = this.#makeCertificationRequest(certificateRequestInfo, signed);
-		this.__tests++;
+		this.cngCSR = this.#assertSignRequest(this.cngKeyPair);
+		this.tests++;
 		LOG.write(' done!\n');
 	}
-	#signLegacyRequest(csr) {
-		fs.writeFileSync(path.resolve(__dirname, 'legacy-request.der'), Buffer.from(csr));
+	#signRequest(csr, fname) {
+		let pem = '-----BEGIN CERTIFICATE REQUEST-----\n' + toBase64(csr) + '\n-----END CERTIFICATE REQUEST-----';
+		fs.writeFileSync(path.resolve(__dirname, fname), Buffer.from(pem));
 		// TODO: Sign request with OpenSSL PKI
 		return new TextEncoder().encode('Pretend this is a pkcs #7');
 	}
@@ -171,54 +222,67 @@ class EnrollTest
 	}
 	checkInstallLegacyCert() {
 		LOG.write('Testing install user certificate...');
-		this.__pkcs7 = this.#signLegacyRequest(this.__csr);
-		let userCert = this.#getSignerCertificate(this.__pkcs7);
-		assert(this.__enroll.installCertificate, 'The expected Enroll.installCertificate() method is undefined');
-		assert(this.__enroll.installCertificate(userCert), 'Failure on install user certificate');
-		this.__tests++;
+		this.pkcs7 = this.#signRequest(this.legacyCSR, "legacy-request.req");
+		let userCert = this.#getSignerCertificate(this.pkcs7);
+		assert(this.enroll.installCertificate, 'The expected Enroll.installCertificate() method is undefined');
+		assert(this.enroll.installCertificate(userCert), 'Failure on install user certificate');
+		this.tests++;
+		LOG.write(' done!\n');
+	}
+	checkInstallCNGCert() {
+		LOG.write('Testing install user certificate...');
+		this.pkcs7 = this.#signRequest(this.cngCSR, "cng-request.req");
+		let userCert = this.#getSignerCertificate(this.pkcs7);
+		assert(this.enroll.installCertificate, 'The expected Enroll.installCertificate() method is undefined');
+		assert(this.enroll.installCertificate(userCert), 'Failure on install user certificate');
+		this.tests++;
 		LOG.write(' done!\n');
 	}
 	checkInstallChain() {
 		LOG.write('Testing install CA certificates chain...');
-		assert(this.__pkcs7, 'This test requires that checkInstallLegacyCert test succeeds');
-		let chain = this.#getCAChain(this.__pkcs7);
+		assert(this.pkcs7, 'This test requires that checkInstallLegacyCert test succeeds');
+		let chain = this.#getCAChain(this.pkcs7);
 
-		assert(this.__enroll.installChain, 'The expected Enroll.installChain() method is undefined');
-		let done = this.__enroll.installChain(chain);
+		assert(this.enroll.installChain, 'The expected Enroll.installChain() method is undefined');
+		let done = this.enroll.installChain(chain);
 		let msg = done ? ' done!' : ' Chain already installed.';
-		this.__tests++;
+		this.tests++;
 		LOG.write(msg);
 		LOG.write('\n');
 	}
 	checkDeleteLegacyKey() {
 		LOG.write('Testing legacy RSA key pair removal...');
-		assert(this.__legacyKeyPair, 'This test requires that checkLegacyGenKeyPair test succeeds');
-		assert(this.__enroll.deleteKeyPair, 'The expected Enroll.deleteKeyPair() method is undefined');
-		assert(this.__enroll.deleteKeyPair(this.__legacyKeyPair.privKey), 'Failed to remove RSA key pair');
-		this.__tests++;
+		assert(this.legacyKeyPair, 'This test requires that checkLegacyGenKeyPair test succeeds');
+		assert(this.enroll.deleteKeyPair, 'The expected Enroll.deleteKeyPair() method is undefined');
+		assert(this.enroll.deleteKeyPair(this.legacyKeyPair.privKey), 'Failed to remove RSA key pair');
+		this.tests++;
 		LOG.write(' done!\n');
 	}
 	checkDeleteCNGKey() {
 		LOG.write('Testing Windows CNG RSA key pair removal...');
-		assert(this.__cngKeyPair, 'This test requires that checkCNGGenKeyPair test succeeds');
-		assert(this.__enroll.deleteKeyPair, 'The expected Enroll.deleteKeyPair() method is undefined');
-		assert(this.__enroll.deleteKeyPair(this.__cngKeyPair.privKey), 'Failed to remove RSA key pair');
-		this.__tests++;
+		assert(this.cngKeyPair, 'This test requires that checkCNGGenKeyPair test succeeds');
+		assert(this.enroll.deleteKeyPair, 'The expected Enroll.deleteKeyPair() method is undefined');
+		assert(this.enroll.deleteKeyPair(this.cngKeyPair.privKey), 'Failed to remove RSA key pair');
+		this.tests++;
 		LOG.write(' done!\n');
 	}
 	static test() {
 		LOG.write('Tests battery of certificate enrollment:\n');
 		let test = new EnrollTest();
 		test.checkEnumDevices();
+
 		test.checkLegacyGenKeyPair();
 		test.checkSignLegacyRequest();
 		test.checkInstallLegacyCert();
 		test.checkDeleteLegacyKey();
-/*		test.checkCNGGenKeyPair();
+
+		test.checkCNGGenKeyPair();
 		test.checkSignCNGRequest();
+		test.checkInstallCNGCert();
 		test.checkInstallChain();
-		test.checkDeleteCNGKey();  */
-		LOG.write(test.__tests.toString());
+		test.checkDeleteCNGKey();
+
+		LOG.write(test.tests.toString());
 		LOG.write(' test cases performed.\n')
 	}
 }
