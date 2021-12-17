@@ -1,0 +1,94 @@
+#
+# Signature configuration
+#
+HOME		= .
+USERPROFILE	= $ENV::HOME
+RANDFILE	= $ENV::USERPROFILE/.rnd
+SUBJECTID	=
+SUBJECTTE	=
+SUBJECTCEI	=
+SPONSORID	=
+SPONSOR		=
+COMPANYID	=
+COMPANYCEI	=
+COMPANY		=
+CN			=
+EMAIL		=
+ALT_NAMES	= PF
+
+####################################################################
+[ req ]
+
+default_bits			= 2048
+default_keyfile 		= keyfile.pem
+distinguished_name		= req_dn
+x509_extensions			= v3
+req_extensions			= altv3
+input_password			= secret		# WARNING!
+output_password			= secret		# WARNING!
+string_mask				= nombstr
+
+
+
+####################################################################
+[ req_dn ]
+
+countryName						= Country Name (2 letter ISO country code)
+countryName_default				= BR
+countryName_value				= BR
+countryName_min					= 2
+countryName_max					= 2
+organizationName				= Organization Name
+organizationName_default		= PKI Brazil
+organizationName_value			= PKI Brazil
+organizationalUnitName			= Group within the Organization
+organizationalUnitName_default	= PKI Ruler for All Cats
+organizationalUnitName_value	= PKI Ruler for All Cats
+commonName						= Cert Name
+commonName_max					= 64
+commonName_default				= $ENV::CN
+commonName_value				= $ENV::CN
+emailAddress					= Email Address
+emailAddress_default			= $ENV::EMAIL
+emailAddress_value				= $ENV::EMAIL
+emailAddress_max				= 40
+
+####################################################################
+[ v3 ]
+
+subjectKeyIdentifier		= hash
+#authorityKeyIdentifier		= keyid,issuer
+basicConstraints			= CA:false
+keyUsage					= nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage			= clientAuth, emailProtection, 1.3.6.1.4.1.311.20.2.2
+crlDistributionPoints		= @cdps
+
+####################################################################
+[ altv3 ]
+
+subjectAltName				= @$ENV::ALT_NAMES
+certificatePolicies			= @cert_pol
+authorityInfoAccess			= @aia
+
+####################################################################
+[ altv3sign ]
+keyUsage					= nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage			= clientAuth, emailProtection, 1.3.6.1.4.1.311.20.2.2
+subjectKeyIdentifier		= hash
+authorityKeyIdentifier		= keyid:always
+crlDistributionPoints		= @cdps
+authorityInfoAccess			= @aia
+
+####################################################################
+[ cdps ]
+URI.0				= http://localhost/ac/end.crl
+
+
+####################################################################
+[ aia ]
+caIssuers;URI.0		= http://localhost/ac/end.html
+
+####################################################################
+[ cert_pol ]
+ policyIdentifier	= 1.3.5.8
+ CPS				="http://my.host.name/"

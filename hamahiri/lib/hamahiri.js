@@ -40,7 +40,7 @@ const addon = require('../build/Release/hamahiri-native');
  * Representação interna de um par de chaves RSA
  * @class KeyPair
  * @memberof Hamahiri
- * @property { Uint8Array } privKey - Chave pública (campo SubjectPublicKeyInfo do PKCS #10) encodada em DER
+ * @property { Uint8Array } pubKey - Chave pública (campo SubjectPublicKeyInfo do PKCS #10) encodada em DER
  * @property { Number     } privKey - Handle para a chave privada
  */
 
@@ -95,7 +95,7 @@ const addon = require('../build/Release/hamahiri-native');
  */
  class Hamahiri
 {
-	constructor() { this._addon = new addon.Hamahiri(); }
+	constructor() { this.addon = new addon.Hamahiri(); }
 
 	/**
 	 * Assina o buffer contendo o hash do conteúdo
@@ -106,7 +106,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @returns { Uint8Array } Buffer assinado.
 	 */
 	 sign(hash, algorithm, key) {
-		return this._addon.sign(hash, algorithm, key);
+		return this.addon.sign(hash, algorithm, key);
 	}
 
 	/**
@@ -116,7 +116,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @returns { boolean } Indicador de sucesso
 	 */
 	 releaseKeyHandle(hHandle) {
-		return this._addon.releaseKeyHandle(hHandle);
+		return this.addon.releaseKeyHandle(hHandle);
 	}
 
 	/**
@@ -126,7 +126,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @returns Indicador de sucesso da operação. Uma chave inexistente não é considerada uma falha.
 	 */
 	 deleteKeyPair(key) {
-		return this._addon.deleteKeyPair(key);
+		return this.addon.deleteKeyPair(key);
 	}
 }
 
@@ -145,7 +145,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @return { Array } Lista de strings contendo os nomes dos dispositivos presentes
 	 */
 	 enumerateDevices() {
-		return this._addon.enumerateDevices();
+		return this.addon.enumerateDevices();
 	};
 
 	/**
@@ -156,7 +156,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @returns { KeyPair } Retorna o par de chaves gerado como uma instância de {@link Hamahiri.KeyPair}.
 	 */
 	generateKeyPair(device, keySize) {
-		return this._addon.generateKeyPair(device, keySize);
+		return this.addon.generateKeyPair(device, keySize);
 	}
 
 	/**
@@ -166,20 +166,39 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @returns { boolean } Indicador de sucesso da operação. Caso o certificado tenha sido instalado
 	 * anteriormente, retorna false
 	 */
-	 installCertificate(userCert) {
-		return this._addon.installCertificate(userCert);
+	 installCertificate(userCertificate) {
+		return this.addon.installCertificate(userCertificate);
 	}
 
 	/**
 	 * Instala a cadeia de certificados emissores confiáveis. Deve-se verificar previamente se a cadeia é válida e se sua
 	 * AC final assinou um certificado de usuário com instalação prévia bem sucedida.
-	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
-	 * @param { Array } chain  Cadeia de certificados codificada em DER, representada como uma matriz de Uint8Array
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param   { Array } chain  Cadeia de certificados codificada em DER, representada como uma matriz de Uint8Array
 	 * @returns { boolean } Indicador de sucesso da operação. Caso a cadeia tenha sido instalada
 	 * anteriormente, retorna false
 	 */
 	 installChain(chain) {
-		return this._addon.installChain(chain);
+		let i = 0;
+		let added = true;
+		while (i < chain.length)
+		{
+			let rv = this.addon.installCACertificate(chain[i]);
+			added = !rv ? false : added;
+			i++;
+		}
+		return added;
+	}
+
+	/**
+	 * Remove o certificado especificado pelo seu titular.
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param  { String } subject Titular do certificado a ser excluído.
+	 * @param  { String } issuer  Emissor do certificado
+	 * @returns { boolean } Indicador de sucesso da operação. Caso o certificado não seja encontrado, retorna false.
+	 */
+	deleteCertificate(subject, issuer) {
+		return this.addon.deleteCertificate(subject, issuer);
 	}
 }
 
@@ -198,7 +217,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @returns { Array } Um array de objetos {@link Xapiripe.Certificate}
 	 */
 	 enumerateCertificates() {
-		return this._addon.enumerateCertificates();
+		return this.addon.enumerateCertificates();
 	}
 }
 

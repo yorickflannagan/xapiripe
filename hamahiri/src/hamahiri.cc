@@ -1,7 +1,6 @@
 #include "hamahiri.h"
 #include <ncrypt.h>
-
-#include <fstream>
+#include <string>
 
 // * * * * * * * * * * * * * * *
 // Javascript exception facility
@@ -468,7 +467,224 @@ Napi::Value capiEnrollSign(const Napi::Env env, const std::string& provider, con
 	return ret;
 }
 
+bool installCertificate(const Napi::Env& env, const BYTE* pbEncoded, DWORD cbEncoded)
+{
+	PCCERT_CONTEXT hCert;
+	if (!(hCert = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pbEncoded, cbEncoded)))
+	{
+		THROW_JS_ERROR(env, "Could not create a certificate context to encoding", "installCertificate", HH_CERT_PARSING_ERROR, GetLastError());
+		return env.Null();
+	}
+	if (!CryptFindCertificateKeyProvInfo(hCert, CRYPT_FIND_USER_KEYSET_FLAG, NULL))
+	{
+		THROW_JS_ERROR(env, "Could not find a private key corresponding to this certificate", "installCertificate", HH_CERT_PRIVKEY_FIND_ERROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return env.Null();
+	}
 
+	CRYPT_KEY_PROV_INFO* phInfo;
+	DWORD cbInfo;
+	if (!CertGetCertificateContextProperty(hCert, CERT_KEY_PROV_INFO_PROP_ID, NULL, &cbInfo))
+	{
+		THROW_JS_ERROR(env, "Could not get certificate provider info", "installCertificate", HH_CERT_PROVIDER_FIND_ERROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return env.Null();
+	}
+	if (!(phInfo = (CRYPT_KEY_PROV_INFO*) LocalAlloc(LMEM_ZEROINIT, cbInfo)))
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "installCertificage", HH_OUT_OF_MEM_ERROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return env.Null();
+	}
+	if (!CertGetCertificateContextProperty(hCert, CERT_KEY_PROV_INFO_PROP_ID, phInfo, &cbInfo))
+	{
+		THROW_JS_ERROR(env, "Could not get certificate provider info", "installCertificate", HH_CERT_PROVIDER_FIND_ERROR, GetLastError());
+		LocalFree(phInfo);
+		CertFreeCertificateContext(hCert);
+		return env.Null();
+	}
+	CERT_KEY_CONTEXT hKey;
+	NCRYPT_PROV_HANDLE hNProv = NULL;
+	NCRYPT_KEY_HANDLE hNKey = NULL;
+	HCRYPTPROV hProv = NULL;
+	if (phInfo->dwProvType == 0)
+	{
+		SECURITY_STATUS stat;
+		if ((stat = NCryptOpenStorageProvider(&hNProv, phInfo->pwszProvName, 0)) != ERROR_SUCCESS)
+		{
+			THROW_JS_ERROR(env, "Could no open CNG storage provider associated to specified certificate", "installCertificate", HH_CNG_PROVIDER_ERROR, stat);
+			LocalFree(phInfo);
+			CertFreeCertificateContext(hCert);
+			return env.Null();
+		}
+		if ((stat = NCryptOpenKey(hNProv, &hNKey, phInfo->pwszContainerName, AT_SIGNATURE, 0)) != ERROR_SUCCESS)
+		{
+			THROW_JS_ERROR(env, "Could not get CNG private key associated to specified certificate", "installCertificate", HH_CNG_OPEN_KEY_ERROR, stat);
+			NCryptFreeObject(hNProv);
+			LocalFree(phInfo);
+			CertFreeCertificateContext(hCert);
+			return env.Null();
+		}
+		hKey.hCryptProv = hNKey;
+		hKey.dwKeySpec = CERT_NCRYPT_KEY_SPEC;
+		hKey.cbSize = sizeof(hKey);
+	}
+	else
+	{
+		std::wstring wstring(phInfo->pwszContainerName);
+		std::string keyContainer(wstring.cbegin(), wstring.cend());
+		wstring.assign(phInfo->pwszProvName);
+		std::string provider(wstring.cbegin(), wstring.cend());
+		if (!CryptAcquireContextA(&hProv, keyContainer.c_str(), provider.c_str(), phInfo->dwProvType, 0))
+		{
+			THROW_JS_ERROR(env, "Could not open legacy private key associated to specified certificate", "installCertificate", HH_CAPI_OPEN_KEY_ERROR, GetLastError());
+			LocalFree(phInfo);
+			CertFreeCertificateContext(hCert);
+			return env.Null();
+		}
+		hKey.hCryptProv = hProv;
+		hKey.dwKeySpec = AT_SIGNATURE;
+		hKey.cbSize = sizeof(hKey);
+
+	}
+	if (!CertSetCertificateContextProperty(hCert, CERT_KEY_CONTEXT_PROP_ID, 0, &hKey))
+	{
+		THROW_JS_ERROR(env, "Could not associate specified certificate to its private key", "installCertificate", HH_CERT_PRIVKEY_SET_ERROR, GetLastError());
+		if (hNProv) NCryptFreeObject(hNProv);
+		if (hNKey) NCryptFreeObject(hNKey);
+		if (hProv) CryptReleaseContext(hProv, 0);
+		LocalFree(phInfo);
+		CertFreeCertificateContext(hCert);
+		return env.Null();
+	}
+	if (hNProv) NCryptFreeObject(hNProv);
+	if (hNKey) NCryptFreeObject(hNKey);
+	if (hProv) CryptReleaseContext(hProv, 0);
+	LocalFree(phInfo);
+
+	HCERTSTORE hStore;
+	if (!(hStore = CertOpenSystemStoreA(NULL, "MY")))	
+	{
+		THROW_JS_ERROR(env, "Could not open MY certificate store", "installCertificate", HH_CERT_STORE_OPEN_ERROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return env.Null();
+	}
+	bool added = CertAddCertificateContextToStore(hStore, hCert, CERT_STORE_ADD_NEW, NULL);
+	if (!added)
+	{
+		DWORD dwRet = GetLastError();
+		if (dwRet != CRYPT_E_EXISTS ) THROW_JS_ERROR(env, "Could not add specified certificate to MY store", "installCertificate", HH_CERT_STORE_ADD_ERROR, dwRet);
+	}
+	CertCloseStore(hStore, 0);
+	CertFreeCertificateContext(hCert);
+	return added;
+}
+bool installCACertificate(const Napi::Env& env, const BYTE* pbEncoded, const DWORD cbEncoded)
+{
+	PCCERT_CONTEXT hCert = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pbEncoded, cbEncoded);
+	if (!hCert)
+	{
+		THROW_JS_ERROR(env, "Could not create a certificate context to encoding", "installCACertificate", HH_CERT_PARSING_ERROR, GetLastError());
+		return false;
+	}
+
+	PCERT_EXTENSION pExt = hCert->pCertInfo->rgExtension;
+	bool found = false;
+	while (!found && pExt)
+	{
+		found = strcmp(pExt->pszObjId, "2.5.29.19") == 0;
+		if (!found) pExt++;
+	}
+	if (!found)
+	{
+		THROW_JS_ERROR(env, "Could not find Basic Constraint certificate extension", "installCACertificate", HH_CA_CERT_EXT_ERROR);
+		CertFreeCertificateContext(hCert);
+		return false;
+	}
+	DWORD cbInfo;
+	CERT_BASIC_CONSTRAINTS2_INFO* phInfo;
+	if (!CryptDecodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, szOID_BASIC_CONSTRAINTS2, pExt->Value.pbData, pExt->Value.cbData, 0, NULL, &cbInfo))
+	{
+		THROW_JS_ERROR(env, "Could not decode Basic Constraint certificate extension", "installCACertificate", HH_DER_ENCONDING_ERROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return false;
+	}
+	if (!(phInfo = (CERT_BASIC_CONSTRAINTS2_INFO*) LocalAlloc(LMEM_ZEROINIT, cbInfo)))
+	{
+		THROW_JS_ERROR(env, "Out of memory error", "installCACertificate", HH_OUT_OF_MEM_ERROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return false;
+	}
+	if (!CryptDecodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, szOID_BASIC_CONSTRAINTS2, pExt->Value.pbData, pExt->Value.cbData, 0, phInfo, &cbInfo))
+	{
+		THROW_JS_ERROR(env, "Could not decode Basic Constraint certificate extension", "installCACertificate", HH_DER_ENCONDING_ERROR, GetLastError());
+		LocalFree(phInfo);
+		CertFreeCertificateContext(hCert);
+		return false;
+	}
+	if (!phInfo->fCA)
+	{
+		THROW_JS_ERROR(env, "Certificate is not compliant with an RFC 5280 CA certificate", "installCACertificate", HH_CERT_NOT_CA_ERROR);
+		LocalFree(phInfo);
+		CertFreeCertificateContext(hCert);
+		return false;
+	}
+	LocalFree(phInfo);
+	bool isRoot = CertCompareCertificateName(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, &hCert->pCertInfo->Issuer, &hCert->pCertInfo->Subject);
+
+	HCERTSTORE hStore = CertOpenSystemStoreA(NULL, isRoot ? "Root" : "CA");
+	if (!hStore)
+	{
+		THROW_JS_ERROR(env, "Could not open CA certificate store", "installCACertificate", HH_CERT_STORE_OPEN_ERROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return false;
+	}
+	bool added = CertAddCertificateContextToStore(hStore, hCert, CERT_STORE_ADD_NEW, NULL);
+	if (!added)
+	{
+		DWORD dwRet = GetLastError();
+		if (dwRet != CRYPT_E_EXISTS) THROW_JS_ERROR(env, "Could not add CA certificate to systema store", "installCACertificate", HH_CERT_STORE_ADD_ERROR, dwRet);
+	}
+	CertCloseStore(hStore, 0);
+	CertFreeCertificateContext(hCert);
+	return added;
+}
+
+bool removeCertificate(const Napi::Env& env, const CHAR* szSubject, const CHAR* szIssuer, const CHAR* szSubsystem)
+{
+	HCERTSTORE hStore = CertOpenSystemStoreA(NULL, szSubsystem);
+	if (!hStore)
+	{
+		THROW_JS_ERROR(env, "Could not open certificate store", "removeCertificate", HH_CERT_STORE_OPEN_ERROR, GetLastError());
+		return false;
+	}
+	bool removed = false;
+	PCCERT_CONTEXT pCtx = NULL;
+	while ((pCtx = CertEnumCertificatesInStore(hStore, pCtx)))
+	{
+		CHAR szName[1024];
+		DWORD cbName = sizeof(szName);
+		CertGetNameStringA(pCtx, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, szName, cbName);
+		if (strcmp(szSubject, szName) == 0)
+		{
+			CertGetNameStringA(pCtx, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, NULL, szName, cbName);
+			if (strcmp(szIssuer, szName) == 0)
+			{
+				if (!CertDeleteCertificateFromStore(pCtx))
+				{
+					THROW_JS_ERROR(env, "Could not delete certificate from store", "removeCertificate", HH_CERT_DELETE_ERROR, GetLastError());
+					CertFreeCertificateContext(pCtx);
+					CertCloseStore(hStore, 0);
+					return false;
+				}
+				pCtx = NULL;
+				removed = true;
+			}
+		}
+	}
+	CertCloseStore(hStore, 0);
+	return removed;
+}
 
 // * * * * * * * * * * * * * * *
 // Key/Certificates wrapper
@@ -798,37 +1014,66 @@ Napi::Value Hamahiri::InstallCertificate(const Napi::CallbackInfo& info)
 		THROW_JS_ERROR(env, "Argument userCert must be an Uint8Array", "installCertificate", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
-
-	// TODO: Install user certificate using CryptoAPI
-	return Napi::Boolean::New(env, true);
+	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
+	BYTE* pbEncoded = (BYTE*) data.Data();
+	DWORD cbEncoded = data.ByteLength();
+	bool added = installCertificate(env, pbEncoded, cbEncoded);
+	if (env.IsExceptionPending()) return env.Null();
+	return Napi::Boolean::New(env, added);
 }
 
-Napi::Value Hamahiri::InstallChain(const Napi::CallbackInfo& info)
+Napi::Value Hamahiri::InstallCACertificate(const Napi::CallbackInfo& info)
 {
 	Napi::Env env = info.Env();
 	if (info.Length() < 1)
 	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "installChain", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Wrong number of arguments", "installCACertificate", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
-	if (!info[0].IsArray())
+	if (!info[0].IsTypedArray())
 	{
-		THROW_JS_ERROR(env, "Argument chain must be an Array object", "installChain", HH_ARGUMENT_ERROR);
+		THROW_JS_ERROR(env, "Argument userCert must be an Uint8Array", "installCACertificate", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
-	Napi::Array arg = info[0].As<Napi::Array>();
-	for (unsigned int i = 0; i < arg.Length(); i++)
+	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
+	BYTE* pbEncoded = (BYTE*) data.Data();
+	DWORD cbEncoded = data.ByteLength();
+	bool added = installCACertificate(env, pbEncoded, cbEncoded);
+	if (env.IsExceptionPending()) return env.Null();
+	return Napi::Boolean::New(env, added);
+}
+
+Napi::Value Hamahiri::DeleteCertificate(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 2)
 	{
-		if (!arg.Get(i).IsTypedArray())
-		{
-			THROW_JS_ERROR(env, "Argument chain must be an array of Uint8Array", "installChain", HH_ARGUMENT_ERROR);
-			return env.Null();
-		}
+		THROW_JS_ERROR(env, "Wrong number of arguments", "deleteCertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
 	}
-	// TODO: Look for at least one user certificate signed by leaf CA of this chain
-	// TODO: Check if chain is correct and ends in a self-signed certificate
-	// TODO: Install chain
-	return Napi::Boolean::New(env, true);
+	if (!info[0].IsString())
+	{
+		THROW_JS_ERROR(env, "Argument subject must be a string", "deleteCertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[1].IsString())
+	{
+		THROW_JS_ERROR(env, "Argument issuer must be a string", "deleteCertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	std::string szSubject = info[0].As<Napi::String>().Utf8Value();
+	std::string szIssuer = info[1].As<Napi::String>().Utf8Value();
+
+	CHAR* szSubystem[] = { "MY", "CA", "Root" };
+	bool removed = false;
+	int i = 0;
+	while (!removed && i < 2)
+	{
+		removed = removeCertificate(env, szSubject.c_str(), szIssuer.c_str(), szSubystem[i]);
+		if (env.IsExceptionPending()) return env.Null();
+		i++;
+	}
+	return Napi::Boolean::New(env, removed);
 }
 
 Napi::Value Hamahiri::EnumerateCertificates(const Napi::CallbackInfo& info)
@@ -867,7 +1112,8 @@ Napi::Function Hamahiri::GetClass(Napi::Env env)
 		Hamahiri::InstanceMethod("deleteKeyPair",         &Hamahiri::DeleteKeyPair),
 		Hamahiri::InstanceMethod("sign",                  &Hamahiri::Sign),
 		Hamahiri::InstanceMethod("installCertificate",    &Hamahiri::InstallCertificate),
-		Hamahiri::InstanceMethod("installChain",          &Hamahiri::InstallChain),
+		Hamahiri::InstanceMethod("installCACertificate",  &Hamahiri::InstallCACertificate),
+		Hamahiri::InstanceMethod("deleteCertificate",     &Hamahiri::DeleteCertificate),
 		Hamahiri::InstanceMethod("enumerateCertificates", &Hamahiri::EnumerateCertificates)
 	});
 }

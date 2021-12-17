@@ -63,7 +63,8 @@ public:
 	Napi::Value ReleaseKeyHandle(const Napi::CallbackInfo&);		// Implements releaseKeyHandle() member of Hamahiri
 	Napi::Value Sign(const Napi::CallbackInfo&);					// Implements sign() member of Hamahiri
 	Napi::Value InstallCertificate(const Napi::CallbackInfo&);		// Implements installCertificate() member of Enroll
-	Napi::Value InstallChain(const Napi::CallbackInfo&);			// Implements installChain() member of Enroll
+	Napi::Value InstallCACertificate(const Napi::CallbackInfo&);	// Implements installChain() member of Enroll
+	Napi::Value DeleteCertificate(const Napi::CallbackInfo&);		// Implements deleteCertificate() member of Enroll
 	Napi::Value EnumerateCertificates(const Napi::CallbackInfo&);	// Implements enumerateCertificates member of Sign
 
 	static Napi::Function GetClass(Napi::Env);
@@ -112,3 +113,13 @@ enum SignMechanism
 #define HH_CAPI_ENCODE_ERROR				21L
 #define HH_CAPI_INIT_REQUEST_ERROR			22L
 #define HH_CAPIT_SIGN_REQUEST_ERROR			23L
+#define HH_CERT_PARSING_ERROR				24L
+#define HH_CERT_PRIVKEY_FIND_ERROR			25L
+#define HH_CERT_PROVIDER_FIND_ERROR			26L
+#define HH_CERT_PRIVKEY_SET_ERROR			27L
+#define HH_CERT_STORE_OPEN_ERROR			28L
+#define HH_CERT_STORE_ADD_ERROR				29L
+#define HH_CA_CERT_EXT_ERROR				30L
+#define HH_DER_ENCONDING_ERROR				31L
+#define HH_CERT_NOT_CA_ERROR				32L
+#define HH_CERT_DELETE_ERROR				33L

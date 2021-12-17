@@ -1,0 +1,116 @@
+#
+# CA configuration
+#
+HOME		= .
+USERPROFILE	= $ENV::HOME
+RANDFILE	= $ENV::USERPROFILE/.rnd
+ENDCA_DIR	= .
+dir			= $ENV::ENDCA_DIR
+
+
+
+####################################################################
+[ ca ]
+default_ca		= CA_default		# The default ca section
+caIssuers;URI.0	=
+
+####################################################################
+[ CA_default ]
+
+certs				= $dir/certs		# Where the issued certs are kept
+crl_dir				= $dir/crl		# Where the issued crl are kept
+database			= $dir/index.txt	# database index file.
+new_certs_dir		= $dir/newcerts		# default place for new certs.
+certificate			= $dir/endcert.pem 	# The CA certificate
+serial				= $dir/serial 		# The current serial number
+crlnumber			= $dir/crlnumber	# the current crl number must be commented out to leave a V1 CRL
+crl					= $dir/crl/crl.pem 	# The current CRL
+private_key			= $dir/private/cakey.pem	# The private key
+RANDFILE			= $dir/private/.rand	# private random number file
+name_opt 			= ca_default		# Subject Name options
+cert_opt 			= ca_default		# Certificate field options
+default_days		= 3650			# how long to certify for
+default_crl_days	= 30			# how long before next CRL
+default_md			= sha256			# which md to use.
+preserve			= no			# keep passed DN ordering
+policy				= policy_match
+
+####################################################################
+# Root CA DN values
+[ req_ca_dn ]
+
+countryName						= Country Name (2 letter ISO country code)
+countryName_default				= BR
+countryName_value				= BR
+countryName_min					= 2
+countryName_max					= 2
+organizationName				= Organization Name
+organizationName_default		= PKI Brazil
+organizationName_value			= PKI Brazil
+organizationalUnitName			= Group within the Organization
+organizationalUnitName_default	= PKI Ruler for All Cats
+organizationalUnitName_value	= PKI Ruler for All Cats
+commonName						= The Name of this CA
+commonName_default				= Common Name for All Cats End User CA
+commonName_value				= Common Name for All Cats End User CA
+commonName_max					= 64
+
+
+####################################################################
+[ policy_match ]
+
+countryName				= optional
+organizationName		= optional
+organizationalUnitName	= optional
+commonName				= optional
+
+
+####################################################################
+[ req ]
+
+default_bits			= 2048
+default_keyfile 		= $dir/private/cakey.pem
+distinguished_name		= req_ca_dn
+x509_extensions			= v3_ca		
+input_password			= secret		# WARNING!
+output_password			= secret		# WARNING!
+string_mask				= nombstr
+
+##############################################################./######
+[ v3_rootca ]
+
+subjectKeyIdentifier	= hash
+authorityKeyIdentifier	= keyid:always,issuer:always
+basicConstraints		= CA:true
+keyUsage				= cRLSign, keyCertSign
+crlDistributionPoints	= @cdps
+
+
+####################################################################
+[ v3_ca ]
+
+subjectKeyIdentifier	= hash
+authorityKeyIdentifier	= keyid:always,issuer:always
+basicConstraints		= CA:true
+keyUsage				= cRLSign, keyCertSign
+crlDistributionPoints	= @cdps
+authorityInfoAccess		= @aia
+
+
+####################################################################
+[ cdps ]
+
+URI.0					= http://localhost/ac/end.crl
+
+
+####################################################################
+[ aia ]
+
+caIssuers;URI.0			= http://localhost/ac/end.html
+
+
+####################################################################
+[ crl_ext ]
+
+authorityKeyIdentifier	= keyid:always,issuer:always
+
