@@ -68,7 +68,7 @@ const addon = require('../build/Release/hamahiri-native');
  * Representação interna de um par de chaves RSA
  * @class KeyPair
  * @memberof Hamahiri
- * @property { Uint8Array } privKey - Chave pública (campo SubjectPublicKeyInfo do PKCS #10) encodada em DER
+ * @property { Uint8Array } pubKey - Chave pública (campo SubjectPublicKeyInfo do PKCS #10) encodada em DER
  * @property { Number     } privKey - Handle para a chave privada
  */
 
@@ -123,28 +123,38 @@ const addon = require('../build/Release/hamahiri-native');
  */
  class Hamahiri
 {
-	constructor() { this._addon = new addon.Hamahiri(); }
+	constructor() { this.addon = new addon.Hamahiri(); }
 
 	/**
 	 * Assina o buffer contendo o hash do conteúdo
-	 * @throws  { Failure } Dispara uma instância de Failure em caso de falha
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param   { Uint8Array    } hash      Hash do conteúdo. Deve ter o tamanho apropriado às chaves RSA e ao algoritmo especificado.
 	 * @param   { SignMechanism } algorithm Constante PKCS #11 do algoritmo de assinatura
 	 * @param   { Number        } key       Handle para a chave privada de assinatura, obtido previamente
 	 * @returns { Uint8Array } Buffer assinado.
 	 */
 	 sign(hash, algorithm, key) {
-		return this._addon.sign(hash, algorithm, key);
+		return this.addon.sign(hash, algorithm, key);
 	}
 
 	/**
 	 * Libera o handle para uma chave privada
-	 * @throws  { Failure } Dispara uma instância de Failure em caso de falha
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param { Number } hHandle Handle retornado anteriormente
 	 * @returns { boolean } Indicador de sucesso
 	 */
 	 releaseKeyHandle(hHandle) {
-		return this._addon.releaseKeyHandle(hHandle);
+		return this.addon.releaseKeyHandle(hHandle);
+	}
+
+	/**
+	 * Remove do repositório criptográfico um par de chaves criado por generateKeyPair
+	 * @throws {Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de argumentos inválidos
+	 * @param { Number } key Handle para a chave gerada, obtido por {@link Enroll.generateKeyPair}
+	 * @returns Indicador de sucesso da operação. Uma chave inexistente não é considerada uma falha.
+	 */
+	 deleteKeyPair(key) {
+		return this.addon.deleteKeyPair(key);
 	}
 }
 
@@ -159,47 +169,64 @@ const addon = require('../build/Release/hamahiri-native');
 
 	/**
 	 * Enumera os dispositivos criptográficos presentes (Cryptographic Services Providers para RSA)
-	 * @throws { Failure } Dispara uma instância de Failure em caso de falha
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @return { Array } Lista de strings contendo os nomes dos dispositivos presentes
 	 */
 	 enumerateDevices() {
-		return this._addon.enumerateDevices();
+		return this.addon.enumerateDevices();
 	};
 
 	/**
 	 * Gera um par de chaves RSA
-	 * @throws { Failure } Dispara uma instância de Failure em caso de falha
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param { string } device  Cryptographic Service Provider a ser utilizado para gerar as chaves
 	 * @param { Number } keySize Tamanho (em bits) das chaves RSA
 	 * @returns { KeyPair } Retorna o par de chaves gerado como uma instância de {@link Hamahiri.KeyPair}.
 	 */
-	 generateKeyPair(device, keySize) {
-		return this._addon.generateKeyPair(device, keySize);
+	generateKeyPair(device, keySize) {
+		return this.addon.generateKeyPair(device, keySize);
 	}
 
 	/**
 	 * Instala o certificado de usuário, caso a chave pública esteja associada a uma chave privada existente
-	 * @throws { Failure } Dispara uma instância de Failure em caso de falha ou caso o certificado não possa
-	 * ser associado a uma chave existente
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param { Uint8Array } userCertificate Certificado do usuário codificado em DER
 	 * @returns { boolean } Indicador de sucesso da operação. Caso o certificado tenha sido instalado
 	 * anteriormente, retorna false
 	 */
-	 installCertificate(userCert) {
-		return this._addon.installCertificate(userCert);
+	 installCertificate(userCertificate) {
+		return this.addon.installCertificate(userCertificate);
 	}
 
 	/**
-	 * Instala a cadeia de certificados de Autoridade Certificadora emissora de um certificado
-	 * previamente instalado.
-	 * @throws { Failure } Dispara uma instância de Failure em caso de falha ou caso a cadeia não corresponda
-	 * a um certificado de usuário instalado
-	 * @param { Array } chain  Cadeia de certificados codificada em DER, representada como uma matriz de Uint8Array
+	 * Instala a cadeia de certificados emissores confiáveis. Deve-se verificar previamente se a cadeia é válida e se sua
+	 * AC final assinou um certificado de usuário com instalação prévia bem sucedida.
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param   { Array } chain  Cadeia de certificados codificada em DER, representada como uma matriz de Uint8Array
 	 * @returns { boolean } Indicador de sucesso da operação. Caso a cadeia tenha sido instalada
 	 * anteriormente, retorna false
 	 */
 	 installChain(chain) {
-		return this._addon.installChain(chain);
+		let i = 0;
+		let added = true;
+		while (i &lt; chain.length)
+		{
+			let rv = this.addon.installCACertificate(chain[i]);
+			added = !rv ? false : added;
+			i++;
+		}
+		return added;
+	}
+
+	/**
+	 * Remove o certificado especificado pelo seu titular.
+	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param  { String } subject Titular do certificado a ser excluído.
+	 * @param  { String } issuer  Emissor do certificado
+	 * @returns { boolean } Indicador de sucesso da operação. Caso o certificado não seja encontrado, retorna false.
+	 */
+	deleteCertificate(subject, issuer) {
+		return this.addon.deleteCertificate(subject, issuer);
 	}
 }
 
@@ -214,11 +241,22 @@ const addon = require('../build/Release/hamahiri-native');
 
 	/**
 	 * Enumera os certificados em vigor que estejam associados a chaves privadas RSA nos repositórios criptográficos
-     * @throws { Failure } Dispara uma instância de Failure em caso de falha
+     * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @returns { Array } Um array de objetos {@link Xapiripe.Certificate}
 	 */
 	 enumerateCertificates() {
-		return this._addon.enumerateCertificates();
+		return this.addon.enumerateCertificates();
+	}
+
+	/**
+	 * Obtém a cadeia de certificados associada ao certificado de usuário final especificado
+     * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param { Number } handle Handle para o certificado desejado
+	 * @returns { Array } Um array ordenado de Uint8Array, onde o elemento 0 corresponde ao certificado de usuário final
+	 * e o elemento length - 1 corresponde à AC raiz da cadeia emissora.
+	 */
+	getCertificateChain(handle) {
+		return this.addon.getCertificateChain(handle);
 	}
 }
 
@@ -243,7 +281,7 @@ module.exports = {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Nov 09 2021 10:55:26 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Dec 21 2021 15:59:33 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

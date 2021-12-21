@@ -94,7 +94,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line128">line 128</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line138">line 138</a>
     </li></ul></dd>
     
 
@@ -161,6 +161,217 @@
     
 
     
+    <h4 class="name" id="deleteCertificate"><span class="type-signature"></span>deleteCertificate<span class="signature">(subject, issuer)</span><span class="type-signature"> &rarr; {boolean}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Remove o certificado especificado pelo seu titular.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>subject</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Titular do certificado a ser excluído.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>issuer</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Emissor do certificado</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line200">line 200</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Throws:</h5>
+
+        
+
+<dl>
+    <dt>
+        <div class="param-desc">
+        Dispara uma instância de <a href="Hamahiri.Failure.html">Hamahiri.Failure</a> em caso de falha
+        </div>
+    </dt>
+    <dd></dd>
+    <dt>
+        <dl>
+            <dt>
+                Type
+            </dt>
+            <dd>
+                
+<span class="param-type">Failure</span>
+
+
+            </dd>
+        </dl>
+    </dt>
+    <dd></dd>
+</dl>
+
+
+    
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    Indicador de sucesso da operação. Caso o certificado não seja encontrado, retorna false.
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">boolean</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
     <h4 class="name" id="enumerateDevices"><span class="type-signature"></span>enumerateDevices<span class="signature">()</span><span class="type-signature"> &rarr; {Array}</span></h4>
     
 
@@ -213,7 +424,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line137">line 137</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line147">line 147</a>
     </li></ul></dd>
     
 
@@ -243,7 +454,7 @@
 <dl>
     <dt>
         <div class="param-desc">
-        Dispara uma instância de Failure em caso de falha
+        Dispara uma instância de <a href="Hamahiri.Failure.html">Hamahiri.Failure</a> em caso de falha
         </div>
     </dt>
     <dd></dd>
@@ -424,7 +635,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line148">line 148</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line158">line 158</a>
     </li></ul></dd>
     
 
@@ -454,7 +665,7 @@
 <dl>
     <dt>
         <div class="param-desc">
-        Dispara uma instância de Failure em caso de falha
+        Dispara uma instância de <a href="Hamahiri.Failure.html">Hamahiri.Failure</a> em caso de falha
         </div>
     </dt>
     <dd></dd>
@@ -612,7 +823,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line160">line 160</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line169">line 169</a>
     </li></ul></dd>
     
 
@@ -642,8 +853,7 @@
 <dl>
     <dt>
         <div class="param-desc">
-        Dispara uma instância de Failure em caso de falha ou caso o certificado não possa
-ser associado a uma chave existente
+        Dispara uma instância de <a href="Hamahiri.Failure.html">Hamahiri.Failure</a> em caso de falha
         </div>
     </dt>
     <dd></dd>
@@ -709,8 +919,8 @@ anteriormente, retorna false
 
 
 <div class="description">
-    Instala a cadeia de certificados de Autoridade Certificadora emissora de um certificado
-previamente instalado.
+    Instala a cadeia de certificados emissores confiáveis. Deve-se verificar previamente se a cadeia é válida e se sua
+AC final assinou um certificado de usuário com instalação prévia bem sucedida.
 </div>
 
 
@@ -803,7 +1013,7 @@ previamente instalado.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line173">line 173</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line181">line 181</a>
     </li></ul></dd>
     
 
@@ -833,8 +1043,7 @@ previamente instalado.
 <dl>
     <dt>
         <div class="param-desc">
-        Dispara uma instância de Failure em caso de falha ou caso a cadeia não corresponda
-a um certificado de usuário instalado
+        Dispara uma instância de <a href="Hamahiri.Failure.html">Hamahiri.Failure</a> em caso de falha
         </div>
     </dt>
     <dd></dd>
@@ -908,7 +1117,7 @@ anteriormente, retorna false
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Nov 09 2021 10:55:26 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Dec 21 2021 15:59:33 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -1,6 +1,7 @@
 #include "hamahiri.h"
 #include <ncrypt.h>
-#include <string>
+#include <sstream>
+#include <iomanip>
 
 // * * * * * * * * * * * * * * *
 // Javascript exception facility
@@ -375,7 +376,7 @@ Napi::Value cngEnrollSign(const Napi::Env env, const std::wstring& provider, con
 	NCryptFreeObject(hProv);
 	return ret;
 }
-Napi::Value capiSign(const Napi::Env env, const HCRYPTPROV hProv, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
+Napi::Value capiSign(const Napi::Env env, const HCRYPTPROV hProv, const uint32_t mechanism, const BYTE* pbData, const DWORD cbData)
 {
 	ALG_ID algID;
 	switch (mechanism)
@@ -401,7 +402,7 @@ Napi::Value capiSign(const Napi::Env env, const HCRYPTPROV hProv, const uint32_t
 	BOOL ret = CryptCreateHash(hProv, algID, NULL, 0, &hHash);
 	if (!ret)
 	{
-		THROW_JS_ERROR(env, "Could not create legacy hash object", "capiSign", HH_CAPI_CRETE_HASH_ERROR, GetLastError());
+		THROW_JS_ERROR(env, "Could not create legacy hash object", "capiSign", HH_CAPI_CREATE_HASH_ERROR, GetLastError());
 		return env.Null();
 	}
 	ret = CryptSetHashParam(hHash, HP_HASHVAL, pbData, 0);
@@ -436,21 +437,21 @@ Napi::Value capiSign(const Napi::Env env, const HCRYPTPROV hProv, const uint32_t
 		return env.Null();
 	}
 
-	BYTE* pbBigEndian = (BYTE*) LocalAlloc(LMEM_ZEROINIT, cbSignature);
-	if (!pbBigEndian)
+	register DWORD i = 0;
+	register DWORD j = cbSignature - 1;
+	BYTE temp;
+	while (i < j)
 	{
-		THROW_JS_ERROR(env, "Out of memory error", "capiSign", HH_OUT_OF_MEM_ERROR, GetLastError());
-		LocalFree(pbSignature);
-		CryptDestroyHash(hHash);
-		return env.Null();
+		temp = pbSignature[i];
+		pbSignature[i] = pbSignature[j];
+		pbSignature[j] = temp;
+		i++, j--;
 	}
-	for (DWORD i = 0, j = cbSignature - 1; i < cbSignature; i++, j--) pbBigEndian[i] = pbSignature[j];
-	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbBigEndian, cbSignature, cleanupHook);
-	LocalFree(pbSignature);
+	Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbSignature, cbSignature, cleanupHook);
 	CryptDestroyHash(hHash);
 	return Napi::TypedArrayOf<uint8_t>::New(env, cbSignature, buffer, 0, napi_uint8_array);
 }
-Napi::Value capiEnrollSign(const Napi::Env env, const std::string& provider, const DWORD dwProvType, const std::string& keyContainer, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
+Napi::Value capiEnrollSign(const Napi::Env env, const std::string& provider, const DWORD dwProvType, const std::string& keyContainer, const uint32_t mechanism, const BYTE* pbData, const DWORD cbData)
 {
 	HCRYPTPROV hProv = NULL;
 	Napi::Value ret;
@@ -464,6 +465,34 @@ Napi::Value capiEnrollSign(const Napi::Env env, const std::string& provider, con
 		THROW_JS_ERROR(env, "Could not open legacy private key", "capiEnrollSign", HH_CAPI_OPEN_KEY_ERROR, GetLastError());
 		ret = env.Null();
 	}
+	return ret;
+}
+Napi::Value sign(const Napi::Env env, const BYTE* pbEncoded, const DWORD cbEncoded, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
+{
+	PCCERT_CONTEXT hCert = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pbEncoded, cbEncoded);
+	if (!hCert)
+	{
+		THROW_JS_ERROR(env, "Could not create a certificate context to encoding", "sign", HH_CERT_PARSING_ERROR, GetLastError());
+		return env.Null();
+	}
+	HCRYPTPROV_OR_NCRYPT_KEY_HANDLE hKey;
+	DWORD dwKeySpec;
+	BOOL mustFree;
+	if (!CryptAcquireCertificatePrivateKey(hCert, CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG, NULL, &hKey, &dwKeySpec, &mustFree))
+	{
+		THROW_JS_ERROR(env, "Could not acquire key from certificate context", "sign", HH_ACQUIRE_KEY_ERRROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return env.Null();
+	}
+	Napi::Value ret;
+	if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) ret = cngSign(env, hKey, mechanism, pbData, cbData);
+	else ret = capiSign(env, hKey, mechanism, pbData, cbData);
+	if (mustFree)
+	{
+		if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) NCryptFreeObject(hKey);
+		else CryptReleaseContext(hKey, 0);
+	}
+	CertFreeCertificateContext(hCert);
 	return ret;
 }
 
@@ -649,7 +678,6 @@ bool installCACertificate(const Napi::Env& env, const BYTE* pbEncoded, const DWO
 	CertFreeCertificateContext(hCert);
 	return added;
 }
-
 bool removeCertificate(const Napi::Env& env, const CHAR* szSubject, const CHAR* szIssuer, const CHAR* szSubsystem)
 {
 	HCERTSTORE hStore = CertOpenSystemStoreA(NULL, szSubsystem);
@@ -685,6 +713,87 @@ bool removeCertificate(const Napi::Env& env, const CHAR* szSubject, const CHAR* 
 	CertCloseStore(hStore, 0);
 	return removed;
 }
+void enumCerts(const Napi::Env& env, std::vector<Certificate>& out)
+{
+	HCERTSTORE hStore = CertOpenSystemStoreA(NULL, "MY");
+	if (!hStore)
+	{
+		THROW_JS_ERROR(env, "Could not open certificate store", "enumCerts", HH_CERT_STORE_OPEN_ERROR, GetLastError());
+		return;
+	}
+	PCCERT_CONTEXT hCert = NULL;
+	while ((hCert = CertFindCertificateInStore(hStore, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 0, CERT_FIND_HAS_PRIVATE_KEY, NULL, hCert)))
+	{
+		HCRYPTPROV_OR_NCRYPT_KEY_HANDLE hKey;
+		DWORD dwKeySpec;
+		BOOL mustFree;
+		if
+		(
+			!CertVerifyTimeValidity(NULL, hCert->pCertInfo) &&
+			CryptAcquireCertificatePrivateKey(hCert, CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG, NULL, &hKey, &dwKeySpec, &mustFree)
+		)
+		{
+			if (mustFree)
+			{
+				if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) NCryptFreeObject(hKey);
+				else CryptReleaseContext(hKey, 0);
+			}
+
+			CHAR szName[1024];
+			DWORD cbName = sizeof(szName);
+			CertGetNameStringA(hCert, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, szName, cbName);
+			std::string subject(szName);
+			CertGetNameStringA(hCert, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, NULL, szName, cbName);
+			std::string issuer(szName);
+			std::stringbuf buffer;
+			std::ostream os(&buffer);
+			DWORD i;
+			for (i = 0; i < hCert->pCertInfo->SerialNumber.cbData; i++)
+			{
+				os << std::setfill('0');
+				os << std::hex << std::setw(2) << (int) hCert->pCertInfo->SerialNumber.pbData[i];
+			}
+			std::string serial = buffer.str();
+			std::vector<uint8_t> encoded(hCert->cbCertEncoded, 0);
+			for (i = 0; i < hCert->cbCertEncoded; i++) encoded[i] = hCert->pbCertEncoded[i];
+			Certificate cert;
+			cert.subject.assign(subject);
+			cert.issuer.assign(issuer);
+			cert.serial.assign(serial);
+			cert.encoded.assign(encoded.cbegin(), encoded.cend());
+			out.push_back(cert);
+		}
+	}
+	CertCloseStore(hStore, 0);
+}
+
+void getChain(const Napi::Env& env, const BYTE* pbEncoded, const DWORD cbEncoded, std::vector<std::vector<uint8_t>>& out)
+{
+	PCCERT_CONTEXT hCert = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pbEncoded, cbEncoded);
+	if (!hCert)
+	{
+		THROW_JS_ERROR(env, "Could not create a certificate context to encoding", "getChain", HH_CERT_PARSING_ERROR, GetLastError());
+		return;
+	}
+	CERT_ENHKEY_USAGE enhkeyUsage = { 0, NULL };
+	CERT_USAGE_MATCH certUsage = { USAGE_MATCH_TYPE_AND, enhkeyUsage };
+	CERT_CHAIN_PARA params = { sizeof(CERT_CHAIN_PARA), certUsage };
+	PCCERT_CHAIN_CONTEXT pChain;
+	if (!CertGetCertificateChain(NULL, hCert, NULL, NULL, &params, 0, NULL, &pChain))
+	{
+		CertFreeCertificateContext(hCert);
+		return;
+	}
+	for (DWORD i = 0; i < pChain->rgpChain[0]->cElement; i++)
+	{
+		DWORD cbSize = pChain->rgpChain[0]->rgpElement[i]->pCertContext->cbCertEncoded;
+		std::vector<uint8_t> encoded(cbSize, 0);
+		for (DWORD j = 0; j < cbSize; j++) encoded[j] = pChain->rgpChain[0]->rgpElement[i]->pCertContext->pbCertEncoded[j];
+		out.push_back(encoded);
+	}
+	CertFreeCertificateChain(pChain);
+	CertFreeCertificateContext(hCert);
+}
 
 // * * * * * * * * * * * * * * *
 // Key/Certificates wrapper
@@ -696,26 +805,13 @@ KeyWrap::KeyWrap(const std::string& provider, const DWORD dwType, const std::str
 	this->provider.name.assign(provider);
 	this->keyName.assign(container);
 }
-KeyWrap::KeyWrap(const char* szProvider, const DWORD dwType, const char* szContainer)
-{
-	this->isEnroll = true;
-	this->provider.dwProvType = dwType;
-	this->provider.name.assign(szProvider);
-	this->keyName.assign(szContainer);
-}
-KeyWrap::KeyWrap(const std::string& subject, const std::string& issuer, const std::string& serial)
+KeyWrap::KeyWrap(const std::string& subject, const std::string& issuer, const std::string& serial, const std::vector<uint8_t>& encoded)
 {
 	this->isEnroll = false;
-	this->subject.assign(subject);
-	this->issuer.assign(issuer);
-	this->serial.assign(serial);
-}
-KeyWrap::KeyWrap(const char* subject, const char* issuer, const char* serial)
-{
-	this->isEnroll = false;
-	this->subject.assign(subject);
-	this->issuer.assign(issuer);
-	this->serial.assign(serial);
+	this->certificate.subject.assign(subject);
+	this->certificate.issuer.assign(issuer);
+	this->certificate.serial.assign(serial);
+	this->certificate.encoded.assign(encoded.cbegin(), encoded.cend());
 }
 
 KeyHandler::KeyHandler()
@@ -733,23 +829,22 @@ int KeyHandler::AddKey(const std::string& provider, const DWORD dwType, const st
 	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
 	return hHandle;
 }
-int KeyHandler::AddKey(const char* szProvider, const DWORD dwType, const char* szContainer)
+int KeyHandler::AddKey(const std::string& subject, const std::string& issuer, const std::string& serial, const std::vector<uint8_t>& encoded)
 {
-	KeyWrap* key = new KeyWrap(szProvider, dwType, szContainer);
+	KeyWrap* key = new KeyWrap(subject, issuer, serial, encoded);
 	int hHandle = ++this->handlers;
 	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
 	return hHandle;
 }
-int KeyHandler::AddKey(const std::string& subject, const std::string& issuer, const std::string& serial)
+int KeyHandler::AddKey(const char* szSubject, const char* szIssuer, const char* szSerial, const unsigned char* pbEncoded, unsigned long cbEncoded)
 {
-	KeyWrap* key = new KeyWrap(subject, issuer, serial);
-	int hHandle = ++this->handlers;
-	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
-	return hHandle;
-}
-int KeyHandler::AddKey(const char* subject, const char* issuer, const char* serial)
-{
-	KeyWrap* key = new KeyWrap(subject, issuer, serial);
+	std::string subject(szSubject);
+	std::string issuer(szIssuer);
+	std::string serial(szSerial);
+	std::vector<uint8_t> encoded(cbEncoded, 0);
+	for (unsigned long i = 0; i < cbEncoded; i++) encoded[i] = pbEncoded[i];
+
+	KeyWrap* key = new KeyWrap(subject, issuer, serial, encoded);
 	int hHandle = ++this->handlers;
 	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
 	return hHandle;
@@ -975,7 +1070,7 @@ Napi::Value Hamahiri::Sign(const Napi::CallbackInfo& info)
 	KeyWrap* wrapper = this->handlers.GetKey(info[2].As<Napi::Number>().Int32Value());
 	if (!wrapper)
 	{
-		THROW_JS_ERROR(env, "Invaid signing key handle", "sign", HH_INVALID_KEY_HANDLE);
+		THROW_JS_ERROR(env, "Invalid signing key handle", "sign", HH_INVALID_KEY_HANDLE);
 		return env.Null();
 	}
 
@@ -988,15 +1083,9 @@ Napi::Value Hamahiri::Sign(const Napi::CallbackInfo& info)
 			std::wstring cngKey(wrapper->keyName.cbegin(), wrapper->keyName.cend());
 			ret = cngEnrollSign(env, cngProv, cngKey, mechanism, pbData, cbData);
 		}
-		else
-		{
-			ret = capiEnrollSign(env, wrapper->provider.name, wrapper->provider.dwProvType, wrapper->keyName, mechanism, pbData, cbData);
-		}
+		else ret = capiEnrollSign(env, wrapper->provider.name, wrapper->provider.dwProvType, wrapper->keyName, mechanism, pbData, cbData);
 	}
-	else
-	{
-		// TODO:
-	}
+	else ret = sign(env, wrapper->certificate.encoded.data(), wrapper->certificate.encoded.size(), mechanism, pbData, cbData);
 	if (env.IsExceptionPending()) return env.Null();
 	return ret;
 }
@@ -1079,26 +1168,69 @@ Napi::Value Hamahiri::DeleteCertificate(const Napi::CallbackInfo& info)
 Napi::Value Hamahiri::EnumerateCertificates(const Napi::CallbackInfo& info)
 {
 	Napi::Env env = info.Env();
-
-	// TODO: Enumerate signing certificates with CryptoAPI
-	this->handlers.AddKey("CN = Francisvaldo Genevaldo das Torres 1601581365803", "CN = Common Name for All Cats End User CA, OU = PKI Ruler for All Cats, O = PKI Brazil, C = BR", "1A");
+	std::vector<Certificate> certs;
+	enumCerts(env, certs);
+	if (env.IsExceptionPending()) return env.Null();
+	for (std::vector<Certificate>::iterator it = certs.begin(); it != certs.end(); ++it)
+	{
+		this->handlers.AddKey(it->subject, it->issuer, it->serial, it->encoded);
+	}
 
 	std::map<int, KeyWrap*> keys = this->handlers.GetHandlers();
-	std::vector<Napi::Object> certs;
+	std::vector<Napi::Object> certsJS;
 	for (std::map<int, KeyWrap*>::iterator it = keys.begin(); it != keys.end(); ++it)
 	{
 		if (!it->second->isEnroll)
 		{
 			Napi::Object cert = Napi::Object::New(env);
-			cert.Set("subject", it->second->subject);
-			cert.Set("issuer", it->second->issuer);
-			cert.Set("serial", it->second->serial);
+			cert.Set("subject", it->second->certificate.subject);
+			cert.Set("issuer", it->second->certificate.issuer);
+			cert.Set("serial", it->second->certificate.serial);
 			cert.Set("handle", it->first);
-			certs.push_back(cert);
+			certsJS.push_back(cert);
 		}
 	}
-	Napi::Array ret = Napi::Array::New(env, certs.size());
-	for (unsigned int i = 0; i < certs.size(); i++) ret[i] = certs.at(i);
+	Napi::Array ret = Napi::Array::New(env, certsJS.size());
+	for (unsigned int i = 0; i < certsJS.size(); i++) ret[i] = certsJS.at(i);
+	return ret;
+}
+
+Napi::Value Hamahiri::GetCertificateChain(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 1)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "getCertificateChain", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument handle must be a Number", "getCertificateChain", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	KeyWrap* wrapper = this->handlers.GetKey(info[0].As<Napi::Number>().Int32Value());
+	if (!wrapper)
+	{
+		THROW_JS_ERROR(env, "Invaid signing certificate handle", "getCertificateChain", HH_INVALID_KEY_HANDLE);
+		return env.Null();
+	}
+
+	std::vector<std::vector<uint8_t>> chain;
+	getChain(env, wrapper->certificate.encoded.data(), wrapper->certificate.encoded.size(), chain);
+	if (env.IsExceptionPending()) return env.Null();
+	Napi::Array ret = Napi::Array::New(env, chain.size());
+	for (size_t i = 0; i < chain.size(); i++)
+	{
+		BYTE* pbEncoded = (BYTE*) LocalAlloc(LMEM_ZEROINIT, chain[i]. size());
+		if (!pbEncoded)
+		{
+			THROW_JS_ERROR(env, "Out of memory error", "getCertificateChain", HH_OUT_OF_MEM_ERROR, GetLastError());
+			return env.Null();
+		}
+		memcpy(pbEncoded, chain[i].data(), chain[i].size());
+		Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, chain[i].size(), cleanupHook);
+		ret[i] = Napi::TypedArrayOf<uint8_t>::New(env, chain[i].size(), buffer, 0, napi_uint8_array);
+	}
 	return ret;
 }
 
@@ -1114,7 +1246,8 @@ Napi::Function Hamahiri::GetClass(Napi::Env env)
 		Hamahiri::InstanceMethod("installCertificate",    &Hamahiri::InstallCertificate),
 		Hamahiri::InstanceMethod("installCACertificate",  &Hamahiri::InstallCACertificate),
 		Hamahiri::InstanceMethod("deleteCertificate",     &Hamahiri::DeleteCertificate),
-		Hamahiri::InstanceMethod("enumerateCertificates", &Hamahiri::EnumerateCertificates)
+		Hamahiri::InstanceMethod("enumerateCertificates", &Hamahiri::EnumerateCertificates),
+		Hamahiri::InstanceMethod("getCertificateChain",   &Hamahiri::GetCertificateChain)
 	});
 }
 

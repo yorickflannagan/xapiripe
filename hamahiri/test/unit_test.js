@@ -8,6 +8,8 @@ const asn1js = require('asn1js');
 const path = require('path');
 const fs = require('fs');
 const cp = require('child_process');
+const { Sign } = require('../lib/hamahiri.js');
+const { AssertionError } = require('assert');
 
 const LOG = process.stdout;
 const LEGACY_PROVIDER = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
@@ -231,23 +233,22 @@ class OpenSSLWrapper
 	}
 }
 
+function checkError(err, expectedCode) {
+	assert(err instanceof Error, 'Must throw an Error subclass');
+	assert(
+		typeof err.component != 'undefined' &&
+		typeof err.method != 'undefined' &&
+		typeof err.errorCode != 'undefined' &&
+		typeof err.apiError != 'undefined',
+		'Invalid Error subclass'
+	);
+	assert(err.errorCode === expectedCode, 'Unexpected error code');
+}
+
 class EnrollTest
 {
 	constructor()
 	{
-		this.tests = 0;
-	
-		this.legacyKeyPair = null;
-		this.cngKeyPair = null;
-		this.legacyCN = null;
-		this.cngCN = null;		
-		this.legacyCSR = null;
-		this.cngCSR = null;
-		this.legacyPkcs7 = null;
-		this.cngPkcs7 = null;
-		this.legacyCerts = null;
-		this.cngCerts = null;
-
 		LOG.write('Testing certificate enrollment initialization...');
 		this.tests = 0;
 		this.enroll = new Hamahiri.Enroll();
@@ -419,6 +420,20 @@ class EnrollTest
 		this.tests++;
 		return devices;
 	}
+	keyGenFewArgumentsTestCase() {
+		LOG.write('Testing RSA key pair generation with few arguments... ');
+		try { this.enroll.generateKeyPair(2048); }
+		catch (err) { checkError(err, 1); }
+		LOG.write(' done!\n');
+		this.tests++;
+	}
+	keyGenInvalidProviderTestCase() {
+		LOG.write('Testing RSA key pair generation with a wrong provider... ');
+		try { this.enroll.generateKeyPair('Microsoft Base Cryptographic Provider', 2048); }
+		catch (err) { checkError(err, 1); }
+		LOG.write(' done!\n');
+		this.tests++;
+	}
 	keyGenTestCase(provider) {
 		LOG.write('Testing RSA key pair generation with provider ');
 		LOG.write(provider);
@@ -469,7 +484,7 @@ class EnrollTest
 		LOG.write(' removal...');
 		assert(this.enroll.deleteCertificate, 'The expected Enroll.deleteCertificate() method is undefined');
 		let removed = this.enroll.deleteCertificate(subject, issuer);
-		let msg = removed ? ' done!\n' : ' could not remove signer certificate\n';
+		let msg = removed ? ' done!\n' : ' could not remove certificate\n';
 		this.tests++;
 		LOG.write(msg);
 	}
@@ -478,74 +493,84 @@ class EnrollTest
 class SignTest
 {
 	constructor() {
-		this.__tests = 0;
-		this.__certificates = null;
-		this.__signature = null;
+		this.tests = 0;
 
 		LOG.write('Testing digital signature initialization...');
-		this.__sign = new Hamahiri.Sign();
-		assert(this.__sign, 'Failure on Hamahiri.Sign initialization');
+		this.sign = new Hamahiri.Sign();
+		assert(this.sign, 'Failure on Hamahiri.Sign initialization');
 		LOG.write(' done!\n');
-		this.__tests++;
+		this.tests++;
 	}
-	checkEnumCerts() {
+	enumCertsTestCase() {
 		LOG.write('Testing signing certificates enumeration...');
-		assert(this.__sign.enumerateCertificates, 'The expected Sign.enumerateCertificates() method is undefined');
-		let certs = this.__sign.enumerateCertificates();
+		assert(this.sign.enumerateCertificates, 'The expected Sign.enumerateCertificates() method is undefined');
+		let certs = this.sign.enumerateCertificates();
 		assert(certs, 'Signing certificates enumeration failed');
 		assert(Array.isArray(certs), 'Sign.enumerateCertificates() must return an array of Xapiripe.Certificate');
 		assert(certs.length > 0, 'There are no signing certificates installed. Cannot proceed with test.');
 		certs.forEach(value => {
 			assert(value.subject && value.issuer && value.serial && value.handle, 'Sign.enumerateCertificates() must return an array of Xapiripe.Certificate objects');
-			assert(!isNaN(value.handle && value.handle > 0), 'Certificate.handle member must be a positive integer');
+			assert(!isNaN(value.handle) && value.handle > 0, 'Certificate.handle member must be a positive integer');
 		});
-		this.__certificates = certs;
 		LOG.write(' done!\n');
-		console.log('Installed signing certificates:')
-		console.log(certs);
-		this.__tests++;
+		this.tests++;
+		return certs;
 	}
-	checkSign() {
-		LOG.write('Testing signing with sha256WithRSAEncryption algorithm...');
-		assert(this.__certificates, 'This test requires that checkEnumCerts test case succeeds');
-		assert(this.__sign.sign, 'The expected Sign.sign() method is undefined');
+	selectCert(certs, expression) {
+		let i = 0;
+		while (i < certs.length)
+		{
+			if (certs[i].subject.match(expression)) return certs[i];
+			i++;
+		}
+		return null;
+	}
+	#assertSign(cert) {
+		assert(this.sign.sign, 'The expected Sign.sign() method is undefined');
 		let hash = crypto.createHash('sha256');
 		hash.update('Transaction to sign');
-		let signature = this.__sign.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, this.__certificates[0].handle);
+		let signature = this.sign.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, cert.handle);
 		assert(signature, 'Failure on sign transaction hash');
 		assert(signature instanceof Uint8Array, 'Signature must be an instance of Uint8Array');
-		this.__signature = signature;
-		LOG.write(' done!\n');
-		this.__tests++;
+		return signature;
 	}
-	checkSignature() {
-		LOG.write('Validating Hamahiri signature against OpenSSL...');
-		assert(this.__signature, 'This test requires that checkSign test case succeeds');
-		// TODO: Check signature using OpenSSL (see openssl dgst -verify)
+	signWithLegacyKeyTestCase(cert) {
+		LOG.write('Testing sign with legacy CryptoAPI key...');
+		let signature = this.#assertSign(cert);
 		LOG.write(' done!\n');
-		this.__tests++;
+		this.tests++;
+		return signature;
 	}
-	checkReleaseKey() {
+	signWithCNGKeyTestCase(cert) {
+		LOG.write('Testing sign with CNG key...');
+		let signature = this.#assertSign(cert);
+		LOG.write(' done!\n');
+		this.tests++;
+		return signature;
+	}
+	getChainTestCase(cert) {
+		LOG.write('Testing get certificate chain...')
+		assert(this.sign.getCertificateChain, 'The expected Sign.getCertificateChain() method is undefined');
+		let chain = this.sign.getCertificateChain(cert.handle);
+		assert(chain, 'Failure on get certificate chain');
+		assert(Array.isArray(chain) && chain.length > 0, 'getCertificateChain() must return an array');
+		let i = 0;
+		while (i < chain.length) assert(chain[i++] instanceof Uint8Array, 'Certificate must be an instance of Uint8Array');
+		if (chain.length < 4) LOG.write(' Warning: incomplete certificate chain, but basic test succeeded!\n');
+		else LOG.write(' done!\n');
+		this.tests++;
+		return chain;
+	}
+	releaseKeyTestCase(cert) {
 		LOG.write('Testing release certificate handle...');
-		assert(this.__signature, 'This test requires that checkSignature test cases succeeds');
-		assert(this.__sign.releaseKeyHandle, 'The expected Sign.releaseKeyHandle() method is undefined');
-		this.__certificates.forEach(value => {
-			assert(this.__sign.releaseKeyHandle(value.handle), 'Failure on release certificcates handle');
-		});
-		
-		this.__keyPair = null;
-		this.__tests++;
+		assert(this.sign.releaseKeyHandle, 'The expected Sign.releaseKeyHandle() method is undefined');
+		this.sign.releaseKeyHandle(cert.handle);
+		let hash = crypto.createHash('sha256');
+		hash.update('Transaction to sign');
+		try { this.sign.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, cert.handle); }
+		catch (err) { checkError(err, 3); }
+		this.tests++;
 		LOG.write(' done!\n');
-	}
-	static test() {
-		LOG.write('Tests battery of digital signature:\n');
-		let test = new SignTest();
-		test.checkEnumCerts();
-		test.checkSign();
-		test.checkSignature();
-		test.checkReleaseKey();
-		LOG.write(test.__tests.toString());
-		LOG.write(' test cases performed.\n')
 	}
 }
 
@@ -561,6 +586,8 @@ function main() {
 	let devices = enroll.enumDevicesTestCase();
 	console.log("Installed devices:");
 	console.log(devices);
+	enroll.keyGenFewArgumentsTestCase();
+	enroll.keyGenInvalidProviderTestCase();
 	let capiKeyPair = enroll.keyGenTestCase(LEGACY_PROVIDER);
 	let capiCN = 'User CN to legacy CryptoAPI ' + ++indexCN;
 	let capiCSR = enroll.signCSRTestCase(capiKeyPair, capiCN);
@@ -572,8 +599,30 @@ function main() {
 	chain = enroll.installCertTestCase(cngCSR, 'cng-request.req');
 	enroll.installChainTestCase(chain);
 
-	// Normal signing tests
+	// Signing tests
 	LOG.write('Tests battery of digital signature:\n');
+	let sign = new SignTest();
+	let certs = sign.enumCertsTestCase();
+	console.log('Installed signing certificates:');
+	console.log(certs);
+	let signCert = sign.selectCert(certs, /CryptoAPI/gi);
+	if (signCert)
+	{
+		console.log('Selected signing certificate issued to ' + signCert.subject);
+		let signature = sign.signWithLegacyKeyTestCase(signCert);
+		let chain = sign.getChainTestCase(signCert);
+		sign.releaseKeyTestCase(signCert);
+	}
+	else console.log('Warning! Could not find a signing legacy certificate. Cannot complete test battery!');
+	signCert = sign.selectCert(certs, /CNG/gi);
+	if (signCert)
+	{
+		console.log('Selected signing certificate issued to ' + signCert.subject);
+		let signature = sign.signWithCNGKeyTestCase(signCert);
+		let chain = sign.getChainTestCase(signCert);
+		sign.releaseKeyTestCase(signCert);
+	}
+	else console.log('Warning! Could not find a signing CNG certificate. Cannot complete test battery!');
 
 	// Clean-up
 	LOG.write('Clean-up basic tests:\n');
@@ -583,8 +632,10 @@ function main() {
 	enroll.deleteCertificateTestCase(cngCN, END_CA_NAME);
 	enroll.deleteCertificateTestCase(END_CA_NAME, INTER_CA_NAME);
 	enroll.deleteCertificateTestCase(INTER_CA_NAME, ROOT_CA_NAME);
+	enroll.deleteCertificateTestCase(ROOT_CA_NAME, ROOT_CA_NAME);
 
 	LOG.write(enroll.tests.toString());
 	LOG.write(' test cases performed.\n')
 	fs.writeFileSync(indexFile, indexCN.toString());
-} main();
+}   main();
+

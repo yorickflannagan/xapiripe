@@ -1,10 +1,10 @@
 #pragma once
 
 #include <napi.h>
+#include <windows.h>
 #include <string>
 #include <map>
 #include <vector>
-#include <windows.h>
 
 class Provider
 {
@@ -13,21 +13,25 @@ public:
 	std::string name;	// Enroll provider if isEnroll
 };
 
+class Certificate
+{
+public:
+	std::string subject;			// Signing certificate subject
+	std::string issuer;				// Signing certificate issuer
+	std::string serial;				// Signing certificate serial number
+	std::vector<uint8_t> encoded;	// Certificate DER encoded
+};
+
 class KeyWrap
 {
 public:
-	boolean isEnroll;		// True if it wraps an enroll key
-	Provider provider;		// Cryptographic provider
-	std::string keyName;	// Windows key container or CNG key name if isEnroll
-
-	std::string subject;	// Signing certificate subject, if !isEnroll
-	std::string issuer;		// Signing certificate issuer, if !isEnroll
-	std::string serial;		// Signing certificate serial number, encoded as hexadecimal, if !isEnroll
+	boolean     isEnroll;		// True if it wraps an enroll key
+	Provider    provider;		// Cryptographic provider, if isEnroll
+	std::string keyName;		// Windows key container or CNG key name, if isEnroll
+	Certificate certificate;	// Signing certificate, if not isEnroll
 
 	KeyWrap(const std::string&, const DWORD, const std::string&);
-	KeyWrap(const char*, const DWORD, const char*);
-	KeyWrap(const std::string&, const std::string&, const std::string&);
-	KeyWrap(const char*, const char*, const char*);
+	KeyWrap(const std::string&, const std::string&, const std::string&, const std::vector<uint8_t>&);
 };
 
 class KeyHandler
@@ -37,9 +41,8 @@ public:
 	~KeyHandler();
 
 	int AddKey(const std::string&, const DWORD, const std::string&);
-	int AddKey(const char*, const DWORD, const char*);
-	int AddKey(const std::string&, const std::string&, const std::string&);
-	int AddKey(const char*, const char*, const char*);
+	int AddKey(const std::string&, const std::string&, const std::string&, const std::vector<uint8_t>&);
+	int AddKey(const char*, const char*, const char*, const unsigned char*, const unsigned long);
 	void ReleaseKey(const int);
 	void DeleteKey(const Napi::Env&, const int);
 	KeyWrap* GetKey(const int);
@@ -66,6 +69,7 @@ public:
 	Napi::Value InstallCACertificate(const Napi::CallbackInfo&);	// Implements installChain() member of Enroll
 	Napi::Value DeleteCertificate(const Napi::CallbackInfo&);		// Implements deleteCertificate() member of Enroll
 	Napi::Value EnumerateCertificates(const Napi::CallbackInfo&);	// Implements enumerateCertificates member of Sign
+	Napi::Value GetCertificateChain(const Napi::CallbackInfo&);		// Implements getCertificateChain member of Sign
 
 	static Napi::Function GetClass(Napi::Env);
 
@@ -102,7 +106,7 @@ enum SignMechanism
 #define HH_CNG_PROVIDER_ERROR				10L
 #define HH_CNG_CREATE_KEY_ERROR				11L
 #define HH_CNG_FINALIZE_KEY_ERROR			12L
-#define HH_CAPI_CRETE_HASH_ERROR			13L
+#define HH_CAPI_CREATE_HASH_ERROR			13L
 #define HH_CAPI_SET_HASH_ERROR				14L
 #define HH_CAPI_SIGN_HASH_ERROR				15L
 #define HH_CNG_SIGN_HASH_ERROR				16L
@@ -123,3 +127,4 @@ enum SignMechanism
 #define HH_DER_ENCONDING_ERROR				31L
 #define HH_CERT_NOT_CA_ERROR				32L
 #define HH_CERT_DELETE_ERROR				33L
+#define HH_ACQUIRE_KEY_ERRROR				34L

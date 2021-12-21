@@ -219,6 +219,17 @@ const addon = require('../build/Release/hamahiri-native');
 	 enumerateCertificates() {
 		return this.addon.enumerateCertificates();
 	}
+
+	/**
+	 * Obtém a cadeia de certificados associada ao certificado de usuário final especificado
+     * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param { Number } handle Handle para o certificado desejado
+	 * @returns { Array } Um array ordenado de Uint8Array, onde o elemento 0 corresponde ao certificado de usuário final
+	 * e o elemento length - 1 corresponde à AC raiz da cadeia emissora.
+	 */
+	getCertificateChain(handle) {
+		return this.addon.getCertificateChain(handle);
+	}
 }
 
 module.exports = {
