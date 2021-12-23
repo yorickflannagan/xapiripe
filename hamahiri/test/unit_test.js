@@ -8,8 +8,6 @@ const asn1js = require('asn1js');
 const path = require('path');
 const fs = require('fs');
 const cp = require('child_process');
-const { Sign } = require('../lib/hamahiri.js');
-const { AssertionError } = require('assert');
 
 const LOG = process.stdout;
 const LEGACY_PROVIDER = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
@@ -18,6 +16,7 @@ const END_CA_NAME = 'Common Name for All Cats End User CA';
 const INTER_CA_NAME = 'Common Name for All Cats Intermediate CA';
 const ROOT_CA_NAME = 'Common Name for All Cats Root CA';
 let indexCN = 0;
+let PKIDir = __dirname;
 
 const encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const equals = "=".charCodeAt(0);
@@ -148,7 +147,7 @@ class Base64
 class OpenSSLWrapper
 {
 	constructor() {
-		this.pki = path.resolve(__dirname, '..', '..', 'pki');
+		this.pki = PKIDir;
 		this.openSSL = path.resolve(this.pki, 'openssl.exe');
 		this.caConf = path.resolve(this.pki, 'caend.cnf');
 		this.signConf = path.resolve(this.pki, 'sign.cnf');
@@ -575,8 +574,8 @@ class SignTest
 }
 
 function main() {
-	let dir = path.dirname(process.argv[1]);
-	let indexFile = path.join(dir, 'index.txt');
+	if (process.argv.length == 3) PKIDir = path.resolve(process.argv[2]);
+	let indexFile = path.join(PKIDir, 'CNindex.txt');
 	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
 	else fs.writeFileSync(indexFile, indexCN.toString());
 
@@ -634,7 +633,8 @@ function main() {
 	enroll.deleteCertificateTestCase(INTER_CA_NAME, ROOT_CA_NAME);
 	enroll.deleteCertificateTestCase(ROOT_CA_NAME, ROOT_CA_NAME);
 
-	LOG.write(enroll.tests.toString());
+	let tests = enroll.tests + sign.tests;
+	LOG.write(tests.toString());
 	LOG.write(' test cases performed.\n')
 	fs.writeFileSync(indexFile, indexCN.toString());
 }   main();

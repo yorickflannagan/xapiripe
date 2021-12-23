@@ -8,7 +8,7 @@ node_modules/
 dist/
 build/
 pki/newcerts/*.pem
-**/test/index.txt
+pki/CNindex.txt
 
 # Compiled Java class files
 *.class

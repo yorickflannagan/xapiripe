@@ -1,12 +1,16 @@
 {
-	"name": "hamahiri",
+	"name": "aroari",
 	"version": "1.0.0",
-	"description": "Native node.js module to interact with cryptographic devices",
+	"description": "High level module to interact with cryptographic devices",
 	"keywords": [
 		"digital signature",
 		"certificate enrollment",
 		"cryptographic smart card"
 	],
+	"main": "src/aroari.js",
+	"scripts": {
+		"test": "node ./test/unit_test.js ../pki"
+	},
 	"author": "Marco Antonio Gutierrez",
 	"license": "LGPL-3.0-or-later",
 	"repository": {
@@ -16,15 +20,7 @@
 	"bugs": {
 		"email": "yorick.flannagan@gmail.com"
 	},
-	"main": "lib/hamahiri.js",
-	"gypfile": true,
-	"scripts": {
-		"test": "node --napi-modules ./test/unit_test.js ../pki"
-	},
 	"dependencies": {
-		"node-addon-api": "^1.1.0"
-	},
-	"devDependencies": {
 		"asn1js": "^2.1.1"
 	}
 }
