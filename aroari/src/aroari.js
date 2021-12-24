@@ -120,6 +120,55 @@ const crypto = require('crypto');
 	 */
 	static DER_ENCODE_REQUEST_ERROR = 72;
 
+	/**
+	 * Falha ao codificar em DER a requisição de certificado
+	 * @member { Number }
+	 * @default 73
+	 */
+	static DER_DECODE_CMS_ERROR = 73;
+
+	/**
+	 * CMS ContentInfo inválido
+	 * @member { Number }
+	 * @default 74
+	 */
+	static INVALID_CONTENT_INFO_ERROR = 74;
+
+	/**
+	 * CMS SignedData inválido
+	 * @member { Number }
+	 * @default 75
+	 */
+	static INVALID_SIGNED_DATA_ERROR = 75;
+
+	/**
+	 * Falha na verificação criptográfica da cadeia de certificados
+	 * @member { Number }
+	 * @default 76
+	 */
+	static CERTIFICATE_CHAIN_VERIFY_ERROR = 76;
+
+	/**
+	 * Falha na instalação do certificado do assinante
+	 * @member { Number }
+	 * @default 77
+	 */
+	static INSTALL_SIGNER_CERT_ERROR = 77;
+
+	/**
+	 * Falha na instalação da cadeia de ACs
+	 * @member { Number }
+	 * @default 78
+	 */
+	static INSTALL_CA_CHAIN_ERROR = 78;
+
+	/**
+	 * Impossível instalar novamente o certificado do assinante
+	 * @member { Number }
+	 * @default 79
+	 */
+	static SIGNER_CERT_ALREADY_INSTALLED_ERROR = 79;
+
 	constructor(msg, method, errorCode, native)
 	{
 		super(msg);
@@ -434,6 +483,7 @@ class Enroll
 			this.addon.deleteKeyPair(keyPair.privKey);
 			throw new APIError(request.error, 'generateCSR', DER_ENCODE_REQUEST_ERROR);
 		}
+		this.addon.releaseKeyHandle(keyPair.privKey);
 		return '-----BEGIN CERTIFICATE REQUEST-----\n' + Base64.btoa(csr) + '\n-----END CERTIFICATE REQUEST-----';
 	}
 
@@ -450,7 +500,45 @@ class Enroll
 	 */
 	installCertificates(pkcs7) {
 		if (!pkcs7) throw new APIError('Argumento pkcs7 é obrigatório', 'installCertificates', APIError.ARGUMENT_ERROR);
-		// TODO: implement installCertificates
+		let decoded = asn1js.fromBER(pkcs7.buffer);
+		if (decoded.offset == -1) throw new APIError('Falha ao decodificar de DER o documento PKCS #7', 'installCertificates', APIError.DER_DECODE_CMS_ERROR);
+		let contentInfo = decoded.result;
+		if 
+		(!(
+			contentInfo instanceof asn1js.Sequence &&
+			contentInfo.valueBlock.value[0] instanceof asn1js.ObjectIdentifier &&
+			contentInfo.valueBlock.value[0].valueBlock.toString() === '1.2.840.113549.1.7.2'
+		))	throw new APIError('CMS ContentInfo inesperado para um PKCS #7', 'installCertificates', APIError.INVALID_CONTENT_INFO_ERROR);
+		let signedData = contentInfo.valueBlock.value[1].valueBlock.value[0];
+		if
+		(!(
+			signedData instanceof asn1js.Sequence &&
+			signedData.valueBlock.value.length >= 4
+		))	throw new APIError('Documento CMS SignedData inválido', 'installCertificates', APIError.INVALID_SIGNED_DATA_ERROR);
+		
+		let certificates = signedData.valueBlock.value[3];
+		let i = 0;
+		while (i < certificates.valueBlock.value.length)
+		{
+			let subject = certificates.valueBlock.value[i];
+			let issuer = (i + 1 < certificates.valueBlock.value.length) ? certificates.valueBlock.value[i + 1] : subject;
+			let certSubject = new crypto.X509Certificate(Buffer.from(subject.valueBeforeDecode));
+			let certIssuer = new crypto.X509Certificate(Buffer.from(issuer.valueBeforeDecode));
+			if (!certSubject.verify(certIssuer.publicKey)) throw new APIError('Assinatura de um emissor inválida na cadeia de certificados', 'installCertificates', APIError.CERTIFICATE_CHAIN_VERIFY_ERROR);
+			i++;
+		}
+
+		let signer = certificates.valueBlock.value[0].valueBeforeDecode;
+		let done;
+		try { done = this.addon.installCertificate(new Uint8Array(signer)); }
+		catch (err) { throw new APIError('Falha na instalação do certificado do assinante', 'installCertificates', APIError.INSTALL_SIGNER_CERT_ERROR, err); }
+		if (!done) throw new APIError('Certificado do assinante já instalado', 'installCertificates', APIError.SIGNER_CERT_ALREADY_INSTALLED_ERROR);
+		i = 1;
+		let chain = [];
+		while (i < certificates.valueBlock.value.length) chain.push(new Uint8Array(certificates.valueBlock.value[i++].valueBeforeDecode));
+		try { done = this.addon.installChain(chain); }
+		catch (err) { throw new APIError('Falha na instalação da cadeia de certificados de AC', 'installCertificates', APIError.INSTALL_CA_CHAIN_ERROR, err); }
+		return done;
 	}
 }
 

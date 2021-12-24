@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Aroari = require('../src/aroari');
 const assert = require('assert');
+const cp = require('child_process');
 const LOG = process.stdout;
 
 let PKIDir = __dirname;
@@ -143,6 +144,29 @@ class EnrollTest
 		this.tests++;
 		return csr;
 	}
+	#signRequest(csr, fName) {
+		let request = path.resolve(__dirname, fName);
+		fs.writeFileSync(request, Buffer.from(csr));
+		let openSSL = new OpenSSLWrapper();
+		let cert = openSSL.signCert(request);
+		let p7b = openSSL.mountPKCS7(cert);
+		let p7PEM = fs.readFileSync(p7b, { encoding: 'utf8'});
+		fs.unlinkSync(request);
+		fs.unlinkSync(cert);
+		fs.unlinkSync(p7b);
+		return p7PEM;
+	}
+	installChainTestCase(csr, fName) {
+		LOG.write('Testing install signed certificate chain...');
+		let pkcs7 = this.#signRequest(csr, fName);
+		let b64 = pkcs7.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace(/\r?\n|\r/g, '');
+		let derPKCS7 = Aroari.Base64.atob(b64);
+		assert(this.component.installCertificates, 'The expected Enroll.installCertificates method is undefined');
+		let done = this.component.installCertificates(derPKCS7);
+		let msg = done ? ' done!\n' : ' at least one CA certificate is already installed\n';
+		this.tests++;
+		LOG.write(msg);
+	}
 }
 
 function main() {
@@ -157,14 +181,18 @@ function main() {
 	console.log('Enrollment test case battery');
 	let enrollTest = new EnrollTest();
 	let devices = enrollTest.enumDevicesTestCase();
-	console.log('Installed devices:');
+	console.log('Installed devices:')
 	console.log(devices);
 	let capiCN = 'User CN to legacy CryptoAPI ' + ++indexCN;
 	let capiCSR = enrollTest.generateCSRTestCase(LEGACY_PROVIDER, capiCN);
 	console.log('Request generated:');
 	console.log(capiCSR);
-
-	// Clean-up
+	enrollTest.installChainTestCase(capiCSR, 'capi-request.req');
+	let cngCN = 'User CN to CNG API ' + ++indexCN;
+	let cngCSR = enrollTest.generateCSRTestCase(CNG_PROVIDER, cngCN);
+	console.log('Request generated:');
+	console.log(cngCSR);
+	enrollTest.installChainTestCase(cngCSR, 'cng-request.req');
 
 	let tests = enrollTest.tests;
 	LOG.write(tests.toString());
