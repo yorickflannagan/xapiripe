@@ -748,9 +748,9 @@ void enumCerts(const Napi::Env& env, std::vector<Certificate>& out)
 			std::stringbuf buffer;
 			std::ostream os(&buffer);
 			DWORD i;
+			os << std::setfill('0');
 			for (i = 0; i < hCert->pCertInfo->SerialNumber.cbData; i++)
 			{
-				os << std::setfill('0');
 				os << std::hex << std::setw(2) << (int) hCert->pCertInfo->SerialNumber.pbData[i];
 			}
 			std::string serial = buffer.str();

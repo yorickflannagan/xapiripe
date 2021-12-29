@@ -169,6 +169,55 @@ const crypto = require('crypto');
 	 */
 	static SIGNER_CERT_ALREADY_INSTALLED_ERROR = 79;
 
+	/**
+	 * Padrão de assinatura não suportado
+	 * @member { Number }
+	 * @default 80
+	 */
+	static UNSUPPORTED_CADES_SIGNATURE = 80;
+
+	/**
+	 * Tipo de compromisso CAdES desconhecido
+	 * @member { Number }
+	 * @default 81
+	 */
+	static UNSUPPORTED_COMMITMENT_TYPE = 81;
+
+	/**
+	 * Falha ao codificar os atributos assinados em DER
+	 * @member { Number }
+	 * @default 82
+	 */
+	static DER_ENCODE_SIGNED_ATTR_ERROR = 82;
+
+	/**
+	 * Falha ao obter a cadeia de certificados do assinante
+	 * @member { Number }
+	 * @default 83
+	 */
+	static GET_CHAIN_ERROR = 83;
+
+	/**
+	 * Falha ao assinar os atributos assinados do documento CMS
+	 * @member { Number }
+	 * @defaualt 84
+	 */
+	static SIGNED_ATTRS_SIGN_ERROR = 84;
+
+	/**
+	 * Falha geral na decodificação de um certificado
+	 * @member { Number }
+	 * @default 85
+	 */
+	static CERTIFICATE_DECODE_ERROR = 85;
+
+	/**
+	 * Falha geral ao codificar o documento CMS em DER
+	 * @member { Number }
+	 * @default 86
+	 */
+	static DER_ENCODE_CMS_ERROR = 86;
+
 	constructor(msg, method, errorCode, native)
 	{
 		super(msg);
@@ -202,67 +251,207 @@ const crypto = require('crypto');
  * @property { Object } rdn     - Nome distinto do titular do certificado, conforme {@link Aroari.X500Name}. Obrigatório
  */
 
+/**
+ * Políticas de assinatura, conforme RFC 5126. Atenção: somente a política CAdES-BES é presentemente suportada.
+ * @memberof Aroari
+ */
+class Policy
+{
+	/**
+	 * CAdES Basic Electronic Signature
+	 * @member { String }
+	 * @default CAdES-BES
+	 */
+	static typeBES = 'CAdES-BES';
 
- const encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
- const equals = "=".charCodeAt(0);
- const dash = "-".charCodeAt(0);
- const decodings = [
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,63,
-	 52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,
-	 -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,
-	 15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,-1,
-	 -1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
-	 41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-	 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+	/**
+	 *  CAdES Explicit Policy-based Electronic Signatures
+	 * @member { String }
+	 * @default CAdES-EPES
+	 */
+	static typeEPES = 'CAdES-EPES';
+
+	/**
+	 * Electronic Signature with Time
+	 * @member { String }
+	 * @default 'CAdES-T
+	 */
+	static typeT = 'CAdES-T'
+
+	/**
+	 * ES with Complete Validation Data Reference
+	 * @member { String }
+	 * @default CAdES-C
+	 */
+	static typeC = 'CAdES-C';
+
+	/**
+	 * EXtended Long Electronic Signature
+	 * @member { String }
+	 * @default CAdES-X Long
+	 */
+	static typeX = 'CAdES-X Long';
+
+	/**
+	 * EXtended Electronic Signature with Time Type 1
+	 * @member { String }
+	 * @default CAdES-X Type 1
+	 */
+	static type1 = 'CAdES-X Type 1';
+
+	/**
+	 * EXtended Electronic Signature with Time Type 2
+	 * @member { String }
+	 * @default CAdES-X Type 2
+	 */
+	static type2 = 'CAdES-X Type 2';
+
+	/**
+	 * Xtended Long Electronic Signature with Time Type 1
+	 * @member { String }
+	 * @default CAdES-X Long Type 1
+	 */
+	static typeX1 = 'CAdES-X Long Type 1';
+
+	/**
+	 * Xtended Long Electronic Signature with Time Type 2
+	 * @member { String }
+	 * @default CAdES-X Long Type 2
+	 */
+	static typeX2 = 'CAdES-X Long Type 2';
+
+	/**
+	 * Archival Electronic Signature
+	 * @member { String }
+	 * @default CAdES-A
+	 */
+	static typeA = 'CAdES-A';
+}
+
+/**
+ * Identificador dos algoritmos criptográficos
+ * @memberof Aroari
+ */
+class AlgorithmOID
+{
+	/**
+	 * Assinatura RSA sobre hash SHA-1
+	 * @member { String }
+	 * @default 1.2.840.113549.1.1.5
+	 */
+	static sha1WithRSAEncryption = '1.2.840.113549.1.1.5';
+
+	/**
+	 * Assinatura RSA sobre hash SHA-256
+	 * @member { String }
+	 * @default 1.2.840.113549.1.1.11
+	 */
+	static sha256WithRSAEncryption = '1.2.840.113549.1.1.11';
+
+	/**
+	 * Assinatura RSA sobre hash SHA-384
+	 * @member { String }
+	 * @default 1.2.840.113549.1.1.12
+	 */
+	static sha384WithRSAEncryption = '1.2.840.113549.1.1.12';
+
+	/**
+	 * Assinatura RSA sobre hash SHA-512
+	 * @member { String }
+	 * @default 1.2.840.113549.1.1.13
+	 */
+	static sha512WithRSAEncryption = '1.2.840.113549.1.1.13';
+
+	/**
+	 * Hash SHA-1
+	 * @member { String }
+	 * @default 1.3.14.3.2.26
+	 */
+	static sha1 = '1.3.14.3.2.26';
+
+	/**
+	 * Hash SHA-256
+	 * @member { String }
+	 * @default 2.16.840.1.101.3.4.2.1
+	 */
+	static sha256 = '2.16.840.1.101.3.4.2.1';
+
+	/**
+	 * Hash SHA-384
+	 * @member { String }
+	 * @default 2.16.840.1.101.3.4.2.2
+	 */
+	static sha384 = '2.16.840.1.101.3.4.2.2';
+
+	/**
+	 * Hash SHA-512
+	 * @member { String }
+	 * @default 2.16.840.1.101.3.4.2.3
+	 */
+	static sha512 = '2.16.840.1.101.3.4.2.3';
+}
+
+const encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const equals = "=".charCodeAt(0);
+const dash = "-".charCodeAt(0);
+const decodings = [
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,62,-1,-1,-1,63,
+	52,53,54,55,56,57,58,59,60,61,-1,-1,-1,-1,-1,-1,
+	-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,
+	15,16,17,18,19,20,21,22,23,24,25,-1,-1,-1,-1,-1,
+	-1,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
+	41,42,43,44,45,46,47,48,49,50,51,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+	-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
  ];
- const equals_value	= -2;
- const dash_value 	= -3;
- decodings[equals]	= equals_value;
- decodings[dash] 	= dash_value;
- const pre = 0;
- const content_1 = 1;
- const content_2 = 2;
- const content_3 = 3;
- const content_4 = 4;
- /**
-  * Utilitário para conversão de e para Base64
-  * @memberof Aroari
-  */
- class Base64
- {
-	 /**
-	  * Converte um array de bytes para Base64
-	  * @param { Uint8Array } bytes Cadeia de bytes a ser convertida
-	  * @returns { String } Argumento convertido para Base64
-	  */
-	 static btoa(bytes)
-	 {
-		 var base64        = '';
-		 var byteLength    = bytes.byteLength;
-		 var byteRemainder = byteLength % 3;
-		 var mainLength    = byteLength - byteRemainder;
-		 var a, b, c, d;
-		 var chunk;
-		 for (var i = 0; i < mainLength; i = i + 3)
-		 {
-			 chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
-			 a = (chunk & 16515072) >> 18;
-			 b = (chunk & 258048)   >> 12;
-			 c = (chunk & 4032)     >>  6;
-			 d = chunk & 63;
-			 base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
-		 }
-		 if (byteRemainder == 1)
-		 {
+const equals_value	= -2;
+const dash_value 	= -3;
+decodings[equals]	= equals_value;
+decodings[dash] 	= dash_value;
+const pre = 0;
+const content_1 = 1;
+const content_2 = 2;
+const content_3 = 3;
+const content_4 = 4;
+/**
+ * Utilitário para conversão de e para Base64
+ * @memberof Aroari
+ */
+class Base64
+{
+	/**
+	 * Converte um array de bytes para Base64
+	 * @param { Uint8Array } bytes Cadeia de bytes a ser convertida
+	 * @param { Boolean } breakLines Se true, a linha é quebrada na coluna 64. Opcional. Valor default: false
+	 * @returns { String } Argumento convertido para Base64
+	 */
+	static btoa(bytes, breakLines)
+	{
+		var base64        = '';
+		var byteLength    = bytes.byteLength;
+		var byteRemainder = byteLength % 3;
+		var mainLength    = byteLength - byteRemainder;
+		var a, b, c, d;
+		var chunk;
+		for (var i = 0; i < mainLength; i = i + 3)
+		{
+			chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+			a = (chunk & 16515072) >> 18;
+			b = (chunk & 258048)   >> 12;
+			c = (chunk & 4032)     >>  6;
+			d = chunk & 63;
+			base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
+		}
+		if (byteRemainder == 1)
+		{
 			 chunk = bytes[mainLength];
 			 a = (chunk & 252) >> 2;
 			 b = (chunk & 3)   << 4;
@@ -270,79 +459,91 @@ const crypto = require('crypto');
 		 }
 		 else if (byteRemainder == 2)
 		 {
-			 chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
-			 a = (chunk & 64512) >> 10;
-			 b = (chunk & 1008)  >>  4;
-			 c = (chunk & 15)    <<  2;
-			 base64 += encodings[a] + encodings[b] + encodings[c] + '=';
-		 }
-		 return base64;
-	 }
+			chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
+			a = (chunk & 64512) >> 10;
+			b = (chunk & 1008)  >>  4;
+			c = (chunk & 15)    <<  2;
+			base64 += encodings[a] + encodings[b] + encodings[c] + '=';
+		}
+		let ret = base64;
+		if (breakLines)
+		{
+			let pem = [];
+			let start = 0;
+			while (start < base64.length)
+			{
+				pem.push(base64.slice(start, start + 64));
+				start += 64;
+			}
+			ret = pem.join('\r\n');
+		}
+		return ret;
+	}
 
-	 /**
-	  * Converte o argumento de Baser64 para um array de bytes
-	  * @throws { Error } Dispara uma exceção caso a string não seja válida em Base64
-	  * @param { String } base64 Array de bytes codificado em Base64
-	  * @returns { Uint8Array } Array de bytes convertido
-	  */
-	 static atob(base64)
-	 {
-		 var charlen = base64.length;
-		 var byteoff = 0;
-		 var byteLength = Math.round(((charlen) / 4 * 3)+1);
-		 var bytes = new Uint8Array(byteLength)
-		 var chunk = 0;
-		 var i = 0;
-		 var code;
-		 code = decodings[base64.charCodeAt(i)];
-		 if (code == dash_value)
-		 {
-			 while (code == dash_value && i < charlen) code = decodings[base64.charCodeAt(++i)];
-			 if (i!=0)
-			 {
-				 while(code != dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
-				 while(code == dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
-			 }
-		 }
-		 while(code<0 && code != dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
-		 if(code == dash_value || i >= charlen) throw new Error("A codificação recebida como base64 é inválida");
-		 var stage = pre; 
-		 while(i < charlen && code != dash_value) {
-			 while(i < charlen && stage != content_4 && code != dash_value)
-			 {
-				 stage++;
-				 switch(stage)
-				 {
-					 case content_1:
-						 chunk = code << 18;
-						 break;
-					 case content_2:
-						 chunk |= code << 12;
-						 break;
-					 case content_3:
-						 chunk |= code << 6;
-						 break;
-					 case content_4:
-						 chunk |= code;
-						 break;
-				 }
-				 code = decodings[base64.charCodeAt(++i)];
-				 while(code < 0 && code != dash_value && i < charlen) code = decodings[base64.charCodeAt(++i)];
-			 }
-			 switch(stage)
-			 {
-				 case content_1: throw new Error("A codificação recebida como base64 é inválida");
-				 case content_4:	bytes[byteoff + 2] = chunk &  255;
-				 case content_3:	bytes[byteoff + 1] = chunk >> 8;
-				 case content_2:	bytes[byteoff    ] = chunk >> 16;
-			 }
-			 byteoff += stage-1;
-			 stage = pre;
-		 }
-		 return bytes.subarray(0,byteoff);
-	 }
- }
- 
+	/**
+	 * Converte o argumento de Baser64 para um array de bytes
+	 * @throws { Error } Dispara uma exceção caso a string não seja válida em Base64
+	 * @param { String } base64 Array de bytes codificado em Base64
+	 * @returns { Uint8Array } Array de bytes convertido
+	 */
+	static atob(base64)
+	{
+		var charlen = base64.length;
+		var byteoff = 0;
+		var byteLength = Math.round(((charlen) / 4 * 3)+1);
+		var bytes = new Uint8Array(byteLength)
+		var chunk = 0;
+		var i = 0;
+		var code;
+		code = decodings[base64.charCodeAt(i)];
+		if (code == dash_value)
+		{
+			while (code == dash_value && i < charlen) code = decodings[base64.charCodeAt(++i)];
+			if (i!=0)
+			{
+				while(code != dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
+				while(code == dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
+			}
+		}
+		while(code<0 && code != dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
+		if(code == dash_value || i >= charlen) throw new Error("A codificação recebida como base64 é inválida");
+		var stage = pre; 
+		while(i < charlen && code != dash_value) {
+			while(i < charlen && stage != content_4 && code != dash_value)
+			{
+				stage++;
+				switch(stage)
+				{
+					case content_1:
+						chunk = code << 18;
+						break;
+					case content_2:
+						chunk |= code << 12;
+						break;
+					case content_3:
+						chunk |= code << 6;
+						break;
+					case content_4:
+						chunk |= code;
+						break;
+				}
+				code = decodings[base64.charCodeAt(++i)];
+				while(code < 0 && code != dash_value && i < charlen) code = decodings[base64.charCodeAt(++i)];
+			}
+			switch(stage)
+			{
+				case content_1: throw new Error("A codificação recebida como base64 é inválida");
+				case content_4:	bytes[byteoff + 2] = chunk &  255;
+				case content_3:	bytes[byteoff + 1] = chunk >> 8;
+				case content_2:	bytes[byteoff    ] = chunk >> 16;
+			}
+			byteoff += stage-1;
+			stage = pre;
+		}
+		return bytes.subarray(0,byteoff);
+	}
+}
+
 /**
  * Implementa a parte cliente da emissão de um certificado digital
  * @memberof Aroari
@@ -378,19 +579,24 @@ class Enroll
 
 		let signAlg = typeof options.signAlg != 'undefined' ? options.signAlg : Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS;
 		let hashAlg;
+		let signOID;
 		switch (signAlg)
 		{
 		case Hamahiri.SignMechanism.CKM_SHA1_RSA_PKCS:
 			hashAlg = 'sha1';
+			signOID = AlgorithmOID.sha1WithRSAEncryption;
 			break;
 		case Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS:
 			hashAlg = 'sha256'
+			signOID = AlgorithmOID.sha256WithRSAEncryption;
 			break;
 		case Hamahiri.SignMechanism.CKM_SHA384_RSA_PKCS:
 			hashAlg = 'sha384';
+			signOID = AlgorithmOID.sha384WithRSAEncryption;
 			break;
 		case Hamahiri.SignMechanism.CKM_SHA512_RSA_PKCS:
 			hashAlg = 'sha512';
+			signOID = AlgorithmOID.sha512WithRSAEncryption;
 			break;
 		default: throw new APIError('Algoritmo de assinatura não suportado', 'generateCSR', APIError.UNSUPPORTED_ALGORITHM_ERROR);
 		}
@@ -445,7 +651,7 @@ class Enroll
 			idBlock: { tagClass: 3, tagNumber: 0 },
 			value: [
 				new asn1js.Sequence({ value: [
-					new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.20'}),
+					new asn1js.ObjectIdentifier({ value: signOID }),
 					new asn1js.Set({ value: [
 						new asn1js.Utf8String({ value: options.rdn.cn })
 					]})
@@ -472,7 +678,7 @@ class Enroll
 		let request = new asn1js.Sequence({ value: [
 			certificateRequestInfo,
 			new asn1js.Sequence({ value: [
-				new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.1.11' }),
+				new asn1js.ObjectIdentifier({ value: signOID }),
 				new asn1js.Null()
 			]}),
 			new asn1js.BitString({ valueHex: signature.buffer })
@@ -484,7 +690,7 @@ class Enroll
 			throw new APIError(request.error, 'generateCSR', DER_ENCODE_REQUEST_ERROR);
 		}
 		this.addon.releaseKeyHandle(keyPair.privKey);
-		return '-----BEGIN CERTIFICATE REQUEST-----\n' + Base64.btoa(csr) + '\n-----END CERTIFICATE REQUEST-----';
+		return '-----BEGIN CERTIFICATE REQUEST-----\n' + Base64.btoa(csr, true) + '\n-----END CERTIFICATE REQUEST-----';
 	}
 
 	/**
@@ -543,6 +749,65 @@ class Enroll
 }
 
 /**
+ * Tipos de compromisso da assinatura CAdES
+ * @memberof Aroari
+ */
+ class CommitmentType
+ {
+	 /**
+	  * Indica que o assinante reconhece a criação, a aprovação e o envio do documento assinado
+	  * @member { String }
+	  * @default 1.2.840.113549.1.9.16.6.1
+	  */
+	 static proofOfOrigin = '1.2.840.113549.1.9.16.6.1';
+ 
+	 /**
+	  * Indica que o assinante recebeu o conteúdo assinado
+	  * @member { String }
+	  * @default 1.2.840.113549.1.9.16.6.2
+	  */
+	 static proofOfReceipt = '1.2.840.113549.1.9.16.6.2';
+ 
+	 /**
+	  * Indica que um Trusted Service Provider sinalizou ao destinatário a entrega do conteúdo assinado
+	  * @member { String }
+	  * @default 1.2.840.113549.1.9.16.6.3
+	  */
+	 static proofOfDelivery = '1.2.840.113549.1.9.16.6.3';
+ 
+	 /**
+	  * Indica que o assinante enviou o conteúdo, mas não necessariamente o criou
+	  * @member { String }
+	  * @default 1.2.840.113549.1.9.16.6.4
+	  */
+	 static proofOfSender = '1.2.840.113549.1.9.16.6.4';
+ 
+	 /**
+	  * Indica que o assinante aprova o conteúdo assinado
+	  * @member { String }
+	  * @default 1.2.840.113549.1.9.16.6.5
+	  */
+	 static proofOfApproval = '1.2.840.113549.1.9.16.6.5';
+ 
+	 /**
+	  * Indica que o assinante criou o conteúdo, mas não necessariamente o enviou ou aprovou
+	  * @member { String }
+	  * @default 1.2.840.113549.1.9.16.6.6
+	  */
+	 static proofOfCreation = '1.2.840.113549.1.9.16.6.6';
+ }
+ 
+/**
+ * Opções CAdES da assinatura. Atributos assinados obrigatórios: Content Type, Message Digest e ESS signing-certificate-v2
+ * @class CAdES
+ * @memberof Aroari
+ * @property { String  } policy Padrão de assinatura escolhido conforme a RFC 5126. Opcional. Valor default: CAdES-BES
+ * @property { Boolean } addSigningTime Incluir atributo assinado Signing Time. Opcional. Valor default: true
+ * @property { String } commitmentType Se contiver um valor descritivo, inclui o OID do atributo assinado Commitment
+ * Type Indication conforme {@link Aroari.CommitmentType}. Opcional. Valor default: CommitmentType.proofOfSender.
+ */
+
+/**
  * Opções para a operação de assinatura de documentos e transações
  * @class SignOptions
  * @memberof Aroari
@@ -552,9 +817,36 @@ class Enroll
  * Valor default: true
  * @property { Number } algorithm Constante indicativa do algoritmo de assinatura a ser utilizado.
  * Valor default: SignMechanism.CKM_SHA256_RSA_PKCS
- * @property { String } policy Padrão de assinatura escolhido conforme a RFC 5126. Opcional. Valor default: CAdES-BES
+ * @property { Object } cades Oções CAdES da assinatura conforme {@link Aroari.CAdES}. Opcional
  */
 
+/**
+ * Representação ASN.1 de um certificado digital
+ * @memberof Aroari
+ */
+ class X509Certificate
+ {
+	 constructor(encoded)
+	 {
+		 let decoded = asn1js.fromBER(encoded.buffer);
+		 if (decoded.offset == -1) throw new APIError('Falha geral em efetuar o parsing do certificado', 'new X509Certificate()', APIError.CERTIFICATE_DECODE_ERROR);
+		 this.root = decoded.result;
+		 if (!this.root.valueBlock.value[0]) throw new APIError('Codificação DER inválida para um certificado digital', 'new X509Certificate()', APIError.CERTIFICATE_DECODE_ERROR);
+		 this.tbs = this.root.valueBlock.value[0];
+	 }
+	 getIssuer() {
+		 let issuer = this.tbs.valueBlock.value[3];
+		 if (!(issuer instanceof asn1js.Sequence)) throw new APIError('Codificação DER inválida do campo Issuer', 'new X509Certificate()', APIError.CERTIFICATE_DECODE_ERROR);
+		 return issuer;
+	 }
+	 getSerial() {
+		let serial = this.tbs.valueBlock.value[1];
+		if (!(serial instanceof asn1js.Integer)) throw new APIError('Codificação DER inválida do campo CertificateSerialNumber', 'new X509Certificate()', APIError.CERTIFICATE_DECODE_ERROR);
+		return serial;
+
+	 }
+ }
+ 
 /**
  * Implementa as funções de assinatura digital utilizando chaves RSA
  * @memberof Aroari
@@ -587,7 +879,191 @@ class Sign
 		if (!(typeof options.toBeSigned != 'undefined' && (typeof options.toBeSigned == 'string' || options.toBeSigned instanceof ArrayBuffer))) throw new APIError('Argumento SignOptions.toBeSigned must be an string or an instance of ArrayBuffer', 'sign', APIError.ARGUMENT_ERROR);
 		if (typeof options.attach != 'undefined' && typeof options.attach != 'boolean') throw new APIError('Argumento SignOptions.attach, se presente, deve ser um valor lógico', 'sign', APIError.ARGUMENT_ERROR);
 		if (typeof options.algorithm != 'undefined' && isNaN(options.algorithm)) throw new APIError('Argumento SignOptions.algorithm, se presente, deve ser numérico', 'sign', APIError.ARGUMENT_ERROR);
-		if (typeof options.policy != 'undefined' && 'CAdES-BES'.localeCompare(options.policy) != 0) throw new APIError ('Argumento options.policy, se presente, deve ter um valor suportado', 'sign', APIError.ARGUMENT_ERROR);
+		if (typeof options.cades != 'undefined')
+		{
+			if (typeof options.cades != 'object') throw new APIError('Argumento options.cades, se presente, deve ser um objeto do tipo Aroari.CAdES', 'sign', APIError.ARGUMENT_ERROR);
+			if (typeof options.cades.policy != 'undefined')
+			{
+				if (typeof options.cades.policy != 'string') throw new APIError('Argumento options.cades.policy, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
+				if (options.cades.policy.localCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
+			}
+			if (typeof options.cades.addSigningTime != 'undefined' && typeof options.cades.addSigningTime != 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
+			if (typeof options.cades.commitmentType != 'undefined')
+			{
+				if (typeof options.cades.commitmentType != 'string') throw new APIError('Argumento options.cades.commitmentType, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
+				if
+				(
+					options.cades.commitmentType != CommitmentType.proofOfOrigin &&
+					options.cades.commitmentType != CommitmentType.proofOfReceipt &&
+					options.cades.commitmentType != CommitmentType.proofOfDelivery &&
+					options.cades.commitmentType != CommitmentType.proofOfSender &&
+					options.cades.commitmentType != CommitmentType.proofOfApproval &&
+					options.cades.commitmentType != CommitmentType.proofOfCreation
+				)	throw new APIError('Tipo de compromisso com a assinatura não conhecido', 'sign', APIError.UNSUPPORTED_COMMITMENT_TYPE);
+			}
+		}
+
+		let hHandle = options.handle;
+		let chain;
+		try { chain = this.addon.getCertificateChain(hHandle); }
+		catch (err) { throw new APIError('Falha ao obter a cadeia de certificados do assinante', 'sign', APIError.GET_CHAIN_ERROR, err);}
+		let toBeSigned = typeof options.toBeSigned == 'string' ? new TextEncoder().encode(options.toBeSigned) : new Uint8Array(options.toBeSigned);
+		let attach = typeof options.attach != 'undefined' ? options.attach : true;
+		let signAlg = typeof options.algorithm != 'undefined' ? options.algorithm : Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS;
+		let policy = typeof options.cades != 'undefined' && typeof options.cades.policy != 'undefined' ? options.cades.policy : Policy.typeBES;
+		let addSigningTime = typeof options.cades != 'undefined' && typeof options.cades.addSigningTime != 'undefined' ? options.cades.addSigningTime : true;
+		let commitmentType = typeof options.cades != 'undefined' && typeof options.cades.commitmentType != 'undefined' ? options.cades.commitmentType : CommitmentType.proofOfSender;
+		let hashAlg;
+		let hashAlgOID;
+		let signAlgOID;
+		switch (signAlg)
+		{
+		case Hamahiri.SignMechanism.CKM_SHA1_RSA_PKCS:
+			hashAlg = 'sha1'
+			hashAlgOID = AlgorithmOID.sha1;
+			signAlgOID = AlgorithmOID.sha1WithRSAEncryption;
+			break;
+		case Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS:
+			hashAlg = 'sha256';
+			hashAlgOID = AlgorithmOID.sha256;
+			signAlgOID = AlgorithmOID.sha256WithRSAEncryption;
+			break;
+		case Hamahiri.SignMechanism.CKM_SHA384_RSA_PKCS:
+			hashAlg = 'sha384';
+			hashAlgOID = AlgorithmOID.sha384;
+			signAlgOID = AlgorithmOID.sha384WithRSAEncryption;
+			break;
+		case Hamahiri.SignMechanism.CKM_SHA512_RSA_PKCS:
+			hashAlg = 'sha512';
+			hashAlgOID = AlgorithmOID.sha512;
+			signAlgOID = AlgorithmOID.sha512WithRSAEncryption;
+			break;
+		default: throw new APIError('Algoritmo de assinatura não suportado', 'sign', APIError.UNSUPPORTED_ALGORITHM_ERROR);
+		}
+
+		let contentTypeAttr = new asn1js.Sequence({ value: [
+			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.3'}),
+			new asn1js.Set({ value: [ new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.7.1' }) ]})
+		]});
+		let hash = crypto.createHash(hashAlg);
+		hash.update(Buffer.from(toBeSigned));
+		let digest = hash.digest();
+		let messageDigestAttr = new asn1js.Sequence({ value: [
+			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.4'}),
+			new asn1js.Set({ value: [ new asn1js.OctetString({ valueHex: digest.buffer }) ]})
+		]});
+		hash = crypto.createHash(hashAlg);
+		hash.update(Buffer.from(chain[0]));
+		let certHash = hash.digest();
+		let essCertIDv2 = new asn1js.Sequence({ value: [] });
+		if (hashAlg.localeCompare('sha256') != 0)
+		{
+			essCertIDv2.valueBlock.value.push(
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: hashAlgOID }),
+					new asn1js.Null()
+				]})
+			);
+		}
+		essCertIDv2.valueBlock.value.push(new asn1js.OctetString({ valueHex: certHash.buffer }));
+		let essSignCertv2Attr = new asn1js.Sequence({ value: [
+			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.16.2.47'}),
+			new asn1js.Set({ value: [ essCertIDv2 ]})
+		]});
+		let commitmentTypeAttr = new asn1js.Sequence({ value: [
+			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.16.2.16'}),
+			new asn1js.Set({ value: [ 
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: commitmentType })
+				]})
+			]})
+		]});
+		let signedAttrs = new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 0 }, value: [
+			contentTypeAttr,
+			messageDigestAttr,
+			essSignCertv2Attr,
+			commitmentTypeAttr
+		]});
+		if (addSigningTime)
+		{
+			signedAttrs.valueBlock.value.push(
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.5'}),
+					new asn1js.Set({ value: [ new asn1js.GeneralizedTime({ valueDate: new Date() }) ]})
+				]})
+			);
+		}
+
+		// TODO: Support policies other than CAdES-BES
+		if (policy === Policy.typeEPES);
+		else if (policy === Policy.typeT);
+		else if (policy === Policy.typeC);
+		else if (policy === Policy.typeX);
+		else if (policy === Policy.type1);
+		else if (policy === Policy.type2);
+		else if (policy === Policy.typeX1);
+		else if (policy === Policy.typeX2);
+		else if (policy === Policy.typeA);
+
+		let siVer = new asn1js.Integer({ value: 1 });
+		let signerCert = new X509Certificate(chain[0]);
+		let sid = new asn1js.Sequence({ value: [
+			signerCert.getIssuer(),
+			signerCert.getSerial()
+		]});
+		let digestAlgorithm = new asn1js.Sequence({ value: [
+			new asn1js.ObjectIdentifier({ value: hashAlgOID }),
+			new asn1js.Null()
+		]});
+		let signatureAlgorithm = new asn1js.Sequence({ value: [
+			new asn1js.ObjectIdentifier({ value: signAlgOID }),
+			new asn1js.Null()
+		]});
+		let derSignedAttrs = signedAttrs.toBER(false);
+		if (derSignedAttrs.byteLength == 0) throw new APIError('Falha na codificação em DER dos atributos assinados', 'sign', APIError.DER_ENCODE_SIGNED_ATTR_ERROR);
+		let toSign = new Uint8Array(derSignedAttrs);
+		toSign[0] = 0x31;
+		hash = crypto.createHash(hashAlg);
+		hash.update(Buffer.from(toSign));
+		let signatureValue;
+		try { signatureValue = this.addon.sign(hash.digest(), signAlg, hHandle); }
+		catch (err) { throw new APIError('Falha ao assinar os atributos do documento CMS', 'sign', APIError.SIGNED_ATTRS_SIGN_ERROR, err); }
+		let signature = new asn1js.OctetString({ valueHex: signatureValue.buffer });
+
+		let version = new asn1js.Integer({ value: 1 });
+		let digestAlgorithms = new asn1js.Set({ value: [ digestAlgorithm ]});
+		let encapContentInfo = new asn1js.Sequence({ value: [ new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.7.1' }) ]});
+		if (attach) encapContentInfo.valueBlock.value.push(
+			new asn1js.Constructed({ 
+				idBlock: { tagClass: 3, tagNumber: 0 },
+				value: [ new asn1js.OctetString({ valueHex: toBeSigned.buffer })]})
+		);
+		let i = 0;
+		let certificates = new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 0 }, value: []});
+		while (i < chain.length)
+		{
+			let decoded = asn1js.fromBER(chain[i].buffer);
+			if 
+			(
+				decoded.offset == -1 ||
+				typeof decoded.result === 'undefined' ||
+				!(decoded.result instanceof asn1js.Sequence)
+			)	throw new APIError('Falha geral em efetuar o parsing do certificado', 'sign', APIError.CERTIFICATE_DECODE_ERROR);
+			certificates.valueBlock.value.push(decoded.result);
+			i++;
+		}
+		let signerInfos = new asn1js.Set({ value: [ 
+			new asn1js.Sequence({ value: [ siVer, sid, digestAlgorithm, signedAttrs, signatureAlgorithm, signature ] })
+		]});
+		let signedData = new asn1js.Sequence({ value: [ version, digestAlgorithms, encapContentInfo, certificates, signerInfos ]});
+
+		let contentInfo = new asn1js.Sequence({ value: [
+			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.7.2' }),
+			new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 0 }, value: [ signedData ]})
+		]});
+		let encoded = contentInfo.toBER(false);
+		if (encoded.byteLength == 0) throw new APIError('Falha ao codificar o documento CMS em DER', 'sign', APIError.DER_ENCODE_CMS_ERROR);
+		return '-----BEGIN PKCS7-----\n' + Base64.btoa(new Uint8Array(encoded), true) + '\n-----END PKCS7-----';
 	}
 }
 
@@ -596,5 +1072,6 @@ module.exports = {
 	AroariError: APIError,
 	Enroll: Enroll,
 	Sign: Sign,
-	Base64: Base64
+	Base64: Base64,
+	CommitmentType: CommitmentType
 }

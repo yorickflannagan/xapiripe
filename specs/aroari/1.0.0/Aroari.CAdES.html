@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: SignOptions</title>
+    <title>JSDoc: Class: CAdES</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: SignOptions</h1>
+    <h1 class="page-title">Class: CAdES</h1>
 
     
 
@@ -29,7 +29,7 @@
 <header>
     
         <h2><span class="attribs"><span class="type-signature"></span></span>
-            <span class="ancestors"><a href="Aroari.html">Aroari</a>.</span>SignOptions<span class="signature">()</span><span class="type-signature"></span></h2>
+            <span class="ancestors"><a href="Aroari.html">Aroari</a>.</span>CAdES<span class="signature">()</span><span class="type-signature"></span></h2>
         
     
 </header>
@@ -42,7 +42,7 @@
     
 
     
-    <h4 class="name" id="SignOptions"><span class="type-signature"></span>new SignOptions<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="CAdES"><span class="type-signature"></span>new CAdES<span class="signature">()</span><span class="type-signature"></span></h4>
     
 
     
@@ -50,7 +50,7 @@
 
 
 <div class="description">
-    Opções para a operação de assinatura de documentos e transações
+    Opções CAdES da assinatura. Atributos assinados obrigatórios: Content Type, Message Digest e ESS signing-certificate-v2
 </div>
 
 
@@ -91,39 +91,13 @@
 
         <tr>
             
-                <td class="name"><code>handle</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Handle para o certificado, retornado por <a href="Xapiripe.Certificate.html">Xapiripe.Certificate</a></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>toBeSigned</code></td>
+                <td class="name"><code>policy</code></td>
             
 
             <td class="type">
             
                 
 <span class="param-type">String</span>
-|
-
-<span class="param-type">ArrayBuffer</span>
 
 
             
@@ -133,14 +107,14 @@
 
             
 
-            <td class="description last">Documento ou transação a ser assinada</td>
+            <td class="description last">Padrão de assinatura escolhido conforme a RFC 5126. Opcional. Valor default: CAdES-BES</td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>attach</code></td>
+                <td class="name"><code>addSigningTime</code></td>
             
 
             <td class="type">
@@ -156,20 +130,20 @@
 
             
 
-            <td class="description last">Indica se o documento toBeSigned deve ser anexado ao envelope CMS Signed Data. Opcional.Valor default: true</td>
+            <td class="description last">Incluir atributo assinado Signing Time. Opcional. Valor default: true</td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>algorithm</code></td>
+                <td class="name"><code>commitmentType</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Number</span>
+<span class="param-type">String</span>
 
 
             
@@ -179,30 +153,7 @@
 
             
 
-            <td class="description last">Constante indicativa do algoritmo de assinatura a ser utilizado.Valor default: SignMechanism.CKM_SHA256_RSA_PKCS</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>cades</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Oções CAdES da assinatura conforme <a href="Aroari.CAdES.html">Aroari.CAdES</a>. Opcional</td>
+            <td class="description last">Se contiver um valor descritivo, inclui o OID do atributo assinado CommitmentType Indication conforme <a href="Aroari.CommitmentType.html">Aroari.CommitmentType</a>. Opcional. Valor default: CommitmentType.proofOfSender.</td>
         </tr>
 
     
@@ -241,7 +192,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line810">line 810</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line800">line 800</a>
     </li></ul></dd>
     
 
