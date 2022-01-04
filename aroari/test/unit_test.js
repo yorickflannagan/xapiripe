@@ -5,7 +5,6 @@ const path = require('path');
 const Aroari = require('../src/aroari');
 const assert = require('assert');
 const cp = require('child_process');
-const asn1js = require('asn1js');
 const LOG = process.stdout;
 
 let PKIDir = __dirname;
@@ -43,6 +42,7 @@ class OpenSSLWrapper
 		return ret.status;
 	}
 	verifyCMS(cms) {
+		if (!fs.existsSync(cms)) throw 'CMS SignedData file must exists at current directory';
 		let args = [
 			'smime',
 			'-verify',
@@ -174,7 +174,7 @@ class EnrollTest
 	installChainTestCase(csr, fName) {
 		LOG.write('Testing install signed certificate chain...');
 		let pkcs7 = this.#signRequest(csr, fName);
-		let b64 = pkcs7.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace(/\r?\n|\r/g, '');
+		let b64 = pkcs7.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
 		let derPKCS7 = Aroari.Base64.atob(b64);
 		assert(this.component.installCertificates, 'The expected Enroll.installCertificates method is undefined');
 		let done = this.component.installCertificates(derPKCS7);
@@ -222,10 +222,28 @@ class SignTest
 		}
 		return null;
 	}
-	signTestCase(certs, expression) {
+	basicSignTestCase(certs, expression) {
 		let cert = this.#selectCert(certs, expression);
 		assert(cert, 'Certificate select expression does not return a value. Cannot execute test');
-		LOG.write('Testing CAdES signature with certificate ');
+		LOG.write('Testing basic CAdES signature by certificate ');
+		LOG.write(cert.subject);
+		LOG.write('...');
+		assert(this.component.sign, 'The expected method Sign.Sign() is undefined');
+		let pkcs7 = this.component.sign({
+			handle: cert.handle,
+			toBeSigned: 'Text transaction to be signed'
+		});
+		assert(pkcs7, 'Return value is undefined');
+		assert(typeof pkcs7 === 'string', 'Return value must be a string');
+		assert(pkcs7.startsWith('-----BEGIN PKCS7-----'), 'Return value must be a PKCS #7, PEM encoded document');
+		LOG.write(' done!\n');
+		this.tests++;
+		return pkcs7;
+	}
+	signCommitmentTypeTestCase(certs, expression) {
+		let cert = this.#selectCert(certs, expression);
+		assert(cert, 'Certificate select expression does not return a value. Cannot execute test');
+		LOG.write('Testing CAdES signature with CommitmentType by certificate ');
 		LOG.write(cert.subject);
 		LOG.write('...');
 		assert(this.component.sign, 'The expected method Sign.Sign() is undefined');
@@ -253,6 +271,20 @@ class SignTest
 		let msg = ret == 0 ? ' done!\n' : ' verification failed!\n';
 		LOG.write(msg);
 	}
+	parseCMSTestCase(pkcs7) {
+		LOG.write('Testing parse of CMS Signed Data document...');
+		let cms = new Aroari.CMSSignedData(pkcs7);
+		assert(cms.signedData, 'CMS SignedData parsing failed');
+		LOG.write(' done!\n');
+		this.tests++;
+		return cms;
+	}
+	verifySignatureTestCase(cms) {
+		LOG.write('Testing CMS SignedData cryptographic signature validation...');
+		cms.verify();
+		LOG.write(' done!\n');
+		this.tests++;
+	}
 }
 
 function main() {
@@ -264,7 +296,7 @@ function main() {
 	new OpenSSLWrapper();
 
 	// Enrollment tests
-	console.log('Enrollment test case battery');
+/*	console.log('Enrollment test case battery');
 	let enrollTest = new EnrollTest();
 	let devices = enrollTest.enumDevicesTestCase();
 	console.log('Installed devices:')
@@ -279,19 +311,30 @@ function main() {
 	console.log('Request generated:');
 	console.log(cngCSR);
 	enrollTest.installChainTestCase(cngCSR, 'cng-request.req');
-
+*/
 	// Signature tests
 	console.log('Signature test case battery');
 	let signTest = new SignTest();
 	let certs = signTest.enumerateCertificatesTestCase();
 	console.log('Installed certificates:');
 	console.log(certs);
-	let pkcs7 = signTest.signTestCase(certs, /CryptoAPI/gi);
+	
+	let pkcs7 = signTest.basicSignTestCase(certs, /CryptoAPI/gi);
 	console.log('Signed document:');
 	console.log(pkcs7);
 	signTest.verifySignature(pkcs7, 'capi-cms.pem');
+	let cms = signTest.parseCMSTestCase(pkcs7);
+	signTest.verifySignatureTestCase(cms);
 
-	let tests = enrollTest.tests;
+	pkcs7 = signTest.signCommitmentTypeTestCase(certs, /CryptoAPI/gi);
+	console.log('Signed document:');
+	console.log(pkcs7);
+	signTest.verifySignature(pkcs7, 'capi-cms.pem');
+	cms = signTest.parseCMSTestCase(pkcs7);
+	signTest.verifySignatureTestCase(cms);
+
+	//	let tests = enrollTest.tests;
+	let tests = signTest.tests;
 	LOG.write(tests.toString());
 	LOG.write(' test cases performed.\n')
 	fs.writeFileSync(indexFile, indexCN.toString());

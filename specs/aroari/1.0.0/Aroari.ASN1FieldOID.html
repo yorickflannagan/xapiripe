@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: Policy</title>
+    <title>JSDoc: Class: ASN1FieldOID</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: Policy</h1>
+    <h1 class="page-title">Class: ASN1FieldOID</h1>
 
     
 
@@ -29,9 +29,9 @@
 <header>
     
         <h2><span class="attribs"><span class="type-signature"></span></span>
-            <span class="ancestors"><a href="Aroari.html">Aroari</a>.</span>Policy<span class="signature">()</span><span class="type-signature"></span></h2>
+            <span class="ancestors"><a href="Aroari.html">Aroari</a>.</span>ASN1FieldOID<span class="signature">()</span><span class="type-signature"></span></h2>
         
-            <div class="class-description">Políticas de assinatura, conforme RFC 5126. Atenção: somente a política CAdES-BES é presentemente suportada.</div>
+            <div class="class-description">Constantes úteis para a identificação de objetos ASN.1</div>
         
     
 </header>
@@ -46,7 +46,7 @@
     
 
     
-    <h4 class="name" id="Policy"><span class="type-signature"></span>new Policy<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="ASN1FieldOID"><span class="type-signature"></span>new ASN1FieldOID<span class="signature">()</span><span class="type-signature"></span></h4>
     
 
     
@@ -94,7 +94,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line307">line 307</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line597">line 597</a>
     </li></ul></dd>
     
 
@@ -144,13 +144,13 @@
 
         
             
-<h4 class="name" id="type1"><span class="type-signature"></span>type1<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="cmsCommitmentType"><span class="type-signature"></span>cmsCommitmentType<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    EXtended Electronic Signature with Time Type 1
+    Campo CMS id-aa-ets-commitmentType
 </div>
 
 
@@ -196,14 +196,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-X Type 1</li>
+            <li>1.2.840.113549.1.9.16.2.16</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line349">line 349</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line667">line 667</a>
     </li></ul></dd>
     
 
@@ -221,13 +221,13 @@
 
         
             
-<h4 class="name" id="type2"><span class="type-signature"></span>type2<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="cmsContentType"><span class="type-signature"></span>cmsContentType<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    EXtended Electronic Signature with Time Type 2
+    Campo CMS id-contentType
 </div>
 
 
@@ -273,14 +273,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-X Type 2</li>
+            <li>1.2.840.113549.1.9.3</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line356">line 356</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line639">line 639</a>
     </li></ul></dd>
     
 
@@ -298,13 +298,13 @@
 
         
             
-<h4 class="name" id="typeA"><span class="type-signature"></span>typeA<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="cmsDataContentType"><span class="type-signature"></span>cmsDataContentType<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    Archival Electronic Signature
+    Campos CMS id-data
 </div>
 
 
@@ -350,14 +350,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-A</li>
+            <li>1.2.840.113549.1.7.1</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line377">line 377</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line646">line 646</a>
     </li></ul></dd>
     
 
@@ -375,13 +375,13 @@
 
         
             
-<h4 class="name" id="typeBES"><span class="type-signature"></span>typeBES<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="cmsMessageDigest"><span class="type-signature"></span>cmsMessageDigest<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    CAdES Basic Electronic Signature
+    Campo CMS id-messageDigest
 </div>
 
 
@@ -427,14 +427,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-BES</li>
+            <li>1.2.840.113549.1.9.4</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line314">line 314</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line653">line 653</a>
     </li></ul></dd>
     
 
@@ -452,13 +452,13 @@
 
         
             
-<h4 class="name" id="typeC"><span class="type-signature"></span>typeC<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="cmsSignedData"><span class="type-signature"></span>cmsSignedData<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    ES with Complete Validation Data Reference
+    Campo CMS id-signedData
 </div>
 
 
@@ -504,14 +504,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-C</li>
+            <li>1.2.840.113549.1.7.2</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line335">line 335</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line632">line 632</a>
     </li></ul></dd>
     
 
@@ -529,13 +529,13 @@
 
         
             
-<h4 class="name" id="typeEPES"><span class="type-signature"></span>typeEPES<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="cmsSigningCertificateV2"><span class="type-signature"></span>cmsSigningCertificateV2<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    CAdES Explicit Policy-based Electronic Signatures
+    Campo CMS id-aa-signingCertificateV2
 </div>
 
 
@@ -581,14 +581,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-EPES</li>
+            <li>1.2.840.113549.1.9.16.2.47</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line321">line 321</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line660">line 660</a>
     </li></ul></dd>
     
 
@@ -606,13 +606,13 @@
 
         
             
-<h4 class="name" id="typeT"><span class="type-signature"></span>typeT<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="cmsSigningTime"><span class="type-signature"></span>cmsSigningTime<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    Electronic Signature with Time
+    Campo CMS id-signingTime
 </div>
 
 
@@ -658,14 +658,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>'CAdES-T</li>
+            <li>1.2.840.113549.1.9.5</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line328">line 328</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line674">line 674</a>
     </li></ul></dd>
     
 
@@ -683,13 +683,13 @@
 
         
             
-<h4 class="name" id="typeX"><span class="type-signature"></span>typeX<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="x500CommonName"><span class="type-signature"></span>x500CommonName<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    EXtended Long Electronic Signature
+    Campo X.500 Common Name
 </div>
 
 
@@ -735,14 +735,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-X Long</li>
+            <li>'2.5.4.3</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line342">line 342</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line625">line 625</a>
     </li></ul></dd>
     
 
@@ -760,13 +760,13 @@
 
         
             
-<h4 class="name" id="typeX1"><span class="type-signature"></span>typeX1<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="x500Country"><span class="type-signature"></span>x500Country<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    Xtended Long Electronic Signature with Time Type 1
+    Campo X.500 Country
 </div>
 
 
@@ -812,14 +812,14 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-X Long Type 1</li>
+            <li>'2.5.4.6</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line363">line 363</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line604">line 604</a>
     </li></ul></dd>
     
 
@@ -837,13 +837,13 @@
 
         
             
-<h4 class="name" id="typeX2"><span class="type-signature"></span>typeX2<span class="type-signature"> :String</span></h4>
+<h4 class="name" id="x500Organization"><span class="type-signature"></span>x500Organization<span class="type-signature"> :String</span></h4>
 
 
 
 
 <div class="description">
-    Xtended Long Electronic Signature with Time Type 2
+    Campo X.500 Organization
 </div>
 
 
@@ -889,14 +889,168 @@
     
     <dt class="tag-default">Default Value:</dt>
     <dd class="tag-default"><ul class="dummy">
-            <li>CAdES-X Long Type 2</li>
+            <li>'2.5.4.10</li>
         </ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line370">line 370</a>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line611">line 611</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id="x500OrgUnit"><span class="type-signature"></span>x500OrgUnit<span class="type-signature"> :String</span></h4>
+
+
+
+
+<div class="description">
+    Campo X.500 Organization Unit
+</div>
+
+
+
+    <h5>Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">String</span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-default">Default Value:</dt>
+    <dd class="tag-default"><ul class="dummy">
+            <li>'2.5.4.11</li>
+        </ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line618">line 618</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id="x509SubjectKeyIdentifier"><span class="type-signature"></span>x509SubjectKeyIdentifier<span class="type-signature"> :Number</span></h4>
+
+
+
+
+<div class="description">
+    Extensão Subject Key Identifier do certificado
+</div>
+
+
+
+    <h5>Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">Number</span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-default">Default Value:</dt>
+    <dd class="tag-default"><ul class="dummy">
+            <li>2.5.29.14</li>
+        </ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="aroari.js.html">aroari.js</a>, <a href="aroari.js.html#line681">line 681</a>
     </li></ul></dd>
     
 

@@ -121,7 +121,7 @@ const crypto = require('crypto');
 	static DER_ENCODE_REQUEST_ERROR = 72;
 
 	/**
-	 * Falha ao codificar em DER a requisição de certificado
+	 * Falha ao decodificar um documento PKCS #7
 	 * @member { Number }
 	 * @default 73
 	 */
@@ -217,6 +217,55 @@ const crypto = require('crypto');
 	 * @default 86
 	 */
 	static DER_ENCODE_CMS_ERROR = 86;
+
+	/**
+	 * O campo certificates do documento CMS SignedData não contém certificados
+	 * @member { Number }
+	 * @default 87
+	 */
+	static CMS_CERTIFICATES_FIELD_EMPTY = 87;
+
+	/**
+	 * O conteúdo eContent do campo EncapsulatedContentInfo não está presente
+	 * @member { Number }
+	 * @default 88
+	 */
+	static CMS_ECONTENT_FIELD_EMPTY = 88;
+
+	/**
+	 * O documento CMS não embarca nenhum campo SignerInfo
+	 * @member { Number }
+	 * @default 89
+	 */
+	static CMS_SIGNER_INFO_EMPTY = 89;
+
+	/**
+	 * O fragmento ASN.1 não corresponde à especificação sintática de um RDN
+	 * @member { Number }
+	 * @default 90;
+	 */
+	static DER_DECODE_RDN_ERROR = 90;
+
+	/**
+	 * A assinatura calculada com os atributos assinados não é válida
+	 * @member { Number }
+	 * @default 91;
+	 */
+	static CMS_SIGNATURE_DOES_NOT_MATCH = 91;
+
+	/**
+	 * O atributo assinado Message Digest não confere com o eContent fornecido
+	 * @member { Number }
+	 * @default 92;
+	 */
+	static CMS_MESSAGE_DIGEST_NOT_MATCH = 92;
+
+	/**
+	 * O valor do atributo assinado ESS Signing Certificate V2 não confere com o hash do certificado de assinatura fornecido
+	 * @member{ Number }
+	 * @default 93
+	 */
+	static CMS_SIGNING_CERTIFICATEV2_NOT_MATCH = 93;
 
 	constructor(msg, method, errorCode, native)
 	{
@@ -335,6 +384,11 @@ class Policy
 class AlgorithmOID
 {
 	/**
+	 * 
+	 */
+	static rsaEncryption = '1.2.840.113549.1.1.1';
+
+	/**
 	 * Assinatura RSA sobre hash SHA-1
 	 * @member { String }
 	 * @default 1.2.840.113549.1.1.5
@@ -441,8 +495,7 @@ class Base64
 		var mainLength    = byteLength - byteRemainder;
 		var a, b, c, d;
 		var chunk;
-		for (var i = 0; i < mainLength; i = i + 3)
-		{
+		for (var i = 0; i < mainLength; i = i + 3) {
 			chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
 			a = (chunk & 16515072) >> 18;
 			b = (chunk & 258048)   >> 12;
@@ -450,15 +503,13 @@ class Base64
 			d = chunk & 63;
 			base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
 		}
-		if (byteRemainder == 1)
-		{
+		if (byteRemainder == 1) {
 			 chunk = bytes[mainLength];
 			 a = (chunk & 252) >> 2;
 			 b = (chunk & 3)   << 4;
 			 base64 += encodings[a] + encodings[b] + '==';
 		 }
-		 else if (byteRemainder == 2)
-		 {
+		 else if (byteRemainder == 2) {
 			chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
 			a = (chunk & 64512) >> 10;
 			b = (chunk & 1008)  >>  4;
@@ -466,8 +517,7 @@ class Base64
 			base64 += encodings[a] + encodings[b] + encodings[c] + '=';
 		}
 		let ret = base64;
-		if (breakLines)
-		{
+		if (breakLines) {
 			let pem = [];
 			let start = 0;
 			while (start < base64.length)
@@ -496,8 +546,7 @@ class Base64
 		var i = 0;
 		var code;
 		code = decodings[base64.charCodeAt(i)];
-		if (code == dash_value)
-		{
+		if (code == dash_value) {
 			while (code == dash_value && i < charlen) code = decodings[base64.charCodeAt(++i)];
 			if (i!=0)
 			{
@@ -505,15 +554,13 @@ class Base64
 				while(code == dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
 			}
 		}
-		while(code<0 && code != dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
-		if(code == dash_value || i >= charlen) throw new Error("A codificação recebida como base64 é inválida");
+		while (code<0 && code != dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
+		if (code == dash_value || i >= charlen) throw new Error("A codificação recebida como base64 é inválida");
 		var stage = pre; 
-		while(i < charlen && code != dash_value) {
-			while(i < charlen && stage != content_4 && code != dash_value)
-			{
+		while (i < charlen && code != dash_value) {
+			while (i < charlen && stage != content_4 && code != dash_value) {
 				stage++;
-				switch(stage)
-				{
+				switch(stage) {
 					case content_1:
 						chunk = code << 18;
 						break;
@@ -528,20 +575,110 @@ class Base64
 						break;
 				}
 				code = decodings[base64.charCodeAt(++i)];
-				while(code < 0 && code != dash_value && i < charlen) code = decodings[base64.charCodeAt(++i)];
+				while (code < 0 && code != dash_value && i < charlen) code = decodings[base64.charCodeAt(++i)];
 			}
-			switch(stage)
-			{
-				case content_1: throw new Error("A codificação recebida como base64 é inválida");
-				case content_4:	bytes[byteoff + 2] = chunk &  255;
-				case content_3:	bytes[byteoff + 1] = chunk >> 8;
-				case content_2:	bytes[byteoff    ] = chunk >> 16;
+			switch(stage) {
+			case content_1: throw new Error("A codificação recebida como base64 é inválida");
+			case content_4:	bytes[byteoff + 2] = chunk &  255;
+			case content_3:	bytes[byteoff + 1] = chunk >> 8;
+			case content_2:	bytes[byteoff    ] = chunk >> 16;
 			}
 			byteoff += stage-1;
 			stage = pre;
 		}
 		return bytes.subarray(0,byteoff);
 	}
+}
+
+/**
+ * Constantes úteis para a identificação de objetos ASN.1
+ * @memberof Aroari
+ */
+class ASN1FieldOID
+{
+	/**
+	 * Campo X.500 Country
+	 * @member { String }
+	 * @default '2.5.4.6
+	 */
+	static x500Country = '2.5.4.6';
+
+	/**
+	 * Campo X.500 Organization
+	 * @member { String }
+	 * @default '2.5.4.10
+	 */
+	static x500Organization = '2.5.4.10';
+
+	/**
+	 * Campo X.500 Organization Unit
+	 * @member { String }
+	 * @default '2.5.4.11
+	 */
+	static x500OrgUnit = '2.5.4.11';
+
+	/**
+	 * Campo X.500 Common Name
+	 * @member { String }
+	 * @default '2.5.4.3
+	 */
+	static x500CommonName = '2.5.4.3';
+
+	/**
+	 * Campo CMS id-signedData
+	 * @member { String }
+	 * @default 1.2.840.113549.1.7.2
+	 */
+	static cmsSignedData = '1.2.840.113549.1.7.2';
+
+	/**
+	 * Campo CMS id-contentType
+	 * @member { String }
+	 * @default 1.2.840.113549.1.9.3
+	 */
+	static cmsContentType = '1.2.840.113549.1.9.3';
+
+	/**
+	 * Campos CMS id-data
+	 * @member { String }
+	 * @default 1.2.840.113549.1.7.1
+	 */
+	static cmsDataContentType = '1.2.840.113549.1.7.1';
+
+	/**
+	 * Campo CMS id-messageDigest
+	 * @member { String }
+	 * @default 1.2.840.113549.1.9.4
+	 */
+	static cmsMessageDigest = '1.2.840.113549.1.9.4';
+
+	/**
+	 * Campo CMS id-aa-signingCertificateV2
+	 * @member { String }
+	 * @default 1.2.840.113549.1.9.16.2.47
+	 */
+	static cmsSigningCertificateV2 = '1.2.840.113549.1.9.16.2.47';
+
+	/**
+	 * Campo CMS id-aa-ets-commitmentType
+	 * @member { String }
+	 * @default 1.2.840.113549.1.9.16.2.16
+	 */
+	static cmsCommitmentType = '1.2.840.113549.1.9.16.2.16';
+
+	/**
+	 * Campo CMS id-signingTime
+	 * @member { String }
+	 * @default 1.2.840.113549.1.9.5
+	 */
+	static cmsSigningTime = '1.2.840.113549.1.9.5';
+
+	/**
+	 * Extensão Subject Key Identifier do certificado
+	 * @member { Number }
+	 * @default  2.5.29.14
+	 */
+	static x509SubjectKeyIdentifier = '2.5.29.14';
 }
 
 /**
@@ -564,6 +701,55 @@ class Enroll
 		return ret;
 	}
 
+	#makeCertificateRequestInfo(rdn, pubKey, signOID) {
+		let ver = new asn1js.Integer({ value: 1 });
+		let name = new asn1js.Sequence({ value: [] });
+		if (rdn.c) name.valueBlock.value.push(
+			new asn1js.Set({ value: [
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: ASN1FieldOID.x500Country }),
+					new asn1js.Utf8String({ value: rdn.c })
+				]})
+			]}));
+		if (rdn.o) name.valueBlock.value.push(
+			new asn1js.Set({ value: [
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: ASN1FieldOID.x500Organization}),
+					new asn1js.Utf8String({ value: rdn.o })
+				]})
+			]}));
+		if (rdn.ou) name.valueBlock.value.push(
+			new asn1js.Set({ value: [
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: ASN1FieldOID.x500OrgUnit}),
+					new asn1js.Utf8String({ value: rdn.ou })
+				]})
+			]}));
+		name.valueBlock.value.push(
+			new asn1js.Set({ value: [
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: ASN1FieldOID.x500CommonName }),
+					new asn1js.Utf8String({ value: rdn.cn })
+				]})
+			]}));
+		let pubKeyInfo = new asn1js.Sequence({ value: [
+			pubKey.valueBlock.value[0],
+			pubKey.valueBlock.value[1]
+		]});
+		let attrs = new asn1js.Constructed({ 
+			idBlock: { tagClass: 3, tagNumber: 0 },
+			value: [
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: signOID }),
+					new asn1js.Set({ value: [
+						new asn1js.Utf8String({ value: rdn.cn })
+					]})
+				]})
+			]
+		});
+		return new asn1js.Sequence({ value: [ ver, name, pubKeyInfo, attrs ]});
+	}
+
 	/**
 	 * Gera um par de chaves RSA e assina uma requisição de certificado digital.
 	 * @param   { Object   } options Parâmetros para operação conforme {@link Aroari.EnrollOptions}
@@ -580,8 +766,7 @@ class Enroll
 		let signAlg = typeof options.signAlg != 'undefined' ? options.signAlg : Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS;
 		let hashAlg;
 		let signOID;
-		switch (signAlg)
-		{
+		switch (signAlg) {
 		case Hamahiri.SignMechanism.CKM_SHA1_RSA_PKCS:
 			hashAlg = 'sha1';
 			signOID = AlgorithmOID.sha1WithRSAEncryption;
@@ -606,62 +791,13 @@ class Enroll
 		try { keyPair = this.addon.generateKeyPair(options.device, keySize); }
 		catch (err) { throw new APIError('Falha na geração do par de chaves RSA', 'generateCSR', APIError.GENERATE_KEY_PAIR_ERROR, err); }
 		let decoded = asn1js.fromBER(keyPair.pubKey.buffer);
-		if (decoded.offset == -1)
-		{
+		if (decoded.offset == -1 || !(decoded.result instanceof asn1js.Sequence)) {
 			this.addon.deleteKeyPair(keyPair.privKey);
 			throw new APIError('Falha na decodificação DER da chave púbica gerada', 'generateCSR', APIError.DER_ENCODE_PUBKEY_ERROR);
 		}
-		let pubKey = decoded.result;
-
-		let ver = new asn1js.Integer({ value: 1 });
-		let name = new asn1js.Sequence({ value: [] });
-		if (options.rdn.c) name.valueBlock.value.push(
-			new asn1js.Set({ value: [
-				new asn1js.Sequence({ value: [
-					new asn1js.ObjectIdentifier({ value: '2.5.4.6'}),
-					new asn1js.Utf8String({ value: options.rdn.c })
-				]})
-			]}));
-		if (options.rdn.o) name.valueBlock.value.push(
-			new asn1js.Set({ value: [
-				new asn1js.Sequence({ value: [
-					new asn1js.ObjectIdentifier({ value: '2.5.4.10'}),
-					new asn1js.Utf8String({ value: options.rdn.o })
-				]})
-			]}));
-		if (options.rdn.ou) name.valueBlock.value.push(
-			new asn1js.Set({ value: [
-				new asn1js.Sequence({ value: [
-					new asn1js.ObjectIdentifier({ value: '2.5.4.11'}),
-					new asn1js.Utf8String({ value: options.rdn.ou })
-				]})
-			]}));
-		name.valueBlock.value.push(
-			new asn1js.Set({ value: [
-				new asn1js.Sequence({ value: [
-					new asn1js.ObjectIdentifier({ value: '2.5.4.3'}),
-					new asn1js.Utf8String({ value: options.rdn.cn })
-				]})
-			]}));
-		let pubKeyInfo = new asn1js.Sequence({ value: [
-			pubKey.valueBlock.value[0],
-			pubKey.valueBlock.value[1]
-		]});
-		let attrs = new asn1js.Constructed({ 
-			idBlock: { tagClass: 3, tagNumber: 0 },
-			value: [
-				new asn1js.Sequence({ value: [
-					new asn1js.ObjectIdentifier({ value: signOID }),
-					new asn1js.Set({ value: [
-						new asn1js.Utf8String({ value: options.rdn.cn })
-					]})
-				]})
-			]
-		});
-		let certificateRequestInfo = new asn1js.Sequence({ value: [ ver, name, pubKeyInfo, attrs ]});
+		let certificateRequestInfo = this.#makeCertificateRequestInfo(options.rdn, decoded.result, signOID);
 		let toBeSigned = Buffer.from(certificateRequestInfo.toBER(false));
-		if (certificateRequestInfo.error != '' && toBeSigned.length == 0)
-		{
+		if (certificateRequestInfo.error != '' && toBeSigned.length == 0) {
 			this.addon.deleteKeyPair(keyPair.privKey);
 			throw new APIError(certificateRequestInfo.error, 'generateCSR', DER_ENCODE_REQUEST_INFO_ERROR);
 		}
@@ -669,8 +805,7 @@ class Enroll
 		hash.update(toBeSigned);
 		let signature;
 		try { signature = this.addon.sign(hash.digest(), signAlg, keyPair.privKey); }
-		catch (err)
-		{
+		catch (err) {
 			this.addon.deleteKeyPair(keyPair.privKey);
 			throw new APIError('Falha ao assinar a requisição de certificado', 'generateCSR', APIError.REQUEST_SIGN_ERROR, err);
 		}
@@ -684,8 +819,7 @@ class Enroll
 			new asn1js.BitString({ valueHex: signature.buffer })
 		] });
 		let csr = new Uint8Array(request.toBER(false));
-		if (request.error != '' && csr.length == 0)
-		{
+		if (request.error != '' && csr.length == 0) {
 			this.addon.deleteKeyPair(keyPair.privKey);
 			throw new APIError(request.error, 'generateCSR', DER_ENCODE_REQUEST_ERROR);
 		}
@@ -709,23 +843,20 @@ class Enroll
 		let decoded = asn1js.fromBER(pkcs7.buffer);
 		if (decoded.offset == -1) throw new APIError('Falha ao decodificar de DER o documento PKCS #7', 'installCertificates', APIError.DER_DECODE_CMS_ERROR);
 		let contentInfo = decoded.result;
-		if 
-		(!(
+		if  (!(
 			contentInfo instanceof asn1js.Sequence &&
 			contentInfo.valueBlock.value[0] instanceof asn1js.ObjectIdentifier &&
-			contentInfo.valueBlock.value[0].valueBlock.toString() === '1.2.840.113549.1.7.2'
+			contentInfo.valueBlock.value[0].valueBlock.toString() === ASN1FieldOID.cmsSignedData
 		))	throw new APIError('CMS ContentInfo inesperado para um PKCS #7', 'installCertificates', APIError.INVALID_CONTENT_INFO_ERROR);
 		let signedData = contentInfo.valueBlock.value[1].valueBlock.value[0];
-		if
-		(!(
+		if (!(
 			signedData instanceof asn1js.Sequence &&
 			signedData.valueBlock.value.length >= 4
 		))	throw new APIError('Documento CMS SignedData inválido', 'installCertificates', APIError.INVALID_SIGNED_DATA_ERROR);
 		
 		let certificates = signedData.valueBlock.value[3];
 		let i = 0;
-		while (i < certificates.valueBlock.value.length)
-		{
+		while (i < certificates.valueBlock.value.length) {
 			let subject = certificates.valueBlock.value[i];
 			let issuer = (i + 1 < certificates.valueBlock.value.length) ? certificates.valueBlock.value[i + 1] : subject;
 			let certSubject = new crypto.X509Certificate(Buffer.from(subject.valueBeforeDecode));
@@ -826,26 +957,77 @@ class Enroll
  */
  class X509Certificate
  {
-	 constructor(encoded)
-	 {
-		 let decoded = asn1js.fromBER(encoded.buffer);
-		 if (decoded.offset == -1) throw new APIError('Falha geral em efetuar o parsing do certificado', 'new X509Certificate()', APIError.CERTIFICATE_DECODE_ERROR);
-		 this.root = decoded.result;
-		 if (!this.root.valueBlock.value[0]) throw new APIError('Codificação DER inválida para um certificado digital', 'new X509Certificate()', APIError.CERTIFICATE_DECODE_ERROR);
-		 this.tbs = this.root.valueBlock.value[0];
+	/**
+	 * Efetua o parsing de um certificado digital utilizando a biblioteca asn1js
+	 * @param { Uint8Array } encoded Certificado encodado em DER
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
+	 */
+	constructor(encoded)
+	{
+		let decoded = asn1js.fromBER(encoded.buffer);
+		if (decoded.offset == -1) throw new APIError('Falha geral em efetuar o parsing do certificado', 'X509Certificate constructor', APIError.CERTIFICATE_DECODE_ERROR);
+		this.root = decoded.result;
+		if (
+			!(this.root instanceof asn1js.Sequence) ||
+			!(this.root.valueBlock.value[0] instanceof asn1js.Sequence)
+		)	throw new APIError('Codificação DER inválida para um certificado digital', 'X509Certificate constructor', APIError.CERTIFICATE_DECODE_ERROR);
+		this.tbs = this.root.valueBlock.value[0];
 	 }
-	 getIssuer() {
-		 let issuer = this.tbs.valueBlock.value[3];
-		 if (!(issuer instanceof asn1js.Sequence)) throw new APIError('Codificação DER inválida do campo Issuer', 'new X509Certificate()', APIError.CERTIFICATE_DECODE_ERROR);
-		 return issuer;
-	 }
-	 getSerial() {
-		let serial = this.tbs.valueBlock.value[1];
-		if (!(serial instanceof asn1js.Integer)) throw new APIError('Codificação DER inválida do campo CertificateSerialNumber', 'new X509Certificate()', APIError.CERTIFICATE_DECODE_ERROR);
-		return serial;
 
-	 }
- }
+	/**
+	 * Obtém o emissor do certificado
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
+	 * @returns { Object } Uma instância de asn1js.Sequence
+	 */
+	getIssuer() {
+		let issuer = this.tbs.valueBlock.value[3];
+		if (!(issuer instanceof asn1js.Sequence)) throw new APIError('Codificação DER inválida do campo Issuer', 'getIssuer', APIError.CERTIFICATE_DECODE_ERROR);
+		return issuer;
+	}
+
+	/**
+	 * Obtém o número serial do certificado
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
+	 * @returns { Object } Uma instância de asn1js.Integer
+	 */
+	getSerial() {
+		let serial = this.tbs.valueBlock.value[1];
+		if (!(serial instanceof asn1js.Integer)) throw new APIError('Codificação DER inválida do campo CertificateSerialNumber', 'getSerial', APIError.CERTIFICATE_DECODE_ERROR);
+		return serial;
+	}
+
+	/**
+	 * Obtém o valor OCTET STRING da extensão Subject Key Identifier
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
+	 * @returns { Object } Uma instância de asn1js.OctetString com o valor da extensão ou null, caso não seja encontrada.
+	 */
+	getSubjectKeyIdentifier() {
+		let idx = this.tbs.valueBlock.value.length - 1;
+		if (
+			!(this.tbs.valueBlock.value[idx] instanceof asn1js.Constructed) ||
+			this.tbs.valueBlock.value[idx].idBlock.tagNumber != 3
+		)	throw new APIError('Codificação DER inválida do campo extensions[3]', 'getSubjectKeyIdentifier', APIError.CERTIFICATE_DECODE_ERROR);
+		let extensions = this.tbs.valueBlock.value[idx].valueBlock.value[0];
+		if (
+			!(extensions instanceof asn1js.Sequence) ||
+			!Array.isArray(extensions.valueBlock.value)
+		)	throw new APIError('Codificação DER inválida do campo extensions[3]', 'getSubjectKeyIdentifier', APIError.CERTIFICATE_DECODE_ERROR);
+		let i = 0;
+		while (i < extensions.valueBlock.value.length) {
+			let ext = extensions.valueBlock.value[i];
+			if (
+				!(ext instanceof asn1js.Sequence) ||
+				!(ext.valueBlock.value[0] instanceof asn1js.ObjectIdentifier)
+			)	throw new APIError('Codificação DER inválida do campo extensions[3]', 'getSubjectKeyIdentifier', APIError.CERTIFICATE_DECODE_ERROR);
+			if (ext.valueBlock.value[0].valueBlock.toString() === ASN1FieldOID.x509SubjectKeyIdentifier) {
+				if (!(ext.valueBlock.value[1] instanceof asn1js.OctetString));
+				return ext.valueBlock.value[1];
+			}
+			i++;
+		}
+		return null;
+	}
+}
  
 /**
  * Implementa as funções de assinatura digital utilizando chaves RSA
@@ -867,97 +1049,49 @@ class Sign
 		return ret;
 	}
 
-	/**
-	 * Assina digitalmente um documento ou transação
-	 * @param { Object } options Opções para a assinatura digital, conforme {@link Aroari.SignOptions}
-	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
-	 * @returns { String } Envelope CMS Signed Data, conforme a RFC 5652, codificado em Base64 de acordo com a convenção PEM
-	 */
-	sign(options) {
-		if (!options) throw new APIError('Argumento SignOptions obrigatório', 'sign', APIError.ARGUMENT_ERROR);
-		if (typeof options.handle == 'undefined' || isNaN(options.handle)) throw new APIError('Argumento SignOptions.handle deve ser obrigatoriamente numérico', 'sign', APIError.ARGUMENT_ERROR);
-		if (!(typeof options.toBeSigned != 'undefined' && (typeof options.toBeSigned == 'string' || options.toBeSigned instanceof ArrayBuffer))) throw new APIError('Argumento SignOptions.toBeSigned must be an string or an instance of ArrayBuffer', 'sign', APIError.ARGUMENT_ERROR);
-		if (typeof options.attach != 'undefined' && typeof options.attach != 'boolean') throw new APIError('Argumento SignOptions.attach, se presente, deve ser um valor lógico', 'sign', APIError.ARGUMENT_ERROR);
-		if (typeof options.algorithm != 'undefined' && isNaN(options.algorithm)) throw new APIError('Argumento SignOptions.algorithm, se presente, deve ser numérico', 'sign', APIError.ARGUMENT_ERROR);
-		if (typeof options.cades != 'undefined')
-		{
-			if (typeof options.cades != 'object') throw new APIError('Argumento options.cades, se presente, deve ser um objeto do tipo Aroari.CAdES', 'sign', APIError.ARGUMENT_ERROR);
-			if (typeof options.cades.policy != 'undefined')
-			{
-				if (typeof options.cades.policy != 'string') throw new APIError('Argumento options.cades.policy, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
-				if (options.cades.policy.localCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
-			}
-			if (typeof options.cades.addSigningTime != 'undefined' && typeof options.cades.addSigningTime != 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
-			if (typeof options.cades.commitmentType != 'undefined')
-			{
-				if (typeof options.cades.commitmentType != 'string') throw new APIError('Argumento options.cades.commitmentType, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
-				if
-				(
-					options.cades.commitmentType != CommitmentType.proofOfOrigin &&
-					options.cades.commitmentType != CommitmentType.proofOfReceipt &&
-					options.cades.commitmentType != CommitmentType.proofOfDelivery &&
-					options.cades.commitmentType != CommitmentType.proofOfSender &&
-					options.cades.commitmentType != CommitmentType.proofOfApproval &&
-					options.cades.commitmentType != CommitmentType.proofOfCreation
-				)	throw new APIError('Tipo de compromisso com a assinatura não conhecido', 'sign', APIError.UNSUPPORTED_COMMITMENT_TYPE);
-			}
+	#getHashAlg(signAlg) {
+		switch (signAlg) {
+		case Hamahiri.SignMechanism.CKM_SHA1_RSA_PKCS:   return 'sha1;'
+		case Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS: return 'sha256';
+		case Hamahiri.SignMechanism.CKM_SHA384_RSA_PKCS: return 'sha384';
+		case Hamahiri.SignMechanism.CKM_SHA512_RSA_PKCS: return 'sha512';
+		default: throw new APIError('Algoritmo de assinatura não suportado', 'getHashAlg', APIError.UNSUPPORTED_ALGORITHM_ERROR);
 		}
-
-		let hHandle = options.handle;
-		let chain;
-		try { chain = this.addon.getCertificateChain(hHandle); }
-		catch (err) { throw new APIError('Falha ao obter a cadeia de certificados do assinante', 'sign', APIError.GET_CHAIN_ERROR, err);}
-		let toBeSigned = typeof options.toBeSigned == 'string' ? new TextEncoder().encode(options.toBeSigned) : new Uint8Array(options.toBeSigned);
-		let attach = typeof options.attach != 'undefined' ? options.attach : true;
-		let signAlg = typeof options.algorithm != 'undefined' ? options.algorithm : Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS;
-		let policy = typeof options.cades != 'undefined' && typeof options.cades.policy != 'undefined' ? options.cades.policy : Policy.typeBES;
-		let addSigningTime = typeof options.cades != 'undefined' && typeof options.cades.addSigningTime != 'undefined' ? options.cades.addSigningTime : true;
-		let commitmentType = typeof options.cades != 'undefined' && typeof options.cades.commitmentType != 'undefined' ? options.cades.commitmentType : CommitmentType.proofOfSender;
-		let hashAlg;
-		let hashAlgOID;
-		let signAlgOID;
-		switch (signAlg)
-		{
-		case Hamahiri.SignMechanism.CKM_SHA1_RSA_PKCS:
-			hashAlg = 'sha1'
-			hashAlgOID = AlgorithmOID.sha1;
-			signAlgOID = AlgorithmOID.sha1WithRSAEncryption;
-			break;
-		case Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS:
-			hashAlg = 'sha256';
-			hashAlgOID = AlgorithmOID.sha256;
-			signAlgOID = AlgorithmOID.sha256WithRSAEncryption;
-			break;
-		case Hamahiri.SignMechanism.CKM_SHA384_RSA_PKCS:
-			hashAlg = 'sha384';
-			hashAlgOID = AlgorithmOID.sha384;
-			signAlgOID = AlgorithmOID.sha384WithRSAEncryption;
-			break;
-		case Hamahiri.SignMechanism.CKM_SHA512_RSA_PKCS:
-			hashAlg = 'sha512';
-			hashAlgOID = AlgorithmOID.sha512;
-			signAlgOID = AlgorithmOID.sha512WithRSAEncryption;
-			break;
-		default: throw new APIError('Algoritmo de assinatura não suportado', 'sign', APIError.UNSUPPORTED_ALGORITHM_ERROR);
+	}
+	#getHashAlgOID(hashAlg) {
+		if (hashAlg === 'sha1'  ) return AlgorithmOID.sha1;
+		if (hashAlg === 'sha256') return AlgorithmOID.sha256;
+		if (hashAlg === 'sha384') return AlgorithmOID.sha384;
+		if (hashAlg === 'sha512') return AlgorithmOID.sha512;
+		throw new APIError('Algoritmo de assinatura não suportado', 'getHashAlgOID', APIError.UNSUPPORTED_ALGORITHM_ERROR);
+	}
+	#getSignAlgOID(signAlg) {
+		switch (signAlg) {
+		case Hamahiri.SignMechanism.CKM_SHA1_RSA_PKCS:   return AlgorithmOID.sha1WithRSAEncryption;
+		case Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS: return AlgorithmOID.sha256WithRSAEncryption;
+		case Hamahiri.SignMechanism.CKM_SHA384_RSA_PKCS: return AlgorithmOID.sha384WithRSAEncryption;
+		case Hamahiri.SignMechanism.CKM_SHA512_RSA_PKCS: return AlgorithmOID.sha512WithRSAEncryption;
+		default: throw new APIError('Algoritmo de assinatura não suportado', 'getSignAlgOID', APIError.UNSUPPORTED_ALGORITHM_ERROR);
 		}
-
+	}
+	#makeSignedAttributes(hashAlg, toBeSigned, signingCert, commitmentType, addSigningTime) {
+		let hashAlgOID = this.#getHashAlgOID(hashAlg);
 		let contentTypeAttr = new asn1js.Sequence({ value: [
-			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.3'}),
-			new asn1js.Set({ value: [ new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.7.1' }) ]})
+			new asn1js.ObjectIdentifier({ value: ASN1FieldOID.cmsContentType }),
+			new asn1js.Set({ value: [ new asn1js.ObjectIdentifier({ value: ASN1FieldOID.cmsDataContentType }) ]})
 		]});
 		let hash = crypto.createHash(hashAlg);
 		hash.update(Buffer.from(toBeSigned));
 		let digest = hash.digest();
 		let messageDigestAttr = new asn1js.Sequence({ value: [
-			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.4'}),
+			new asn1js.ObjectIdentifier({ value: ASN1FieldOID.cmsMessageDigest }),
 			new asn1js.Set({ value: [ new asn1js.OctetString({ valueHex: digest.buffer }) ]})
 		]});
 		hash = crypto.createHash(hashAlg);
-		hash.update(Buffer.from(chain[0]));
+		hash.update(Buffer.from(signingCert));
 		let certHash = hash.digest();
 		let essCertIDv2 = new asn1js.Sequence({ value: [] });
-		if (hashAlg.localeCompare('sha256') != 0)
-		{
+		if (hashAlg.localeCompare('sha256') != 0) {
 			essCertIDv2.valueBlock.value.push(
 				new asn1js.Sequence({ value: [
 					new asn1js.ObjectIdentifier({ value: hashAlgOID }),
@@ -967,72 +1101,75 @@ class Sign
 		}
 		essCertIDv2.valueBlock.value.push(new asn1js.OctetString({ valueHex: certHash.buffer }));
 		let essSignCertv2Attr = new asn1js.Sequence({ value: [
-			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.16.2.47'}),
+			new asn1js.ObjectIdentifier({ value: ASN1FieldOID.cmsSigningCertificateV2 }),
 			new asn1js.Set({ value: [ essCertIDv2 ]})
-		]});
-		let commitmentTypeAttr = new asn1js.Sequence({ value: [
-			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.16.2.16'}),
-			new asn1js.Set({ value: [ 
-				new asn1js.Sequence({ value: [
-					new asn1js.ObjectIdentifier({ value: commitmentType })
-				]})
-			]})
 		]});
 		let signedAttrs = new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 0 }, value: [
 			contentTypeAttr,
 			messageDigestAttr,
-			essSignCertv2Attr,
-			commitmentTypeAttr
+			essSignCertv2Attr
 		]});
-		if (addSigningTime)
-		{
+		if (commitmentType) {
 			signedAttrs.valueBlock.value.push(
 				new asn1js.Sequence({ value: [
-					new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.9.5'}),
+					new asn1js.ObjectIdentifier({ value: ASN1FieldOID.cmsCommitmentType }),
+					new asn1js.Set({ value: [ 
+						new asn1js.Sequence({ value: [
+							new asn1js.ObjectIdentifier({ value: commitmentType })
+						]})
+					]})
+				]})
+			);
+		}
+		if (addSigningTime) {
+			signedAttrs.valueBlock.value.push(
+				new asn1js.Sequence({ value: [
+					new asn1js.ObjectIdentifier({ value: ASN1FieldOID.cmsSigningTime }),
 					new asn1js.Set({ value: [ new asn1js.GeneralizedTime({ valueDate: new Date() }) ]})
 				]})
 			);
 		}
-
-		// TODO: Support policies other than CAdES-BES
-		if (policy === Policy.typeEPES);
-		else if (policy === Policy.typeT);
-		else if (policy === Policy.typeC);
-		else if (policy === Policy.typeX);
-		else if (policy === Policy.type1);
-		else if (policy === Policy.type2);
-		else if (policy === Policy.typeX1);
-		else if (policy === Policy.typeX2);
-		else if (policy === Policy.typeA);
-
+		return signedAttrs;
+	}
+	#makeSignerInfos(hHandle, signAlg, signingCert, signedAttrs) {
+		let hashAlg = this.#getHashAlg(signAlg);
+		let signAlgOID = this.#getSignAlgOID(signAlg);
+		let hashAlgOID = this.#getHashAlgOID(hashAlg)
+		let signerCert = new X509Certificate(signingCert);
 		let siVer = new asn1js.Integer({ value: 1 });
-		let signerCert = new X509Certificate(chain[0]);
 		let sid = new asn1js.Sequence({ value: [
 			signerCert.getIssuer(),
 			signerCert.getSerial()
 		]});
 		let digestAlgorithm = new asn1js.Sequence({ value: [
-			new asn1js.ObjectIdentifier({ value: hashAlgOID }),
-			new asn1js.Null()
+			new asn1js.ObjectIdentifier({ value: hashAlgOID })
 		]});
 		let signatureAlgorithm = new asn1js.Sequence({ value: [
-			new asn1js.ObjectIdentifier({ value: signAlgOID }),
-			new asn1js.Null()
+			new asn1js.ObjectIdentifier({ value: signAlgOID })
 		]});
 		let derSignedAttrs = signedAttrs.toBER(false);
-		if (derSignedAttrs.byteLength == 0) throw new APIError('Falha na codificação em DER dos atributos assinados', 'sign', APIError.DER_ENCODE_SIGNED_ATTR_ERROR);
+		if (derSignedAttrs.byteLength == 0) throw new APIError('Falha na codificação em DER dos atributos assinados', 'makeSignerInfos', APIError.DER_ENCODE_SIGNED_ATTR_ERROR);
 		let toSign = new Uint8Array(derSignedAttrs);
 		toSign[0] = 0x31;
-		hash = crypto.createHash(hashAlg);
+		let hash = crypto.createHash(hashAlg);
 		hash.update(Buffer.from(toSign));
 		let signatureValue;
 		try { signatureValue = this.addon.sign(hash.digest(), signAlg, hHandle); }
-		catch (err) { throw new APIError('Falha ao assinar os atributos do documento CMS', 'sign', APIError.SIGNED_ATTRS_SIGN_ERROR, err); }
+		catch (err) { throw new APIError('Falha ao assinar os atributos do documento CMS', 'makeSignerInfos', APIError.SIGNED_ATTRS_SIGN_ERROR, err); }
 		let signature = new asn1js.OctetString({ valueHex: signatureValue.buffer });
-
+		return new asn1js.Set({ value: [ 
+			new asn1js.Sequence({ value: [ siVer, sid, digestAlgorithm, signedAttrs, signatureAlgorithm, signature ] })
+		]});
+	}
+	#makeSignedData(hashAlg, chain, signerInfos, toBeSigned) {
+		let hashAlgOID = this.#getHashAlgOID(hashAlg);
+		let attach = typeof toBeSigned != 'undefined';
+		let digestAlgorithm = new asn1js.Sequence({ value: [
+			new asn1js.ObjectIdentifier({ value: hashAlgOID })
+		]});
 		let version = new asn1js.Integer({ value: 1 });
 		let digestAlgorithms = new asn1js.Set({ value: [ digestAlgorithm ]});
-		let encapContentInfo = new asn1js.Sequence({ value: [ new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.7.1' }) ]});
+		let encapContentInfo = new asn1js.Sequence({ value: [ new asn1js.ObjectIdentifier({ value: ASN1FieldOID.cmsDataContentType }) ]});
 		if (attach) encapContentInfo.valueBlock.value.push(
 			new asn1js.Constructed({ 
 				idBlock: { tagClass: 3, tagNumber: 0 },
@@ -1040,30 +1177,459 @@ class Sign
 		);
 		let i = 0;
 		let certificates = new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 0 }, value: []});
-		while (i < chain.length)
-		{
+		while (i < chain.length) {
 			let decoded = asn1js.fromBER(chain[i].buffer);
-			if 
-			(
+			if (
 				decoded.offset == -1 ||
-				typeof decoded.result === 'undefined' ||
 				!(decoded.result instanceof asn1js.Sequence)
-			)	throw new APIError('Falha geral em efetuar o parsing do certificado', 'sign', APIError.CERTIFICATE_DECODE_ERROR);
+			)	throw new APIError('Falha geral em efetuar o parsing do certificado', 'makeSignedData', APIError.CERTIFICATE_DECODE_ERROR);
 			certificates.valueBlock.value.push(decoded.result);
 			i++;
 		}
-		let signerInfos = new asn1js.Set({ value: [ 
-			new asn1js.Sequence({ value: [ siVer, sid, digestAlgorithm, signedAttrs, signatureAlgorithm, signature ] })
-		]});
-		let signedData = new asn1js.Sequence({ value: [ version, digestAlgorithms, encapContentInfo, certificates, signerInfos ]});
+		return new asn1js.Sequence({ value: [ version, digestAlgorithms, encapContentInfo, certificates, signerInfos ]});
+	}
 
+	/**
+	 * Assina digitalmente um documento ou transação
+	 * @param { Object } options Opções para a assinatura digital, conforme {@link Aroari.SignOptions}
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
+	 * @returns { String } Envelope CMS Signed Data, conforme a RFC 5652, codificado em Base64 de acordo com a convenção PEM
+	 */
+	sign(options) {
+		if (!options) throw new APIError('Argumento SignOptions obrigatório', 'sign', APIError.ARGUMENT_ERROR);
+		if (typeof options.handle == 'undefined' || isNaN(options.handle)) throw new APIError('Argumento SignOptions.handle deve ser obrigatoriamente numérico', 'sign', APIError.ARGUMENT_ERROR);
+		if (
+			typeof options.toBeSigned === 'undefined' ||
+			(typeof options.toBeSigned !== 'string' && !(options.toBeSigned instanceof ArrayBuffer))
+		)	throw new APIError('Argumento SignOptions.toBeSigned must be an string or an instance of ArrayBuffer', 'sign', APIError.ARGUMENT_ERROR);
+		if (typeof options.attach !== 'undefined' && typeof options.attach != 'boolean') throw new APIError('Argumento SignOptions.attach, se presente, deve ser um valor lógico', 'sign', APIError.ARGUMENT_ERROR);
+		if (typeof options.algorithm !== 'undefined' && isNaN(options.algorithm)) throw new APIError('Argumento SignOptions.algorithm, se presente, deve ser numérico', 'sign', APIError.ARGUMENT_ERROR);
+		if (typeof options.cades !== 'undefined') {
+			if (typeof options.cades !== 'object') throw new APIError('Argumento options.cades, se presente, deve ser um objeto do tipo Aroari.CAdES', 'sign', APIError.ARGUMENT_ERROR);
+			if (typeof options.cades.policy !== 'undefined') {
+				if (typeof options.cades.policy !== 'string') throw new APIError('Argumento options.cades.policy, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
+				if (options.cades.policy.localCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
+			}
+			if (typeof options.cades.addSigningTime !== 'undefined' && typeof options.cades.addSigningTime != 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
+			if (typeof options.cades.commitmentType !=='undefined')
+			{
+				if (typeof options.cades.commitmentType != 'string') throw new APIError('Argumento options.cades.commitmentType, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
+				if (
+					options.cades.commitmentType !== CommitmentType.proofOfOrigin &&
+					options.cades.commitmentType !== CommitmentType.proofOfReceipt &&
+					options.cades.commitmentType !== CommitmentType.proofOfDelivery &&
+					options.cades.commitmentType !== CommitmentType.proofOfSender &&
+					options.cades.commitmentType !== CommitmentType.proofOfApproval &&
+					options.cades.commitmentType !== CommitmentType.proofOfCreation
+				)	throw new APIError('Tipo de compromisso com a assinatura não conhecido', 'sign', APIError.UNSUPPORTED_COMMITMENT_TYPE);
+			}
+		}
+
+		let hHandle = options.handle;
+		let chain;
+		try { chain = this.addon.getCertificateChain(hHandle); }
+		catch (err) { throw new APIError('Falha ao obter a cadeia de certificados do assinante', 'sign', APIError.GET_CHAIN_ERROR, err);}
+		let toBeSigned = typeof options.toBeSigned === 'string' ? new TextEncoder().encode(options.toBeSigned) : new Uint8Array(options.toBeSigned);
+		let attach = typeof options.attach !== 'undefined' ? options.attach : true;
+		let signAlg = typeof options.algorithm !== 'undefined' ? options.algorithm : Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS;
+		let policy = typeof options.cades !== 'undefined' && typeof options.cades.policy != 'undefined' ? options.cades.policy : Policy.typeBES;
+		let addSigningTime = typeof options.cades !== 'undefined' && typeof options.cades.addSigningTime !== 'undefined' ? options.cades.addSigningTime : true;
+		let commitmentType = typeof options.cades !== 'undefined' && typeof options.cades.commitmentType !== 'undefined' ? options.cades.commitmentType : null;
+		let hashAlg = this.#getHashAlg(signAlg);
+		let signedAttrs = this.#makeSignedAttributes(hashAlg, toBeSigned, chain[0], commitmentType, addSigningTime);
+
+		// TODO: Support policies other than CAdES-BES
+		if (policy != Policy.typeBES) {
+			if (policy === Policy.typeEPES);
+			else if (policy === Policy.typeT);
+			else if (policy === Policy.typeC);
+			else if (policy === Policy.typeX);
+			else if (policy === Policy.type1);
+			else if (policy === Policy.type2);
+			else if (policy === Policy.typeX1);
+			else if (policy === Policy.typeX2);
+			else if (policy === Policy.typeA);
+		}
+
+		let signerInfos = this.#makeSignerInfos(hHandle, signAlg, chain[0], signedAttrs);
+		let attachment;
+		if (attach) attachment = toBeSigned;
+		let signedData = this.#makeSignedData(hashAlg, chain, signerInfos, attachment);
 		let contentInfo = new asn1js.Sequence({ value: [
-			new asn1js.ObjectIdentifier({ value: '1.2.840.113549.1.7.2' }),
+			new asn1js.ObjectIdentifier({ value: ASN1FieldOID.cmsSignedData }),
 			new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 0 }, value: [ signedData ]})
 		]});
 		let encoded = contentInfo.toBER(false);
 		if (encoded.byteLength == 0) throw new APIError('Falha ao codificar o documento CMS em DER', 'sign', APIError.DER_ENCODE_CMS_ERROR);
 		return '-----BEGIN PKCS7-----\n' + Base64.btoa(new Uint8Array(encoded), true) + '\n-----END PKCS7-----';
+	}
+}
+
+/**
+ * Argumentos opcionais para a verificação de assinaturas digitais
+ * @class VerifyOptions
+ * @memberof Aroari
+ * @property { ArrayBuffer | undefined } signingCert Certificado supostamente associado à chave privada que assinou o documento CMS. Opcional.
+ * Se não estiver presente, o certificado do assinante é procurado no campo certificates do documento CMS, a partir do valor do campo
+ * SignerIdentifier.
+ * @property { ArrayBuffer | undefined } eContent Contéudo digitalmente assinado para verificação. Opcional. Se não estiver presente, o
+ * conteúdo é procurado no campo EncapsulatedContentInfo do documento CMS.
+ * @property { Boolean | undefined } verifyTrustworthy Se estiver definido e contiver um valor true, o certificado do assinante é verificado
+ * criptograficamente contra os certificados de Autoridades Certificadoras presentes no repositório do Windows.
+ */
+
+/**
+ * Implementa um Relative Distinguished Name para comparação com outro RDN (stringprep)
+ * @memberof Aroari
+ */
+class RDN
+{
+	/**
+	 * Cria uma nova instância de um RDN. O objeto asn1js.Sequence recebido como argumento é validado contra
+	 * a especificação
+	 * @param { Object } rdn asn1js.Sequence
+	 * @throws { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
+	 */
+	constructor(rdn) {
+		if (!(rdn instanceof asn1js.Sequence)) throw new APIError('O argumento rdn deve ser uma instância de asn1js.Sequence', 'RDN constructor', APIError.ARGUMENT_ERROR);
+		this.name = rdn.valueBlock.value;
+		if (!Array.isArray(this.name)) throw new APIError('O argumento deve obedecer à especificação de um RDN', 'RDN constructor', APIError.DER_DECODE_RDN_ERROR);
+		let i = 0;
+		while (i < this.name.length) {
+			if (
+				!(this.name[i] instanceof asn1js.Set) ||
+				this.name[i].valueBlock.value.length > 1 ||
+				!(this.name[i].valueBlock.value[0] instanceof asn1js.Sequence)
+			)	throw new APIError('O argumento deve obedecer à especificação de um RDN', 'RDN()', APIError.DER_DECODE_RDN_ERROR);
+			let typeAndValue = this.name[i].valueBlock.value[0];
+			if (
+				typeAndValue.valueBlock.value.length != 2 ||
+				!(typeAndValue.valueBlock.value[0] instanceof asn1js.ObjectIdentifier) ||
+				typeof typeAndValue.valueBlock.value[1] !== 'object'
+			)	throw new APIError('O argumento deve obedecer à especificação de um RDN', 'RDN()', APIError.DER_DECODE_RDN_ERROR);
+			i++;
+		}
+	}
+	#stringPrep(inputString) {
+		let isSpace = false;
+		let cuttedResult = '';
+		const result = inputString.trim();
+		for (let i = 0; i < result.length; i++) {
+			if (result.charCodeAt(i) === 32) { if(isSpace === false) isSpace = true; }
+			else {
+				if (isSpace) {
+					cuttedResult += ' ';
+					isSpace = false;
+				}
+				cuttedResult += result[i];
+			}
+		}
+		return cuttedResult.toLowerCase();
+	}
+
+	/**
+	 * Verifica se as duas instâncias correspondem a um mesmo RDN
+	 * @param { Object } rdn RDN para verificar a igualdade nos termos da especificação RFC 3454 (stringprep)
+	 * @returns { Boolean } Indicador de igualdade
+	 */
+	equalsTo(rdn) {
+		if (!(rdn instanceof RDN)) return false;
+		let myName = this.name;
+		let otherName = rdn.name;
+		if (myName.length != otherName.length) return false;
+		let i = 0;
+		while (i < myName.length) {
+			let myTypeAndValue = myName[i].valueBlock.value[0];
+			let otherTypeAndValue = otherName[i].valueBlock.value[0];
+			if (myTypeAndValue.valueBlock.value[0].valueBlock.toString() !== otherTypeAndValue.valueBlock.value[0].valueBlock.toString()) return false;
+			let myPrep = this.#stringPrep(myTypeAndValue.valueBlock.value[1].valueBlock.value);
+			let otherPrep = this.#stringPrep(otherTypeAndValue.valueBlock.value[1].valueBlock.value);
+			if (myPrep.localeCompare(otherPrep) !== 0) return false;
+			i++;
+		}
+		return true;
+	}
+}
+
+/**
+ * Implementa as funções de parsing e verificação de documentos CMS assinados.
+ * Note-se que o construtor da classe não efetua a validação completa do parsing do documento, tarefa realizada a cada método.
+ * @memberof Aroari
+ */
+class CMSSignedData
+{
+	/**
+	 * Efetua o parsing do documento CMS especificado e valida os campos necessários à verificação criptográfica da assinatura.
+	 * @param { String | ArrayBuffer } cms Documento CMS SignedData, codificado em Base64 (seguindo as convenções PEM) ou DER.
+	 * @throws { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
+	 */
+	constructor(cms) {
+		let encoded;
+		if (typeof cms === 'string') {
+			let input = cms.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
+			try { encoded = Base64.atob(input); }
+			catch (err) { throw new APIError(err, 'CMSSignedData constructor', APIError.ARGUMENT_ERROR); }
+		}
+		else if (cms instanceof ArrayBuffer) {
+			encoded = new Uint8Array(cms);
+			if (encoded[0] != 0x30) throw new APIError('ArrayBuffer argument must be conforms CMS specification', 'CMSSignedData constructor', APIError.ARGUMENT_ERROR);
+		}
+		else throw new APIError('Argumento cms deve ser uma string ou um ArrayBuffer', 'CMSSignedData constructor', APIError.ARGUMENT_ERROR);
+		let decoded = asn1js.fromBER(encoded.buffer);
+		if (
+			decoded.offset == -1 ||
+			!(decoded.result instanceof asn1js.Sequence)
+		)	throw new APIError('Falha geral em efetuar o parsing do documento CMS', 'CMSSignedData constructor', APIError.DER_DECODE_CMS_ERROR);
+		let contentInfo = decoded.result;
+		if (
+			!(contentInfo.valueBlock.value[0] instanceof asn1js.ObjectIdentifier) ||
+			contentInfo.valueBlock.value[0].valueBlock.toString() !== ASN1FieldOID.cmsSignedData
+		)	throw new APIError('Documento não é um CMS SignedData', 'CMSSignedData constructor', APIError.DER_DECODE_CMS_ERROR);
+		if (
+			!(contentInfo.valueBlock.value[1] instanceof asn1js.Constructed) ||
+			contentInfo.valueBlock.value[1].idBlock.tagNumber != 0
+		)	throw new APIError('Documento não tem as características obrigatórias de um CMS', 'CMSSignedData constructor', APIError.DER_DECODE_CMS_ERROR);
+		this.signedData = contentInfo.valueBlock.value[1].valueBlock.value[0];
+		if (!(this.signedData instanceof asn1js.Sequence)) throw new APIError('Documento não tem as características de um CMS SignedData', 'CMSSignedData constructor', APIError.DER_DECODE_CMS_ERROR);
+	}
+
+	#matchOctets(a, b) {
+		if (a.length != b.length) return false;
+		let i = 0;
+		while (i < a.length) {
+			if (a[i] != b[i]) return false;
+			i++;
+		}
+		return true;
+	}
+	#getSignerInfo() {
+		let idx = this.signedData.valueBlock.value.length - 1;
+		let signerInfos = this.signedData.valueBlock.value[idx];
+		if (!(signerInfos instanceof asn1js.Set)) throw new APIError('O campo signerInfos do documento assinando não é válido', 'getSignerInfo', APIError.DER_DECODE_CMS_ERROR);
+		if (!(signerInfos.valueBlock.value[0] instanceof asn1js.Sequence)) throw new APIError('Nenhuma assinatura foi encontrada no documento CMS', 'getSignerInfo', APIError.CMS_SIGNER_INFO_EMPTY);
+		return signerInfos.valueBlock.value[0];
+	}
+	#getSignatureAlgorithm() {
+		let signerInfo = this.#getSignerInfo();
+		let signatureAlgorithm = signerInfo.valueBlock.value[4];
+		if (!(signatureAlgorithm instanceof asn1js.Sequence)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignatureAlgorithm', APIError.DER_DECODE_CMS_ERROR);
+		let algId = signatureAlgorithm.valueBlock.value[0];
+		if (!(algId instanceof asn1js.ObjectIdentifier)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignatureAlgorithm', APIError.DER_DECODE_CMS_ERROR);
+		let oid = algId.valueBlock.toString();
+		if (oid === AlgorithmOID.sha1WithRSAEncryption)   return 'RSA-SHA1';
+		if (oid === AlgorithmOID.sha256WithRSAEncryption) return 'RSA-SHA256';
+		if (oid === AlgorithmOID.sha384WithRSAEncryption) return 'RSA-SHA384';
+		if (oid === AlgorithmOID.sha512WithRSAEncryption) return 'RSA-SHA512';
+		if (oid === AlgorithmOID.rsaEncryption)
+		{
+			let digestAlgorithm = signerInfo.valueBlock.value[2];
+			if (!(digestAlgorithm instanceof asn1js.Sequence)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignatureAlgorithm', APIError.DER_DECODE_CMS_ERROR);
+			let hashId = digestAlgorithm.valueBlock.value[0];
+			if (!(hashId instanceof asn1js.ObjectIdentifier)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignatureAlgorithm', APIError.DER_DECODE_CMS_ERROR);
+			let hashOID = hashId.valueBlock.toString();
+			if (hashOID === AlgorithmOID.sha1)   return 'RSA-SHA1';
+			if (hashOID === AlgorithmOID.sha256) return 'RSA-SHA256';
+			if (hashOID === AlgorithmOID.sha384) return 'RSA-SHA384';
+			if (hashOID === AlgorithmOID.sha512) return 'RSA-SHA512';
+		}
+		throw new APIError('Algoritmo de assinatura não suportado', 'getSignatureAlgorithm', APIError.UNSUPPORTED_ALGORITHM_ERROR);
+	}
+	#getSignedAttributes() {
+		let signerInfo = this.#getSignerInfo();
+		let signedAttrs = signerInfo.valueBlock.value[3];
+		if (!(signedAttrs instanceof asn1js.Constructed)) throw new APIError('Campo SignedAttributes do documento CMS inválido', 'getSignedAttributes', APIError.DER_DECODE_CMS_ERROR);
+		return signedAttrs;
+	}
+	#getSignatureValue() {
+		let signerInfo = this.#getSignerInfo();
+		let idx = signerInfo.valueBlock.value.length - 1;
+		let signature = signerInfo.valueBlock.value[idx];
+		if (!(signature instanceof asn1js.OctetString)) throw new APIError('Campo SignatureValue do documento CMS inválido', 'getSignatureValue', APIError.DER_DECODE_CMS_ERROR);
+		return signature.valueBlock.valueHex;
+	}
+	#matchSignature(signingCert, signedAttrs) {
+		let pubKey;
+		try {
+			let x509Cert = new crypto.X509Certificate(new Uint8Array(signingCert));
+			pubKey = x509Cert.publicKey;
+			if (typeof pubKey !== 'object') throw new Error('X509Certificate Public Key field is undefined');
+		}
+		catch (err) { throw new APIError(err, 'matchSignature', APIError.CERTIFICATE_DECODE_ERROR); }
+		let signAlg = this.#getSignatureAlgorithm();
+		let signed = new Uint8Array(signedAttrs.valueBeforeDecode);
+		signed[0] = 0x31;
+		let signature = this.#getSignatureValue();
+		let vrfy = crypto.createVerify(signAlg);
+		vrfy.update(signed);
+		let match = vrfy.verify(pubKey, new Uint8Array(signature));
+		if (!match) throw new APIError('A verificação criptográfica da assinatura não confere', 'matchSignature', APIError.CMS_SIGNATURE_DOES_NOT_MATCH);
+	}
+	#getSignedContent() {
+		let encapContentInfo = this.signedData.valueBlock.value[2];
+		if (
+			!(encapContentInfo instanceof asn1js.Sequence) ||
+			!(encapContentInfo.valueBlock.value[0] instanceof asn1js.ObjectIdentifier)
+		)	throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
+		if (
+			!(encapContentInfo.valueBlock.value[1] instanceof asn1js.Constructed) ||
+			encapContentInfo.valueBlock.value[1].idBlock.tagNumber != 0 ||
+			typeof encapContentInfo.valueBlock.value[1].valueBlock.value[0] === 'undefined'
+		)	throw new APIError('O conteúdo assinado não está embarcado no documento CMS', 'getSignedContent', APIError.CMS_ECONTENT_FIELD_EMPTY);
+		let eContent = encapContentInfo.valueBlock.value[1].valueBlock.value[0];
+		if (!(eContent instanceof asn1js.OctetString)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
+		return eContent.valueBlock.valueHex;
+	}
+	#getCertificates() {
+		let certField = this.signedData.valueBlock.value[3];
+		if (
+			!(certField instanceof asn1js.Constructed) ||
+			certField.idBlock.tagNumber != 0
+		)	throw new APIError('Não foi possível localizar o campo certificates do documento CMS', 'getCertificates', APIError.DER_DECODE_CMS_ERROR);
+		let certificates = [];
+		let i = 0;
+		while (i < certField.valueBlock.value.length) {
+			if (!(certField.valueBlock.value[i] instanceof asn1js.Sequence)) throw new APIError('Valor inválido para o campo certificates do documento CMS', 'getCertificates', APIError.DER_DECODE_CMS_ERROR);
+			certificates.push(certField.valueBlock.value[i].valueBeforeDecode);
+			i++;
+		}
+		return certificates;
+	}
+	#getSid() {
+		let signerInfo = this.#getSignerInfo();
+		let sid = signerInfo.valueBlock.value[1];
+		if (sid instanceof asn1js.Sequence || (sid instanceof asn1js.Constructed && sid.idBlock.tagNumber === 0)) return sid;
+		throw new APIError('O campo SignerIdentifier do documento CMS é inválido', 'getSid', APIError.DER_DECODE_CMS_ERROR);
+	}
+	#findSigningCertificateByIssuerSerial(certificates, sid) {
+		let i = 0;
+		while (i < certificates.length) {
+			let cert = new X509Certificate(new Uint8Array(certificates[i]));
+			let serial = new Uint8Array(sid.valueBlock.value[1].valueBlock.valueHex);
+			let issuer = new RDN(sid.valueBlock.value[0]);
+			let searchedIssuer = new RDN(cert.getIssuer());
+			if (issuer.equalsTo(searchedIssuer)) {
+				let searchedSerial = new Uint8Array(cert.getSerial().valueBlock.valueHex);
+				if (this.#matchOctets(serial, searchedSerial)) return certificates[i];
+			}
+			i++;
+		}
+	}
+	#findSigningCertificateBySKI(certificates, sid) {
+		let octets = new Uint8Array(sid.valueBlock.valueHex);
+		let i = 0;
+		while (i < certificates.length) {
+			let cert = new X509Certificate(new Uint8Array(certificates[i]));
+			let ski = cert.getSubjectKeyIdentifier();
+			if (ski instanceof asn1js.OctetString) {
+				let searched = new Uint8Array(ski.valueBlock.valueHex);
+				if (this.#matchOctets(octets, searched)) return certificates[i];
+			}
+			i++;
+		}
+		return null;
+	}
+	#findAttribute(signedAttrs, fetchedOID) {
+		let i = 0;
+		while (i < signedAttrs.valueBlock.value.length) {
+			let attr = signedAttrs.valueBlock.value[i];
+			let oid = attr.valueBlock.value[0];
+			if (oid.valueBlock.toString() === fetchedOID) {
+				if (!(attr.valueBlock.value[1] instanceof asn1js.Set)) throw new APIError('Falha ao desencodar o atributo assinado', 'findAttribute', APIError.DER_DECODE_CMS_ERROR);
+				return attr.valueBlock.value[1].valueBlock.value[0];
+			}
+			i++;
+		}
+		return null;
+	}
+	#getDigestAlgorithm() {
+		let signerInfo = this.#getSignerInfo();
+		if (
+			!(signerInfo.valueBlock.value[2] instanceof asn1js.Sequence) ||
+			!(signerInfo.valueBlock.value[2].valueBlock.value[0] instanceof asn1js.ObjectIdentifier)
+		)	throw new APIError('Falha ao desencodar o campo DigestAlgorithmIdentifier', 'getDigestAlgorithm', APIError.DER_DECODE_CMS_ERROR);
+		let oid = signerInfo.valueBlock.value[2].valueBlock.value[0];
+		let hashOID = oid.valueBlock.toString();
+		if (hashOID === AlgorithmOID.sha1)   return 'sha1';
+		if (hashOID === AlgorithmOID.sha256) return 'sha256';
+		if (hashOID === AlgorithmOID.sha384) return 'sha384';
+		if (hashOID === AlgorithmOID.sha512) return 'sha512';
+		throw new APIError('Algoritmo de hash não suportado', 'getDigestAlgorithm', APIError.UNSUPPORTED_ALGORITHM_ERROR);
+	}
+	#matchMessageDigest(signedAttrs, eContent) {
+		let fetched = this.#findAttribute(signedAttrs, ASN1FieldOID.cmsMessageDigest);
+		if (!fetched || (!fetched instanceof asn1js.OctetString)) throw new APIError('Falha ao desencodar o atributo Message Digest', 'matchMessageDigest', APIError.DER_DECODE_CMS_ERROR);
+		let octets = fetched.valueBlock.valueHex;
+		let hashAlg = this.#getDigestAlgorithm();
+		let hash = crypto.createHash(hashAlg);
+		hash.update(Buffer.from(eContent));
+		let dgst = hash.digest();
+		let match = this.#matchOctets(new Uint8Array(octets), new Uint8Array(dgst.buffer));
+		if (!match) throw new APIError('O hash criptográfico do argumento eContent não confere com o valor do atributo assinado Message Digest', 'matchMessageDigest', APIError.CMS_MESSAGE_DIGEST_NOT_MATCH);
+	}
+	#matchSigningCertificate(signedAttrs, signingCert) {
+		let fetch = this.#findAttribute(signedAttrs, ASN1FieldOID.cmsSigningCertificateV2);
+		if (fetch) {
+			if (!(fetch instanceof asn1js.Sequence)) throw new APIError('Falha ao desencodar o atributo assinado signingCertificateV2 ', 'matchSigningCertificate', APIError.DER_DECODE_CMS_ERROR);
+			let hashAlg = 'sha256';
+			let idx = 0;
+			if (fetch.valueBlock.value.length == 2) {
+				if (!(fetch.valueBlock.value[idx] instanceof asn1js.Sequence)) throw new APIError('Falha ao desencodar o atributo assinado signingCertificateV2 ', 'matchSigningCertificate', APIError.DER_DECODE_CMS_ERROR);
+				let digestAlgorithm = fetch.valueBlock.value[idx];
+				if (!(digestAlgorithm.valueBlock.value[0] instanceof asn1js.ObjectIdentifier)) throw new APIError('Falha ao desencodar o atributo assinado signingCertificateV2 ', 'matchSigningCertificate', APIError.DER_DECODE_CMS_ERROR);
+				let hashOID = digestAlgorithm.valueBlock.value[0].valueBlock.toString();
+				if      (hashOID === AlgorithmOID.sha1)   hashAlg = 'sha1';
+				else if (hashOID === AlgorithmOID.sha256) hashAlg = 'sha256';
+				else if (hashOID === AlgorithmOID.sha384) hashAlg = 'sha384';
+				else if (hashOID === AlgorithmOID.sha512) hashAlg = 'sha512';
+				else throw new APIError('Algoritmo de hash não suportado', 'matchSigningCertificate', APIError.UNSUPPORTED_ALGORITHM_ERROR);
+				idx++;
+			}
+			if (!(fetch.valueBlock.value[idx] instanceof asn1js.OctetString)) throw new APIError('Falha ao desencodar o atributo assinado signingCertificateV2 ', 'findSigningCertificate', APIError.DER_DECODE_CMS_ERROR);
+			let octets = fetch.valueBlock.value[idx];
+			let hash = crypto.createHash(hashAlg);
+			hash.update(new Uint8Array(signingCert));
+			let dgst = hash.digest();
+			let match = this.#matchOctets(new Uint8Array(octets.valueBlock.valueHex), new Uint8Array(dgst.buffer));
+			if (!match) throw new APIError('O valor do atributo assinado ESS Signing Certificate V2 não confere com o hash do certificado de assinatura fornecido', 'matchSigningCertificate', APIError.CMS_SIGNING_CERTIFICATEV2_NOT_MATCH);
+		}
+	}
+
+	/**
+	 * Efetua a verificação criptográfica da assinatura do documento CMS.
+	 * @param   { Object   } options Definições para a verificação, conforme {@link Aroari.VerifyOptions}
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIError} em caso de falha na conferência da assinatura ou na
+	 * obtenção dos requisitos necessários à verificação.
+	 */
+	verify(options) {
+		let signingCert;
+		let eContent;
+		let verifyTrustworthy = true;
+		if (typeof options != 'undefined') {
+			if (typeof options.signingCert != 'undefined') {
+				if (options.signingCert instanceof ArrayBuffer) signingCert = options.signingCert;
+				else throw new APIError('O argumento options.signingCert, se presente, deve ser do tipo ArrayBuffer', 'verify', APIError.ARGUMENT_ERROR);
+			}
+			if (typeof options.eContent != 'undefined') {
+				if (options.eContent instanceof ArrayBuffer) eContent = options.eContent;
+				else throw new APIError('O argumento options.eContent, se presente, deve ser do tipo ArrayBuffer', 'verify', APIError.ARGUMENT_ERROR);
+			}
+			if (typeof options.verifyTrustworthy != 'undefined') {
+				if (typeof options.verifyTrustworthy === 'boolean') verifyTrustworthy = options.verifyTrustworthy;
+				else throw new APIError('O argumento options.verifyTrustworthy, se presente, deve ser do tipo Boolean', 'verify', APIError.ARGUMENT_ERROR);
+			}
+		}
+		if (typeof signingCert === 'undefined') {
+			let certificates = this.#getCertificates();
+			if (certificates.length == 0) throw new APIError('Não é possível executar este método: o certificado do assinante não foi embarcado no documento CMS', 'verify', APIError.CMS_CERTIFICATES_FIELD_EMPTY);
+			let sid = this.#getSid();
+			if (sid instanceof asn1js.Sequence) signingCert = this.#findSigningCertificateByIssuerSerial(certificates, sid);
+			else signingCert = this.#findSigningCertificateBySKI(certificates, sid);
+		}
+		if (typeof eContent === 'undefined') eContent = this.#getSignedContent();
+		let signedAttrs = this.#getSignedAttributes();
+		this.#matchSignature(signingCert, signedAttrs);
+		this.#matchMessageDigest(signedAttrs, eContent);
+		this.#matchSigningCertificate(signedAttrs, signingCert);
 	}
 }
 
@@ -1073,5 +1639,6 @@ module.exports = {
 	Enroll: Enroll,
 	Sign: Sign,
 	Base64: Base64,
-	CommitmentType: CommitmentType
+	CommitmentType: CommitmentType,
+	CMSSignedData: CMSSignedData
 }
