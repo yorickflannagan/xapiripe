@@ -183,6 +183,7 @@ class EnrollTest
 		LOG.write(msg);
 	}
 }
+const TO_BE_SIGNED = 'Text transaction to be signed';
 class SignTest
 {
 	constructor()
@@ -231,7 +232,7 @@ class SignTest
 		assert(this.component.sign, 'The expected method Sign.Sign() is undefined');
 		let pkcs7 = this.component.sign({
 			handle: cert.handle,
-			toBeSigned: 'Text transaction to be signed'
+			toBeSigned: TO_BE_SIGNED
 		});
 		assert(pkcs7, 'Return value is undefined');
 		assert(typeof pkcs7 === 'string', 'Return value must be a string');
@@ -249,7 +250,7 @@ class SignTest
 		assert(this.component.sign, 'The expected method Sign.Sign() is undefined');
 		let pkcs7 = this.component.sign({
 			handle: cert.handle,
-			toBeSigned: 'Text transaction to be signed',
+			toBeSigned: TO_BE_SIGNED,
 			cades: {
 				commitmentType: Aroari.CommitmentType.proofOfCreation
 			}
@@ -261,7 +262,7 @@ class SignTest
 		this.tests++;
 		return pkcs7;
 	}
-	verifySignature(pkcs7, fname) {
+	verifyWithOpenSSL(pkcs7, fname) {
 		LOG.write('Using OpenSSL to verify generated CMS Signed Data...\n');
 		let cms = path.resolve(__dirname, fname);
 		fs.writeFileSync(cms, Buffer.from(pkcs7));
@@ -281,9 +282,40 @@ class SignTest
 	}
 	verifySignatureTestCase(cms) {
 		LOG.write('Testing CMS SignedData cryptographic signature validation...');
+		assert(cms.verify, 'The expected CMSSignedData.verify() method is undefined');
 		cms.verify();
 		LOG.write(' done!\n');
 		this.tests++;
+	}
+	verifyTrustworthyTestCase(cms) {
+		LOG.write('Testing signing certificate trustworthy validation...');
+		assert(cms.verifyTrustworthy, 'The expected CMSSignedData.verifyTrustworthy() method is undefined');
+		cms.verifyTrustworthy();
+		LOG.write(' done!\n');
+		this.tests++;
+	}
+	getSidTestCase(cms) {
+		LOG.write('Testing get signer identifier...');
+		assert(cms.getSignerIdentifier, 'The expected CMSSignedData.getSignerIdentifier() method is undefined');
+		let sid = cms.getSignerIdentifier();
+		assert(sid, 'Could not get sid');
+		assert(sid.issuer, 'The returned object lacks the issuer field');
+		assert(sid.serialNumber, 'The returned object lacks the serialNumber field');
+		LOG.write(' done!\n');
+		this.tests++;
+		return sid;
+	}
+	getEncapsulatedContentTestCase(cms) {
+		LOG.write('Testing get encapsulated content info...')
+		assert(cms.getSignedContent, 'The expected CMSSignedData.getSignedContent() method is undefined');
+		let eContent = cms.getSignedContent();
+		assert(eContent, 'Returned value is undefined');
+		assert(eContent.byteLength > 0, 'Invalid returned value');
+		let value = new TextDecoder().decode(eContent);
+		assert(value.match(TO_BE_SIGNED), 'Unexpected return value');
+		LOG.write(' done!\n');
+		this.tests++;
+		return value;
 	}
 }
 
@@ -296,7 +328,7 @@ function main() {
 	new OpenSSLWrapper();
 
 	// Enrollment tests
-/*	console.log('Enrollment test case battery');
+	console.log('Enrollment test case battery');
 	let enrollTest = new EnrollTest();
 	let devices = enrollTest.enumDevicesTestCase();
 	console.log('Installed devices:')
@@ -311,7 +343,7 @@ function main() {
 	console.log('Request generated:');
 	console.log(cngCSR);
 	enrollTest.installChainTestCase(cngCSR, 'cng-request.req');
-*/
+
 	// Signature tests
 	console.log('Signature test case battery');
 	let signTest = new SignTest();
@@ -322,19 +354,61 @@ function main() {
 	let pkcs7 = signTest.basicSignTestCase(certs, /CryptoAPI/gi);
 	console.log('Signed document:');
 	console.log(pkcs7);
-	signTest.verifySignature(pkcs7, 'capi-cms.pem');
 	let cms = signTest.parseCMSTestCase(pkcs7);
 	signTest.verifySignatureTestCase(cms);
+	signTest.verifyTrustworthyTestCase(cms);
+	signTest.verifyWithOpenSSL(pkcs7, 'capi-cms.pem');
+	let sid = signTest.getSidTestCase(cms);
+	console.log('Signer identifier:');
+	console.log(sid.issuer);
+	console.log(sid.serialNumber);
+	let eContent = signTest.getEncapsulatedContentTestCase(cms);
+	console.log('Signed content: ' + eContent);
+
+	pkcs7 = signTest.basicSignTestCase(certs, /CNG/gi);
+	console.log('Signed document:');
+	console.log(pkcs7);
+	cms = signTest.parseCMSTestCase(pkcs7);
+	signTest.verifySignatureTestCase(cms);
+	signTest.verifyTrustworthyTestCase(cms);
+	signTest.verifyWithOpenSSL(pkcs7, 'cng-cms.pem');
+	sid = signTest.getSidTestCase(cms);
+	console.log('Signer identifier:');
+	console.log(sid.issuer);
+	console.log(sid.serialNumber);
+	eContent = signTest.getEncapsulatedContentTestCase(cms);
+	console.log('Signed content: ' + eContent);
 
 	pkcs7 = signTest.signCommitmentTypeTestCase(certs, /CryptoAPI/gi);
 	console.log('Signed document:');
 	console.log(pkcs7);
-	signTest.verifySignature(pkcs7, 'capi-cms.pem');
 	cms = signTest.parseCMSTestCase(pkcs7);
 	signTest.verifySignatureTestCase(cms);
+	signTest.verifyTrustworthyTestCase(cms);
+	signTest.verifyWithOpenSSL(pkcs7, 'capi-cms.pem');
+	sid = signTest.getSidTestCase(cms);
+	console.log('Signer identifier:');
+	console.log(sid.issuer);
+	console.log(sid.serialNumber);
+	eContent = signTest.getEncapsulatedContentTestCase(cms);
+	console.log('Signed content: ' + eContent);
 
-	//	let tests = enrollTest.tests;
-	let tests = signTest.tests;
+	pkcs7 = signTest.signCommitmentTypeTestCase(certs, /CNG/gi);
+	console.log('Signed document:');
+	console.log(pkcs7);
+	cms = signTest.parseCMSTestCase(pkcs7);
+	signTest.verifySignatureTestCase(cms);
+	signTest.verifyTrustworthyTestCase(cms);
+	signTest.verifyWithOpenSSL(pkcs7, 'cng-cms.pem');
+	sid = signTest.getSidTestCase(cms);
+	console.log('Signer identifier:');
+	console.log(sid.issuer);
+	console.log(sid.serialNumber);
+	eContent = signTest.getEncapsulatedContentTestCase(cms);
+	console.log('Signed content: ' + eContent);
+
+	let tests = enrollTest.tests;
+	tests += signTest.tests;
 	LOG.write(tests.toString());
 	LOG.write(' test cases performed.\n')
 	fs.writeFileSync(indexFile, indexCN.toString());

@@ -9,6 +9,7 @@
 const Hamahiri = require('../../hamahiri/lib/hamahiri');
 const asn1js = require('asn1js');
 const crypto = require('crypto');
+const { join, relative } = require('path');
 
 
 /**
@@ -262,10 +263,17 @@ const crypto = require('crypto');
 
 	/**
 	 * O valor do atributo assinado ESS Signing Certificate V2 não confere com o hash do certificado de assinatura fornecido
-	 * @member{ Number }
+	 * @member { Number }
 	 * @default 93
 	 */
 	static CMS_SIGNING_CERTIFICATEV2_NOT_MATCH = 93;
+
+	/**
+	 * Um dos membros da cadeia de certificados relacionada ao certificado do assinante não foi encontrado
+	 * @member { Number }
+	 * @default 94;
+	 */
+	static CMS_VRFY_NO_ISSUER_CERT_FOUND = 94;
 
 	constructor(msg, method, errorCode, native)
 	{
@@ -985,6 +993,12 @@ class Enroll
 		return issuer;
 	}
 
+	getSubject() {
+		let subject = this.tbs.valueBlock.value[5];
+		if (!(subject instanceof asn1js.Sequence)) throw new APIError('Codificação DER inválida do campo Subject', 'getSubject', APIError.CERTIFICATE_DECODE_ERROR);
+		return subject;
+	}
+
 	/**
 	 * Obtém o número serial do certificado
 	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
@@ -1274,8 +1288,6 @@ class Sign
  * SignerIdentifier.
  * @property { ArrayBuffer | undefined } eContent Contéudo digitalmente assinado para verificação. Opcional. Se não estiver presente, o
  * conteúdo é procurado no campo EncapsulatedContentInfo do documento CMS.
- * @property { Boolean | undefined } verifyTrustworthy Se estiver definido e contiver um valor true, o certificado do assinante é verificado
- * criptograficamente contra os certificados de Autoridades Certificadoras presentes no repositório do Windows.
  */
 
 /**
@@ -1349,11 +1361,31 @@ class RDN
 		}
 		return true;
 	}
+
+	toString() {
+		let ret = [];
+		let i = 0;
+		while (i < this.name.length) {
+			let typeAndValue = this.name[i].valueBlock.value[0];
+			let type = typeAndValue.valueBlock.value[0].valueBlock.toString();
+			let value;
+			if      (type === ASN1FieldOID.x500Country)      value = 'C='
+			else if (type === ASN1FieldOID.x500Organization) value = 'O=';
+			else if (type === ASN1FieldOID.x500OrgUnit)      value = 'OU=';
+			else if (type === ASN1FieldOID.x500CommonName)   value = 'CN='
+			else value = type + '=';
+			value += typeAndValue.valueBlock.value[1].valueBlock.value;
+			ret.push(value);
+			i++;
+		}
+		return ret.join(',');
+	}
 }
 
 /**
  * Implementa as funções de parsing e verificação de documentos CMS assinados.
  * Note-se que o construtor da classe não efetua a validação completa do parsing do documento, tarefa realizada a cada método.
+ * Caso o documento CMS embarque mais de um assinante, somente o primeiro é considerado.
  * @memberof Aroari
  */
 class CMSSignedData
@@ -1463,21 +1495,6 @@ class CMSSignedData
 		vrfy.update(signed);
 		let match = vrfy.verify(pubKey, new Uint8Array(signature));
 		if (!match) throw new APIError('A verificação criptográfica da assinatura não confere', 'matchSignature', APIError.CMS_SIGNATURE_DOES_NOT_MATCH);
-	}
-	#getSignedContent() {
-		let encapContentInfo = this.signedData.valueBlock.value[2];
-		if (
-			!(encapContentInfo instanceof asn1js.Sequence) ||
-			!(encapContentInfo.valueBlock.value[0] instanceof asn1js.ObjectIdentifier)
-		)	throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
-		if (
-			!(encapContentInfo.valueBlock.value[1] instanceof asn1js.Constructed) ||
-			encapContentInfo.valueBlock.value[1].idBlock.tagNumber != 0 ||
-			typeof encapContentInfo.valueBlock.value[1].valueBlock.value[0] === 'undefined'
-		)	throw new APIError('O conteúdo assinado não está embarcado no documento CMS', 'getSignedContent', APIError.CMS_ECONTENT_FIELD_EMPTY);
-		let eContent = encapContentInfo.valueBlock.value[1].valueBlock.value[0];
-		if (!(eContent instanceof asn1js.OctetString)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
-		return eContent.valueBlock.valueHex;
 	}
 	#getCertificates() {
 		let certField = this.signedData.valueBlock.value[3];
@@ -1593,6 +1610,28 @@ class CMSSignedData
 			if (!match) throw new APIError('O valor do atributo assinado ESS Signing Certificate V2 não confere com o hash do certificado de assinatura fornecido', 'matchSigningCertificate', APIError.CMS_SIGNING_CERTIFICATEV2_NOT_MATCH);
 		}
 	}
+	#verifyCertChain(signingCert) {
+		let addon = new Hamahiri.Sign();
+		let verified = false;
+		let subjectCert = signingCert;
+		while (!verified) {
+			let issuers = addon.getIssuerOf(subjectCert);
+			if (!Array.isArray(issuers) || issuers.length == 0) throw new APIError('Um dos membros da cadeia de certificados relacionada ao certificado do assinante não foi encontrado nos repositórios do sistema', 'verifyCertChain', APIError.CMS_VRFY_NO_ISSUER_CERT_FOUND);
+			let i = 0;
+			let issuerFound = false;
+			let subject = new crypto.X509Certificate(subjectCert);
+			while (!verified && !issuerFound && i < issuers.length) {
+				let issuer = new crypto.X509Certificate(issuers[i]);
+				issuerFound = subject.verify(issuer.publicKey);
+				if (!issuerFound) i++;
+			}
+			if (!issuerFound) throw new APIError('Um dos membros da cadeia de certificados relacionada ao certificado do assinante não foi encontrado nos repositórios do sistema', 'verifyCertChain', APIError.CMS_VRFY_NO_ISSUER_CERT_FOUND);
+			let iss = new X509Certificate(issuers[i]);
+			let rdn = new RDN(iss.getSubject());
+			verified = rdn.equalsTo(new RDN(iss.getIssuer()));
+			subjectCert = issuers[i];
+		}
+	}
 
 	/**
 	 * Efetua a verificação criptográfica da assinatura do documento CMS.
@@ -1603,7 +1642,6 @@ class CMSSignedData
 	verify(options) {
 		let signingCert;
 		let eContent;
-		let verifyTrustworthy = true;
 		if (typeof options != 'undefined') {
 			if (typeof options.signingCert != 'undefined') {
 				if (options.signingCert instanceof ArrayBuffer) signingCert = options.signingCert;
@@ -1613,10 +1651,6 @@ class CMSSignedData
 				if (options.eContent instanceof ArrayBuffer) eContent = options.eContent;
 				else throw new APIError('O argumento options.eContent, se presente, deve ser do tipo ArrayBuffer', 'verify', APIError.ARGUMENT_ERROR);
 			}
-			if (typeof options.verifyTrustworthy != 'undefined') {
-				if (typeof options.verifyTrustworthy === 'boolean') verifyTrustworthy = options.verifyTrustworthy;
-				else throw new APIError('O argumento options.verifyTrustworthy, se presente, deve ser do tipo Boolean', 'verify', APIError.ARGUMENT_ERROR);
-			}
 		}
 		if (typeof signingCert === 'undefined') {
 			let certificates = this.#getCertificates();
@@ -1625,11 +1659,91 @@ class CMSSignedData
 			if (sid instanceof asn1js.Sequence) signingCert = this.#findSigningCertificateByIssuerSerial(certificates, sid);
 			else signingCert = this.#findSigningCertificateBySKI(certificates, sid);
 		}
-		if (typeof eContent === 'undefined') eContent = this.#getSignedContent();
+		if (typeof eContent === 'undefined') eContent = this.getSignedContent();
 		let signedAttrs = this.#getSignedAttributes();
 		this.#matchSignature(signingCert, signedAttrs);
 		this.#matchMessageDigest(signedAttrs, eContent);
 		this.#matchSigningCertificate(signedAttrs, signingCert);
+	}
+
+	/**
+	 * Verifica se o certificado fornecido no argumento foi assinado por uma Autoridade Certificadora confiável, isto é, instalada
+	 * num dos repositórios do Windows. Caso o parâmetro não seja fornecido, é verificada a confiabilidade do certificado de
+	 * assinatura embarcado no documento CMS.
+	 * @param { ArrayBuffer | undefined } cert Certiticado utilizado para assinatura. Opcional. Se não definido, este certificado é
+	 * buscado no próprio documento CMS a partir do seu campo SignerIdentifier
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIError} em caso de falha na verificação da confiabilidade do
+	 * certificado ou na obtenção dos requisitos necessários à verificação.
+	 */
+	verifyTrustworthy(cert) {
+		let signingCert;
+		if (typeof cert != 'undefined') {
+			if (cert instanceof ArrayBuffer) signingCert = cert;
+			else throw new APIError('O argumento options.signingCert, se presente, deve ser do tipo ArrayBuffer', 'verify', APIError.ARGUMENT_ERROR);
+		}
+		if (typeof signingCert === 'undefined') {
+			let certificates = this.#getCertificates();
+			if (certificates.length == 0) throw new APIError('Não é possível executar este método: o certificado do assinante não foi embarcado no documento CMS', 'verify', APIError.CMS_CERTIFICATES_FIELD_EMPTY);
+			let sid = this.#getSid();
+			if (sid instanceof asn1js.Sequence) signingCert = this.#findSigningCertificateByIssuerSerial(certificates, sid);
+			else signingCert = this.#findSigningCertificateBySKI(certificates, sid);
+		}
+		this.#verifyCertChain(new Uint8Array(signingCert));
+	}
+
+	#toHex(data) {
+		let ret = [];
+		data.forEach((elem) => { ret.push(elem.toString(16).padStart(2, 0)); });
+		return ret.join('');
+	}
+
+	/**
+	 * Obtém o identificador do assinante do documento CMS.
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIError} em caso de falha
+	 * @returns { Object   } O valor da CHOICE SignerIdentifier, a saber:<br>
+	 * <ul>
+	 * <li>issuer: se presente, contém o nome distinto do emissor do certificado;</li>
+	 * <li>serialNumber: se presente, contém o número de série do certificado como uma string em hexadecimal;</li>
+	 * <li>subjectKeyIdentifier: se presente, contém o identificador da chave pública do assinante como uma string em hexadecimal.</li>
+	 * </ul>
+	 */
+	getSignerIdentifier() {
+		let ret = new Object();
+		let sid = this.#getSid();
+		if (sid instanceof asn1js.Sequence)
+		{
+			let issuer = new RDN(sid.valueBlock.value[0]);
+			Object.defineProperty(ret, 'issuer', { value: issuer.toString(), writable: false});
+			let serial = this.#toHex(new Uint8Array(sid.valueBlock.value[1].valueBlock.valueHex));
+			Object.defineProperty(ret, 'serialNumber', { value: serial, writable: false });
+		}
+		else
+		{
+			let keyId = this.#toHex(new Uint8Array(sid.valueBlock.valueHex));
+			Object.defineProperty(ret, 'subjectKeyIdentifier', { value: keyId, writable: false });
+		}
+		return ret;
+	}
+
+	/**
+	 * Obtém o conteúdo assinado.
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIError} em caso de falha ou caso o conteúdo assinado não esteja presente.
+	 * @returns { ArrayBuffer } O conteúdo assinado em octetos.
+	 */
+	getSignedContent() {
+		let encapContentInfo = this.signedData.valueBlock.value[2];
+		if (
+			!(encapContentInfo instanceof asn1js.Sequence) ||
+			!(encapContentInfo.valueBlock.value[0] instanceof asn1js.ObjectIdentifier)
+		)	throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
+		if (
+			!(encapContentInfo.valueBlock.value[1] instanceof asn1js.Constructed) ||
+			encapContentInfo.valueBlock.value[1].idBlock.tagNumber != 0 ||
+			typeof encapContentInfo.valueBlock.value[1].valueBlock.value[0] === 'undefined'
+		)	throw new APIError('O conteúdo assinado não está embarcado no documento CMS', 'getSignedContent', APIError.CMS_ECONTENT_FIELD_EMPTY);
+		let eContent = encapContentInfo.valueBlock.value[1].valueBlock.value[0];
+		if (!(eContent instanceof asn1js.OctetString)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
+		return eContent.valueBlock.valueHex;
 	}
 }
 

@@ -70,6 +70,7 @@ public:
 	Napi::Value DeleteCertificate(const Napi::CallbackInfo&);		// Implements deleteCertificate() member of Enroll
 	Napi::Value EnumerateCertificates(const Napi::CallbackInfo&);	// Implements enumerateCertificates member of Sign
 	Napi::Value GetCertificateChain(const Napi::CallbackInfo&);		// Implements getCertificateChain member of Sign
+	Napi::Value GetIssuerOf(const Napi::CallbackInfo&);				// Implements getIssuerOf member of Sign
 
 	static Napi::Function GetClass(Napi::Env);
 

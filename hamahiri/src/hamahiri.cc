@@ -795,6 +795,43 @@ void getChain(const Napi::Env& env, const BYTE* pbEncoded, const DWORD cbEncoded
 	CertFreeCertificateContext(hCert);
 }
 
+void searchIssuerInStore(const Napi::Env& env, PCCERT_CONTEXT hCert, LPCSTR szStore, std::vector<std::vector<uint8_t>>& out)
+{
+	HCERTSTORE hStore;
+	if (!(hStore = CertOpenSystemStoreA(NULL, szStore)))	
+	{
+		THROW_JS_ERROR(env, "Could not open certificate store", "searchIssuerInStore", HH_CERT_STORE_OPEN_ERROR, GetLastError());
+		return;
+	}
+	PCCERT_CONTEXT hIssuer = NULL;
+	while ((hIssuer = CertFindCertificateInStore(hStore, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 0, CERT_FIND_ISSUER_OF, hCert, hIssuer)))
+	{
+		DWORD cbSize = hIssuer->cbCertEncoded;
+		std::vector<uint8_t> encoded(cbSize, 0);
+		for (DWORD i = 0; i < cbSize; i++) encoded[i] = hIssuer->pbCertEncoded[i];
+		out.push_back(encoded);
+	}
+	CertCloseStore(hStore, 0);
+}
+void findIssuerOf(const Napi::Env& env, const BYTE* pbEncoded, DWORD cbEncoded, std::vector<std::vector<uint8_t>>& out)
+{
+	PCCERT_CONTEXT hCert;
+	if (!(hCert = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pbEncoded, cbEncoded)))
+	{
+		THROW_JS_ERROR(env, "Could not create a certificate context to encoding", "findIssuerOf", HH_CERT_PARSING_ERROR, GetLastError());
+		return;
+	}
+	searchIssuerInStore(env, hCert, "CA", out);
+	if (env.IsExceptionPending())
+	{
+		CertFreeCertificateContext(hCert);
+		return;
+	}
+	searchIssuerInStore(env, hCert, "Root", out);
+	CertFreeCertificateContext(hCert);
+}
+
+
 // * * * * * * * * * * * * * * *
 // Key/Certificates wrapper
 // * * * * * * * * * * * * * * *
@@ -1234,6 +1271,42 @@ Napi::Value Hamahiri::GetCertificateChain(const Napi::CallbackInfo& info)
 	return ret;
 }
 
+Napi::Value Hamahiri::GetIssuerOf(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 1)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "getIssuerOf", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsTypedArray())
+	{
+		THROW_JS_ERROR(env, "Argument cert must be an Uint8Array", "getIssuerOf", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
+	BYTE* pbEncoded = (BYTE*) data.Data();
+	DWORD cbEncoded = data.ByteLength();
+
+	std::vector<std::vector<uint8_t>> issuers;
+	findIssuerOf(env, pbEncoded, cbEncoded, issuers);
+	if (env.IsExceptionPending()) return env.Null();
+	Napi::Array ret = Napi::Array::New(env, issuers.size());
+	for (size_t i = 0; i < issuers.size(); i++)
+	{
+		BYTE* pbEncodedIssuer = (BYTE*) LocalAlloc(LMEM_ZEROINIT, issuers[i]. size());
+		if (!pbEncodedIssuer)
+		{
+			THROW_JS_ERROR(env, "Out of memory error", "getIssuerOf", HH_OUT_OF_MEM_ERROR, GetLastError());
+			return env.Null();
+		}
+		memcpy(pbEncodedIssuer, issuers[i].data(), issuers[i].size());
+		Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncodedIssuer, issuers[i].size(), cleanupHook);
+		ret[i] = Napi::TypedArrayOf<uint8_t>::New(env, issuers[i].size(), buffer, 0, napi_uint8_array);
+	}
+	return ret;
+}
+
 Napi::Function Hamahiri::GetClass(Napi::Env env)
 {
 	return DefineClass(env, "Hamahiri",
@@ -1247,7 +1320,8 @@ Napi::Function Hamahiri::GetClass(Napi::Env env)
 		Hamahiri::InstanceMethod("installCACertificate",  &Hamahiri::InstallCACertificate),
 		Hamahiri::InstanceMethod("deleteCertificate",     &Hamahiri::DeleteCertificate),
 		Hamahiri::InstanceMethod("enumerateCertificates", &Hamahiri::EnumerateCertificates),
-		Hamahiri::InstanceMethod("getCertificateChain",   &Hamahiri::GetCertificateChain)
+		Hamahiri::InstanceMethod("getCertificateChain",   &Hamahiri::GetCertificateChain),
+		Hamahiri::InstanceMethod("getIssuerOf",           &Hamahiri::GetIssuerOf)
 	});
 }
 

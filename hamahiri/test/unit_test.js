@@ -571,6 +571,24 @@ class SignTest
 		this.tests++;
 		LOG.write(' done!\n');
 	}
+	validateIssuerTestCase(cert) {
+		LOG.write('Testing certificate issuer validation... ');
+		assert(this.sign.getIssuerOf, 'The expected Sign.getIssuerOf() method is undefined');
+		let issuers = this.sign.getIssuerOf(cert);
+		assert(issuers.length > 0, 'No issuers found! Test case has failed');
+		let i = 0;
+		let verified = false;
+		let certSubject = new crypto.X509Certificate(cert);
+		while (i < issuers.length && !verified)
+		{
+			let certIssuer = new crypto.X509Certificate(issuers[i]);
+			verified = certSubject.verify(certIssuer.publicKey);
+			i++;
+		}
+		assert(verified, 'None of the issuers certificates found in Windows repository has signed this certificate');
+		this.tests++;
+		LOG.write(' done!\n');
+	}
 }
 
 function main() {
@@ -605,23 +623,29 @@ function main() {
 	console.log('Installed signing certificates:');
 	console.log(certs);
 	let signCert = sign.selectCert(certs, /CryptoAPI/gi);
+	chain = null;
 	if (signCert)
 	{
 		console.log('Selected signing certificate issued to ' + signCert.subject);
 		let signature = sign.signWithLegacyKeyTestCase(signCert);
-		let chain = sign.getChainTestCase(signCert);
+		if (!signature) console.log('Warning! Signature Uint8Array did not return!')
+		chain = sign.getChainTestCase(signCert);
 		sign.releaseKeyTestCase(signCert);
 	}
 	else console.log('Warning! Could not find a signing legacy certificate. Cannot complete test battery!');
+	if (chain) sign.validateIssuerTestCase(chain[0]);
 	signCert = sign.selectCert(certs, /CNG/gi);
+	chain = null;
 	if (signCert)
 	{
 		console.log('Selected signing certificate issued to ' + signCert.subject);
 		let signature = sign.signWithCNGKeyTestCase(signCert);
-		let chain = sign.getChainTestCase(signCert);
+		if (!signature) console.log('Warning! Signature Uint8Array did not return!')
+		chain = sign.getChainTestCase(signCert);
 		sign.releaseKeyTestCase(signCert);
 	}
 	else console.log('Warning! Could not find a signing CNG certificate. Cannot complete test battery!');
+	if (chain) sign.validateIssuerTestCase(chain[0]);
 
 	// Clean-up
 	LOG.write('Clean-up basic tests:\n');

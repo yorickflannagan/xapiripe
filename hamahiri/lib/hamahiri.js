@@ -230,6 +230,17 @@ const addon = require('../build/Release/hamahiri-native');
 	getCertificateChain(handle) {
 		return this.addon.getCertificateChain(handle);
 	}
+
+	/**
+	 * Obtém o certificado emissor do certificado especificado
+	 * @param { Uint8Array } cert Certificado cujo emissor é desejado, codificado em DER
+	 * @returns { Array } Um array, possivelmente vazio, de objetos Uint8Array, contendo a codificação DER dos certificados
+	 * encontrados nos repositórios CA e Root do Windows cujo campo subject sejam iguais ao campo issuer do certificado
+	 * fornecido como parâmetro.
+	 */
+	getIssuerOf(cert) {
+		return this.addon.getIssuerOf(cert);
+	}
 }
 
 module.exports = {
