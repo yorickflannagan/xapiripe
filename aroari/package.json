@@ -5,7 +5,10 @@
 	"keywords": [
 		"digital signature",
 		"certificate enrollment",
-		"cryptographic smart card"
+		"cryptographic smart card",
+		"CMS Signed Data",
+		"PKCS #7",
+		"PKCS #10"
 	],
 	"main": "src/aroari.js",
 	"scripts": {
@@ -21,6 +24,6 @@
 		"email": "yorick.flannagan@gmail.com"
 	},
 	"dependencies": {
-		"asn1js": "^2.1.1"
+		"asn1js": "2.1.1"
 	}
 }

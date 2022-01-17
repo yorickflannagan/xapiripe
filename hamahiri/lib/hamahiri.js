@@ -57,7 +57,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @constant
 	 * @memberof Hamahiri
 	 * @type { Number }
-	 * @default
+	 * @default 0x00000006
 	 */
 	static CKM_SHA1_RSA_PKCS   = 0x00000006;
 
@@ -66,7 +66,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @constant
 	 * @memberof Hamahiri
 	 * @type { Number }
-	 * @default
+	 * @default 0x00000040
 	 */
 	static CKM_SHA256_RSA_PKCS = 0x00000040;
 
@@ -75,7 +75,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @constant
 	 * @memberof Hamahiri
 	 * @type { Number }
-	 * @default
+	 * @default 0x00000041
 	 */
 	static CKM_SHA384_RSA_PKCS = 0x00000041;
 
@@ -84,7 +84,7 @@ const addon = require('../build/Release/hamahiri-native');
 	 * @constant
 	 * @memberof Hamahiri
 	 * @type { Number }
-	 * @default
+	 * @default 0x00000042
 	 */
 	static CKM_SHA512_RSA_PKCS = 0x00000042;
 }

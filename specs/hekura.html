@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="pt">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" href="style.css" type="text/css" />
+	<title>Xapiripë &ndash; Implementação do serviço Hekura</title>
+</head>
+<body>
+<div>
+	<h1>Xapiripë &ndash; Implementação do serviço Hekura</h1>
+	<div>
+		<p>
+		Este documento sumariza as características projetadas para o componente Hekura e especifica
+		sua interface com as aplicações web. É relevante notar que o projeto deste componente da
+		solução Xapiripë implicou igualmente numa revisão da arquitetura projetada, sumarizada no documento
+		<a href = "rational.html" target="_blank">Racional do Projeto</a>.
+		</p>
+	</div>
+
+	<div>
+		<h2>Uma simplificação arquitetural</h2>
+		<div>
+			<p>
+			A ideia de Hekura é ser um servidor (simplificado e especializado) HTTP local, respondendo
+			em alguma porta livre a uma aplicação web, como, no exemplo de request a seguir:
+			</p>
+			<pre>
+window.fetch('http://127.0.0.1:9171/enroll', {
+	method: 'POST',
+	mode: 'cors',
+	cache: 'no-store',
+	headers: {
+		'Content-Type': 'application/json'
+	},
+	body: new TextEncoder().encode(JSON.stringify({ device: 'Microsoft Software Key Storage Provider', rdn: { cn: 'Fulano de Tal'}}))
+})
+.then(...).catch(...);
+			</pre>
+			<p>
+			De modo a simplificar a interação com o componente, optamos por fornecer um serviço REST (<i>Representational state transfer</i>)
+			para as aplicações, tecnologia para a qual Javascript é inteiramente adequado. Outra decisão simplificadora foi a de 
+			incorporar o listener HTTP Hekura ao aplicativo Signthing, sem distribuí-lo como um componente em separado. Isto se deve
+			ao que discutimos do documento <a href = "threat_model.html" target="_blank">Modelo de ameaças</a>. Como ali foi assinalado,
+			a solução requer que o usuário defina ele próprio e inequivocamente quais as origens considerados confiáveis. Assim, é necessário
+			fornecer uma interface gráfica para a interação do usuário e isso já é feito pelo aplicativo (colateral e subsidiário) Signthing.
+			Como nada há que impeça que ele forneça também o servidor HTTP Hekura, decidimos juntar os dois blocos num único.
+			</p>
+			<p>
+			Outra decisão simplificadora foi eliminar o fosso entre o componente criptográfico de alto nível Aroari e o componente nativo
+			que fornece as primitivas criptográficas, Hamahiri, embarcando ambos num único pacote de distribuição. Com isso, eliminamos um
+			componente desnecessário (agora sabemos). A nova implementação seria composta como segue:
+			</p>
+			<figure>
+				<img src="simplified-deployment.png" alt="Simplificação da distribuição Xapiripë" />
+				<figcaption>Figura 1: Simplificação da distribuição Xapiripë</figcaption>
+			</figure>
+		</div>
+	</div>
+
+	<div>
+		<h2>A interface REST do serviço</h2>
+		<div>
+			<p>
+			A ideia geral da interface é dividir os serviços em três URLs distintas, cada uma delas atendendo a uma funcionalidade da
+			solução, a saber:
+			</p>
+			<ul>
+				<li>/enroll: atende às operações de emissão de certificados digitais;</li>
+				<li>/sign: atende às operações de assinatura digital;</li>
+				<li>/verify: atende às operações de verificação de uma assinatura digital.</li>
+			</ul>
+			<p>
+			Como a interface REST se destina a expor a API Aroari, deve existir um mapeamento direto entre suas operações e a interface
+			fornecida por aquela API. Isso pode ser visto na tabela a seguir:
+			</p>
+			<table id = "services">
+				<tr>
+					<th>Path</th>
+					<th>Método HTTP</th>
+					<th>Operação</th>
+					<th>Descrição</th>
+				</tr>
+				<tr>
+					<td>/enroll</td>
+					<td>GET</td>
+					<td>enumerateDevices</td>
+					<td>Enumera os dispositivos criptográficos presentes (Cryptographic Services Providers para RSA)</td>
+				</tr>
+				<tr>
+					<td></td>
+					<td>POST</td>
+					<td>generateCSR</td>
+					<td>Gera um par de chaves RSA e assina uma requisição de certificado digital</td>
+				</tr>
+				<tr>
+					<td></td>
+					<td>PUT</td>
+					<td>installCertificates</td>
+					<td>Instala o certificado assinado e sua cadeia</td>
+				</tr>
+				<tr>
+					<td>/sign</td>
+					<td>GET</td>
+					<td>enumerateCertificates</td>
+					<td>Enumera os certificados de assinatura em vigor</td>
+				</tr>
+				<tr>
+					<td></td>
+					<td>POST</td>
+					<td>sign</td>
+					<td>Assina digitalmente um documento ou transação</td>
+				</tr>
+				<tr>
+					<td>/verify</td>
+					<td>POST</td>
+					<td>verify</td>
+					<td>Verifica a assinatura digital e fornece outras informações</td>
+				</tr>
+			</table>
+			<p>
+			Os detalhes da especificação pode ser visto no documento <a href = "hekura.yaml" target="_blank">Hekura</a>, nos termos
+			da versão 3.0.3 da <a href = "https://swagger.io/specification/" target="_blank">OpenAPI</a>.
+			</p>
+		</div>
+	</div>
+
+	<div>
+		<h2>Projeto do componente Hekura</h2>
+		<div>
+			<p>
+			O componente projetado procura atender ao princípio do primado da simplicidade (<i>small is beautiful</i>), de modo a minimizar
+			a inevitável introdução de bugs. A Figura 2 ilustra esse princípio aplicado ao nosso problema:
+			</p>
+			<figure>
+				<img src="hekura.png" alt="A implementação Hekura" />
+				<figcaption>Figura 2: A implementação Hekura</figcaption>
+			</figure>
+			<p>
+			CORSBlockade é responsável por recusar o acesso de origens não confiáveis. Ele mantém internamente uma lista de domínios
+			cadastrados explicitamente pelo usuário, na forma [protocolo]://[dominio]:[porta]. Note-se que, além de não admitir coringas,
+			a especificação CORS para origens entende [dominio] como o "dispositivo conectado à Internet (ou a uma rede local)". Assim,
+			sicns.caixa.gov.br é um domínio distinto de www.caixa.gov.br. Assim também sicns.caixa.gov.br/registro faz parte do mesmo 
+			domínio de sicns.caixa.gov.br/envio, onde apenas os caminhos, os diretórios virtuais são diferentes. Igualmente relevante na
+			distinção, o protocolo caracteriza uma origem própria. Por exemplo, a origem http://sicns.caixa.gov.br/ é dirente de
+			https://sicns.caixa.gov.br/ por conta dessa distinção. Por fim, a porta, se presente, é igualmente relevante. Por exemplo,
+			http://sicns.caixa.gov.br/:8080 caracteriza origem distinta de http://sicns.caixa.gov.br/8081.
+			</p>
+			<p>
+			A autorização para a origem, responsabilidade do método allowOrigin(), é feita baseada no header CORS
+			<a href = "https://fetch.spec.whatwg.org/#origin-header" target="_blank"><i>origin</i></a>. Esse header é adicionado pelo
+			próprio navegador quando um script originado em uma origem envia um request para recurso em outra origem. A ausência desse
+			header é indicativa de que o request é originado na mesma origem. Como Hekura responde na origem http://127.0.0.1:9171
+			(ou em outra porta, escolhida pelo usuário no caso da que propomos ser necessária a outra aplicação), o único modo desse
+			header não ser adicionado pelo navegador é se o usuário colocar este destino na barra de endereços ou utilizar um outro cliente
+			do protocolo HTTP para a composição do request. Como consideramos essa utilização indesejada (se o usuário desejar assinar
+			legitimamente um documento através de um cliente HTTP personalizado, ele não precisa implementar a comunicação com Hekura:
+			basta utilizar o aplicativo Signthing embarcado na solução), a ausência do header <i>origin</i> da requisição é motivo
+			suficiente para o bloqueio.
+			</p>
+			<p>
+			A classe AbstractService define qualquer serviço capaz de processar requisições destinadas a um Path em particular, dentre os
+			definidos na <a href="#services">Tabela anterior</a>. Um serviço deve implementar a seguinte interface:
+			</p>
+			<ul>
+				<li>accept(): para indicar se o método HTTP (o <i>verrbo</i> do serviço) especificado é aceito;</li>
+				<li>preflight(): para devolver os headers requeridos pela negociação definida nas requisições do protocolo
+				<a href="https://fetch.spec.whatwg.org/#cors-preflight-request" target="_blank">CORS</a> e</li>
+				<li>execute(): para processar o request, tal como especificado na <a href = "hekura.yaml" target="_blank">
+				definição do serviço</a>.</li>
+			</ul>
+			<p>
+			Por fim, a classe Server implementa um servidor HTTP especializado exclusivamente na definição da interface REST de Hekura.
+			Em resumo, Server deve processar os requests HTTP recebidos seguindo estritamente os seguintes passos:
+			</p>
+			<ol>
+				<li>
+				Validar a origem do request através da implementação de CORSBlockade. Em caso de domínio
+				não confiável, retornar o status HTTP 403;
+				</li>
+				<li>
+				Obter um processador (implementação de AbstractService) do path requerido. Em caso de não
+				existir um processador apropriado, retornar 404;
+				</li>
+				<li>
+				Verificar se o processador aceita o método HTTP evocado. Se ele não for aceito, retornar o
+				status 405;
+				</li>
+				<li>
+				Caso o método HTTP seja OPTIONS, obter os headers apropriados do preflight do processador,
+				adicioná-los à resposta e retornar o status 204;
+				</li>
+				<li>
+				Evocar o método execute() do processador, para realizar o trabalho sujo, retornando o status
+				HTTP devolvido pelo método.
+				</li>
+			</ol>
+			<p>
+			Uma descrição formal detalhada dessa implementação está disponível no documento de
+			<a href="hekura\1.0.0\index.html" target="_blank">especificação da interface Hekura</a>.
+			</p>
+		</div>
+	</div>
+</div>
+</body>

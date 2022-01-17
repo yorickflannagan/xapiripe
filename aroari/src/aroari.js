@@ -9,7 +9,6 @@
 const Hamahiri = require('../../hamahiri/lib/hamahiri');
 const asn1js = require('asn1js');
 const crypto = require('crypto');
-const { join, relative } = require('path');
 
 
 /**
@@ -275,6 +274,13 @@ const { join, relative } = require('path');
 	 */
 	static CMS_VRFY_NO_ISSUER_CERT_FOUND = 94;
 
+	/**
+	 * Cria uma nova instância do relatório de erros
+	 * @param { String } msg Mensagem descritiva
+	 * @param { String } method Método ou função onde ocorreu o erro
+	 * @param { Number } errorCode Código de erro no módulo
+	 * @param { Object } native Objeto de erro do módulo nativo, ou null
+	 */
 	constructor(msg, method, errorCode, native)
 	{
 		super(msg);
@@ -364,14 +370,14 @@ class Policy
 	static type2 = 'CAdES-X Type 2';
 
 	/**
-	 * Xtended Long Electronic Signature with Time Type 1
+	 * EXtended Long Electronic Signature with Time Type 1
 	 * @member { String }
 	 * @default CAdES-X Long Type 1
 	 */
 	static typeX1 = 'CAdES-X Long Type 1';
 
 	/**
-	 * Xtended Long Electronic Signature with Time Type 2
+	 * EXtended Long Electronic Signature with Time Type 2
 	 * @member { String }
 	 * @default CAdES-X Long Type 2
 	 */
@@ -943,7 +949,7 @@ class Enroll
  * @property { String  } policy Padrão de assinatura escolhido conforme a RFC 5126. Opcional. Valor default: CAdES-BES
  * @property { Boolean } addSigningTime Incluir atributo assinado Signing Time. Opcional. Valor default: true
  * @property { String } commitmentType Se contiver um valor descritivo, inclui o OID do atributo assinado Commitment
- * Type Indication conforme {@link Aroari.CommitmentType}. Opcional. Valor default: CommitmentType.proofOfSender.
+ * Type Indication conforme {@link Aroari.CommitmentType}. Opcional.
  */
 
 /**
@@ -1748,11 +1754,11 @@ class CMSSignedData
 }
 
 module.exports = {
-	SignMechanism: Hamahiri.SignMechanism,
 	AroariError: APIError,
+	SignMechanism: Hamahiri.SignMechanism,
+	CommitmentType: CommitmentType,
+	Base64: Base64,
 	Enroll: Enroll,
 	Sign: Sign,
-	Base64: Base64,
-	CommitmentType: CommitmentType,
 	CMSSignedData: CMSSignedData
 }

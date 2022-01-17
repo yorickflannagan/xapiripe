@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: hekura.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: hekura.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file API criptogrática exposta como serviço HTTP para atendimento às aplicações web
+ * @copyright Copyleft &amp;copy; 2021-2022 by The Crypthing Initiative - All rights reversed
+ * @author Marco Antonio Gutierrez&lt;yorick.flannagan@gmail.com>
+ */
+
+'use strict';
+const tcp = require('tcp-port-used');
+const http = require('http');
+const Aroari = require('../../aroari');
+
+/**
+ * Serviço REST de atendimento aos usuários web da API Criptográfica Aroari
+ * @namespace Hekura
+ */
+
+/**
+ * Detalhamento dos erros ocorridos no processamento
+ * @extends Aroari.AroariError
+ * @memberof Hekura
+ */
+class ServiceError extends Aroari.AroariError
+{
+	/**
+	 * Porta de atendimento já em uso
+	 * @member { Number }
+	 * @default 128
+	 */
+	static HTTP_PORT_ALREADY_USED = 128;
+
+	/**
+	 * Cria uma nova instância do relatório de erros
+	 * @param { String } msg Mensagem descritiva
+	 * @param { String } method Método ou função onde ocorreu o erro
+	 * @param { Number } errorCode Código de erro no módulo
+	 * @param { Object } native Objeto de erro do módulo nativo eventualmente propagado, ou null
+	 */
+	 constructor(msg, method, errorCode, native) { super(msg, method, errorCode, native); }
+}
+
+/**
+ * Implementação básica da verificação da confiabilidade da origem de uma requisição
+ * @memberof Hekura
+ */
+class CORSBlockade
+{
+	/**
+	 * Cria uma nova instância da verificação de origem
+	 * @param { iterable } trusted Set (ou array) de origens confiáveis. Opcional
+	 */
+	constructor(trusted) {
+		this.trustedOrigins = new Set(trusted);
+	}
+
+	/**
+	 * Adiciona uma nova origem à lista de origens confiáveis
+	 * @param { String } origin Origem confiável, na forma [protocolo]://[dominio]:[porta], conforme especificação
+	 * &lt;a href = "https://fetch.spec.whatwg.org/#http-origin">W3C&lt;/a>
+	 */
+	addTrustedOrigin(origin) {
+		this.trustedOrigins.add(origin);
+	}
+
+	/**
+	 * Verifica a confiabilidade da origem
+	 * @param { Object } headers Cabeçalhos HTTP recebidos na requisição, tal como fornecidos pela propriedade
+	 * headers da classe http.IncomingMessage (Node.js)
+	 * @returns Indicador de confiabilidade da origem.
+	 */
+	allowOrigin(headers) {
+		let allow = false;
+		let origin = headers['origin'];
+		if (origin) allow = trustedOrigins.has(origin);
+		return allow;
+	}
+}
+
+
+/**
+ * Define a interface de um serviço de atendimento
+ * @memberof Hekura
+ */
+class AbstractService
+{
+	/**
+	 * Cria uma nova instância do serviço de atendimento
+	 * @param { String } url Path REST atendido
+	 */
+	constructor(url) {
+		this.url = url;
+	}
+
+	/**
+	 * Verifica se o serviço suporta o método HTTP especificado
+	 * @param { String } method Método HTTP evocado pela requisição
+	 * @returns Indicador de suporte ao método
+	 */
+	accept(method) { return true; }
+
+	/**
+	 * Implementa o atendimento à requisição CORS de preflight, conforme especificado em
+	 * https://fetch.spec.whatwg.org/#cors-preflight-request
+	 * @param { Object } headers Cabeçalhos HTTP recebidos na requisição, tal como fornecidos pela propriedade
+	 * headers da classe http.IncomingMessage (Node.js)
+	 * @returns Uma instância do objeto Map com os headers requeridos para a resposta à requisição
+	 */
+	preflight(headers) { return new Map(); }
+
+	/**
+	 * Atende à requisição REST especificada
+	 * @param { Object } request Instância de http.IncomingMessage contendo a requisição HTTP
+	 * @param { Object } response Instância de http.ServerResponse para fornecimento da resposta HTTP
+	 * @returns { Number } Retorna o código de status HTTP apropriado ao seu processamento.
+	 */
+	execute(request, response) { return 200; }
+}
+
+/**
+ * Serviço de fornecimento do arquivo YAML de especificação do serviço
+ * @extends Hekura.AbstractService
+ * @memberof Hekura
+ */
+class RootService extends AbstractService
+{
+	constructor() { super('/'); }
+	accept(method) { return (method === 'GET'); }
+	execute(request, response) {
+		// TODO:
+	}
+}
+
+/**
+ * Serviço de atendimento às operações de emissão de certificado
+ * @extends Hekura.AbstractService
+ * @memberof Hekura
+ */
+class EnrollService extends AbstractService
+{
+	constructor() { super('/enroll'); }
+	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'PUT') || (method === 'OPTIONS'); }
+	preflight(headers) {
+		// TODO:
+		return new Map();
+	}
+	execute(request, response) {
+		// TODO:
+	}
+}
+
+/**
+ * Serviço de atendimento às operações de assinatura digital
+ * @extends Hekura.AbstractService
+ * @memberof Hekura
+ */
+class SignService extends AbstractService
+{
+	constructor() { super('/sign'); }
+	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'OPTIONS'); }
+	preflight(headers) {
+		// TODO:
+		return new Map();
+	}
+	execute(request, response) {
+		// TODO:
+	}
+}
+
+/**
+ * Serviço de atendimento às operações de verificação de assinaturas digitais
+ * @extends Hekura.AbstractService
+ * @memberof Hekura
+ */
+class VerifyService extends AbstractService
+{
+	constructor() { super('/verify'); }
+	accept(method) { return (method === 'POST') || (method === 'OPTIONS'); }
+	preflight(headers) {
+		// TODO:
+		return new Map();
+	}
+	execute(request, response) {
+		// TODO:
+	}
+}
+
+/**
+ * Servidor HTTP de atendimento REST
+ * @memberof Hekura
+ */
+class Server
+{
+	/**
+	 * Cria uma nova instância do serviço.
+	 * @param { Number } port Porta de atendimento
+	 * @param { Object } cors Implementação de bloqueio de origens não confiáveis. Se definido deve implementar a mesma interface
+	 * de {@link Hekura.CORSBlockade}. Caso o parâmetro não seja informado ou não implemente a interface, a impementação CORSBlockade 
+	 * é utilizada silenciosamene
+	 */
+	constructor(port, cors) {
+		if (typeof cors !== 'undefined' &amp;&amp; typeof cors.allowOrigin === 'function' &amp;&amp; typeof cors.addTrustedOrigin === 'function') this.blockade = cors;
+		else this.blockade = new CORSBlockade();
+		this.services = new Map();
+		this.services.set('/', new RootService());
+		this.services.set('/enroll', new EnrollService());
+		this.services.set('/sign', new SignService());
+		this.services.set('/verify', new VerifyService());
+		this.server = http.createServer(this.#listener);
+		this.checkPort = new Promise((resolve, reject) => {
+			tcp.check(port, '127.0.0.1').
+			then((ready) => {
+				this.port = port;
+				return resolve(!ready);
+			});
+		});
+	}
+
+	#listener(request, response) {
+		if (this.blockade.allowOrigin(request.headers)) {
+			let svc = this.services.get(request.url);
+			if (svc) {
+				if (svc.accept(request.method)) {
+					if (request.method === 'OPTIONS') {
+						let headers = svc.preflight(request.headers);
+						headers.forEach((value, key) => { response.setHeader(key, value); });
+						response.statusCode = 204;
+					}
+					else svc.execute(request, response);
+				}
+				else response.statusCode = 405;
+			}
+			else response.statusCode = 404;
+		}
+		else response.statusCode = 403;
+		response.end();
+	}
+
+	/**
+	 * Inicia o serviço de atendimento
+	 * @throws { ServiceError } Dispara uma instância de {@link Hekura.ServiceError} caso a porta já esteja utilizada
+	 */
+	start() {
+		this.checkPort.then((ready) => {
+			if (!ready) throw new ServiceError('Porta HTTP já utilizada, a saber' + this.port, 'start', ServiceError.HTTP_PORT_ALREADY_USED);
+			this.server.listen(this.port, () => {
+				// TODO: Log
+			});
+		});
+	}
+
+	/**
+	 * Finaliza o serviço de atendimento
+	 */
+	stop() {
+		this.server.close((err) => {
+			// TODO: log
+		});
+	}
+}
+
+
+function main() {
+	let server = new Server(9171);
+	server.start();
+}	main();</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hekura.html">Hekura</a></li></ul><h3>Classes</h3><ul><li><a href="Hekura.AbstractService.html">AbstractService</a></li><li><a href="Hekura.CORSBlockade.html">CORSBlockade</a></li><li><a href="Hekura.EnrollService.html">EnrollService</a></li><li><a href="Hekura.RootService.html">RootService</a></li><li><a href="Hekura.Server.html">Server</a></li><li><a href="Hekura.ServiceError.html">ServiceError</a></li><li><a href="Hekura.SignService.html">SignService</a></li><li><a href="Hekura.VerifyService.html">VerifyService</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Jan 13 2022 11:45:17 GMT-0300 (Horário Padrão de Brasília)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

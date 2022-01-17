@@ -22,7 +22,7 @@
 		"test": "node --napi-modules ./test/unit_test.js ../pki"
 	},
 	"dependencies": {
-		"node-addon-api": "^1.1.0"
+		"node-addon-api": "1.1.0"
 	},
 	"devDependencies": {
 		"asn1js": "^2.1.1"
