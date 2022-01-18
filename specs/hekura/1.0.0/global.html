@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: ServiceError</title>
+    <title>JSDoc: Global</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: ServiceError</h1>
+    <h1 class="page-title">Global</h1>
 
     
 
@@ -28,10 +28,7 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>
-            <span class="ancestors"><a href="Hekura.html">Hekura</a>.</span>ServiceError<span class="signature">(msg, method, errorCode, native)</span><span class="type-signature"></span></h2>
-        
-            <div class="class-description">Detalhamento dos erros ocorridos no processamento</div>
+        <h2></h2>
         
     
 </header>
@@ -41,12 +38,75 @@
     
         
 
-    
-    <h2>Constructor</h2>
+        
+
+
+<dl class="details">
+
     
 
     
-    <h4 class="name" id="ServiceError"><span class="type-signature"></span>new ServiceError<span class="signature">(msg, method, errorCode, native)</span><span class="type-signature"></span></h4>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+        
+    
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Type Definitions</h3>
+
+        
+                
+
+    
+
+    
+    <h4 class="name" id="approvalCallback"><span class="type-signature"></span>approvalCallback<span class="signature">(operationId, referer, value)</span><span class="type-signature"> &rarr; {Boolean}</span></h4>
     
 
     
@@ -54,7 +114,7 @@
 
 
 <div class="description">
-    Cria uma nova instância do relatório de erros
+    Callback chamada sempre que uma operação criptográfica está para ser realizada, visando obter a aprovação do usuário.
 </div>
 
 
@@ -90,7 +150,7 @@
 
         <tr>
             
-                <td class="name"><code>msg</code></td>
+                <td class="name"><code>operationId</code></td>
             
 
             <td class="type">
@@ -106,14 +166,14 @@
 
             
 
-            <td class="description last">Mensagem descritiva</td>
+            <td class="description last">Identificador da operação, conforme especificação OpenAPI do serviço</td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>method</code></td>
+                <td class="name"><code>referer</code></td>
             
 
             <td class="type">
@@ -129,20 +189,23 @@
 
             
 
-            <td class="description last">Método ou função onde ocorreu o erro</td>
+            <td class="description last">Valor do header Referer da requisição HTTP recebida</td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>errorCode</code></td>
+                <td class="name"><code>value</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Number</span>
+<span class="param-type">String</span>
+|
+
+<span class="param-type">ArrayBuffer</span>
 
 
             
@@ -152,30 +215,7 @@
 
             
 
-            <td class="description last">Código de erro no módulo</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>native</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Objeto de erro do módulo nativo eventualmente propagado, ou null</td>
+            <td class="description last">Informação apropriada à operação. Por exemplo, o conteúdo a ser assinado</td>
         </tr>
 
     
@@ -216,7 +256,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line24">line 24</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line214">line 214</a>
     </li></ul></dd>
     
 
@@ -241,122 +281,34 @@
 
 
 
-
-
-
-
-
-    
-    </div>
-
-    
-        <h3 class="subsection-title">Extends</h3>
+<h5>Returns:</h5>
 
         
-
-
-    <ul>
-        <li>Aroari.AroariError</li>
-    </ul>
-
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Members</h3>
-
-        
-            
-<h4 class="name" id="HTTP_PORT_ALREADY_USED"><span class="type-signature"></span>HTTP_PORT_ALREADY_USED<span class="type-signature"> :Number</span></h4>
-
-
-
-
-<div class="description">
-    Porta de atendimento já em uso
+<div class="param-desc">
+    Valor lógico indicando a aprovação (ou não) da operação
 </div>
 
 
 
-    <h5>Type:</h5>
-    <ul>
-        <li>
-            
-<span class="param-type">Number</span>
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Boolean</span>
 
 
-        </li>
-    </ul>
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-default">Default Value:</dt>
-    <dd class="tag-default"><ul class="dummy">
-            <li>128</li>
-        </ul></dd>
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line31">line 31</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
+    </dd>
 </dl>
 
-
-
-
-
-
-        
     
 
-    
 
+
+
+
+            
     
 
     

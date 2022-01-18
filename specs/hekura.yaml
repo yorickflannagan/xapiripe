@@ -80,13 +80,11 @@ paths:
         '200':
           description: Operação bem sucedida.
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
-                items:
-                  type: string
-                  format: byte
-                  description: Requisição assinada de certificado digital, conforme RFC 2986, no formato PEM
+                format: byte
+                description: Requisição assinada de certificado digital, conforme RFC 2986, no formato PEM
         '401':
           description: O usuário recusou a realização da operação
           content:
@@ -101,13 +99,6 @@ paths:
               schema:
                 type: string
                 description: Mensagem padrão (Forbidden). Detalhes podem ser obtidos no log do serviço.
-        '404':
-          description: Dispositivo criptográfico solicitado para a geração das chaves não encontrado no sistema
-          content:
-            text/plain:
-              schema:
-                type: string
-                description: Mensagem descritiva indicando qual o dispositivo criptográfico não disponível
         '500':
           description: Falha na realização da operação
           content:

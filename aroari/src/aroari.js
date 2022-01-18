@@ -813,7 +813,7 @@ class Enroll
 		let toBeSigned = Buffer.from(certificateRequestInfo.toBER(false));
 		if (certificateRequestInfo.error != '' && toBeSigned.length == 0) {
 			this.addon.deleteKeyPair(keyPair.privKey);
-			throw new APIError(certificateRequestInfo.error, 'generateCSR', DER_ENCODE_REQUEST_INFO_ERROR);
+			throw new APIError(certificateRequestInfo.error, 'generateCSR', APIError.DER_ENCODE_REQUEST_INFO_ERROR);
 		}
 		let hash = crypto.createHash(hashAlg);
 		hash.update(toBeSigned);
@@ -835,7 +835,7 @@ class Enroll
 		let csr = new Uint8Array(request.toBER(false));
 		if (request.error != '' && csr.length == 0) {
 			this.addon.deleteKeyPair(keyPair.privKey);
-			throw new APIError(request.error, 'generateCSR', DER_ENCODE_REQUEST_ERROR);
+			throw new APIError(request.error, 'generateCSR', APIError.DER_ENCODE_REQUEST_ERROR);
 		}
 		this.addon.releaseKeyHandle(keyPair.privKey);
 		return '-----BEGIN CERTIFICATE REQUEST-----\n' + Base64.btoa(csr, true) + '\n-----END CERTIFICATE REQUEST-----';

@@ -29,7 +29,7 @@
 <header>
     
         <h2><span class="attribs"><span class="type-signature"></span></span>
-            <span class="ancestors"><a href="Hekura.html">Hekura</a>.</span>AbstractService<span class="signature">(url)</span><span class="type-signature"></span></h2>
+            <span class="ancestors"><a href="Hekura.html">Hekura</a>.</span>AbstractService<span class="signature">(url, corsMaxAge)</span><span class="type-signature"></span></h2>
         
             <div class="class-description">Define a interface de um serviço de atendimento</div>
         
@@ -46,7 +46,7 @@
     
 
     
-    <h4 class="name" id="AbstractService"><span class="type-signature"></span>new AbstractService<span class="signature">(url)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="AbstractService"><span class="type-signature"></span>new AbstractService<span class="signature">(url, corsMaxAge)</span><span class="type-signature"></span></h4>
     
 
     
@@ -110,6 +110,29 @@
         </tr>
 
     
+
+        <tr>
+            
+                <td class="name"><code>corsMaxAge</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">O valor em segundos que os preflight requests do protocolo CORS podem ser cacheados.</td>
+        </tr>
+
+    
     </tbody>
 </table>
 
@@ -147,7 +170,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line83">line 83</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line85">line 85</a>
     </li></ul></dd>
     
 
@@ -304,7 +327,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line98">line 98</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line102">line 102</a>
     </li></ul></dd>
     
 
@@ -350,7 +373,7 @@
     
 
     
-    <h4 class="name" id="execute"><span class="type-signature"></span>execute<span class="signature">(request, response)</span><span class="type-signature"> &rarr; {Number}</span></h4>
+    <h4 class="name" id="execute"><span class="type-signature"></span>execute<span class="signature">(request, response)</span><span class="type-signature"></span></h4>
     
 
     
@@ -474,7 +497,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line115">line 115</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line118">line 118</a>
     </li></ul></dd>
     
 
@@ -499,28 +522,6 @@
 
 
 
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    Retorna o código de status HTTP apropriado ao seu processamento.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Number</span>
-
-
-    </dd>
-</dl>
-
-    
 
 
 
@@ -532,7 +533,7 @@
     
 
     
-    <h4 class="name" id="preflight"><span class="type-signature"></span>preflight<span class="signature">(headers)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="preflight"><span class="type-signature"></span>preflight<span class="signature">(headers)</span><span class="type-signature"> &rarr; {Object}</span></h4>
     
 
     
@@ -633,7 +634,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line107">line 107</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line111">line 111</a>
     </li></ul></dd>
     
 
@@ -667,6 +668,18 @@
 
 
 
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+
+
+    </dd>
+</dl>
+
     
 
 
@@ -689,13 +702,13 @@
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hekura.html">Hekura</a></li></ul><h3>Classes</h3><ul><li><a href="Hekura.AbstractService.html">AbstractService</a></li><li><a href="Hekura.CORSBlockade.html">CORSBlockade</a></li><li><a href="Hekura.EnrollService.html">EnrollService</a></li><li><a href="Hekura.RootService.html">RootService</a></li><li><a href="Hekura.Server.html">Server</a></li><li><a href="Hekura.ServiceError.html">ServiceError</a></li><li><a href="Hekura.SignService.html">SignService</a></li><li><a href="Hekura.VerifyService.html">VerifyService</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hekura.html">Hekura</a></li></ul><h3>Classes</h3><ul><li><a href="Hekura.AbstractService.html">AbstractService</a></li><li><a href="Hekura.CORSBlockade.html">CORSBlockade</a></li><li><a href="Hekura.EnrollService.html">EnrollService</a></li><li><a href="Hekura.HTTPServer.html">HTTPServer</a></li><li><a href="Hekura.RootService.html">RootService</a></li><li><a href="Hekura.ServerOptions.html">ServerOptions</a></li><li><a href="Hekura.ServiceError.html">ServiceError</a></li><li><a href="Hekura.SignService.html">SignService</a></li><li><a href="Hekura.VerifyService.html">VerifyService</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Jan 13 2022 11:45:17 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Jan 18 2022 10:26:28 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

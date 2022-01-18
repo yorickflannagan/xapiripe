@@ -1,42 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>JSDoc: Source: hekura.js</title>
-
-    <script src="scripts/prettify/prettify.js"> </script>
-    <script src="scripts/prettify/lang-css.js"> </script>
-    <!--[if lt IE 9]>
-      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
-</head>
-
-<body>
-
-<div id="main">
-
-    <h1 class="page-title">Source: hekura.js</h1>
-
-    
-
-
-
-    
-    <section>
-        <article>
-            <pre class="prettyprint source linenums"><code>/**
+/**
  * @file API criptogrática exposta como serviço HTTP para atendimento às aplicações web
- * @copyright Copyleft &amp;copy; 2021-2022 by The Crypthing Initiative - All rights reversed
- * @author Marco Antonio Gutierrez&lt;yorick.flannagan@gmail.com>
+ * @copyright Copyleft &copy; 2021-2022 by The Crypthing Initiative - All rights reversed
+ * @author Marco Antonio Gutierrez<yorick.flannagan@gmail.com>
  */
 
 'use strict';
 const tcp = require('tcp-port-used');
 const http = require('http');
 const path = require('path');
-const Aroari = require(path.join(__dirname, '..', '..', 'aroari'));
+const Aroari = require(path.join(__dirname, '..', '..', 'aroari', 'src', 'aroari'));
 const fs = require('fs');
 
 /**
@@ -85,7 +57,7 @@ class CORSBlockade
 	/**
 	 * Adiciona uma nova origem à lista de origens confiáveis
 	 * @param { String } origin Origem confiável, na forma [protocolo]://[dominio]:[porta], conforme especificação
-	 * &lt;a href = "https://fetch.spec.whatwg.org/#http-origin">W3C&lt;/a>
+	 * <a href = "https://fetch.spec.whatwg.org/#http-origin">W3C</a>
 	 */
 	addTrustedOrigin(origin) {
 		this.trustedOrigins.add(origin);
@@ -115,11 +87,13 @@ class AbstractService
 	/**
 	 * Cria uma nova instância do serviço de atendimento
 	 * @param { String } url Path REST atendido
-	* @param { Number } corsMaxAge O valor em segundos que os preflight requests do protocolo CORS podem ser cacheados.
+	 * @param { Number } corsMaxAge O valor em segundos que os preflight requests do protocolo CORS podem ser cacheados.
+	 * @param { approvalCallback} callback Função a ser chamada visando obter a aprovação do usuário para a operação criptográfica
 	 */
-	constructor(url, corsMaxAge) {
+	constructor(url, corsMaxAge, approvalCallback) {
 		this.url = url;
 		this.maxAge = corsMaxAge;
+		this.approvalCallback = approvalCallback;
 	}
 
 	/**
@@ -142,8 +116,9 @@ class AbstractService
 	 * Atende à requisição REST especificada
 	 * @param { Object } request Instância de http.IncomingMessage contendo a requisição HTTP
 	 * @param { Object } response Instância de http.ServerResponse para fornecimento da resposta HTTP
+	 * @param { Buffer } body O corpo da requisição já completamente lido, se algum tiver sido enviado.
 	 */
-	execute(request, response) {}
+	execute(request, response, body) {}
 }
 
 /**
@@ -153,7 +128,7 @@ class AbstractService
  */
 class RootService extends AbstractService
 {
-	constructor(corsMaxAge) { super('/', corsMaxAge); }
+	constructor(corsMaxAge, callback) { super('/', corsMaxAge, approvalCallback); }
 	accept(method) { return (method === 'GET'); }
 	execute(request, response) {
 		let target = path.join(__dirname, 'hekura-schema.json');
@@ -179,7 +154,10 @@ class RootService extends AbstractService
  */
 class EnrollService extends AbstractService
 {
-	constructor(corsMaxAge) { super('/enroll', corsMaxAge); }
+	constructor(corsMaxAge, approvalCallback) {
+		super('/enroll', corsMaxAge, approvalCallback);
+		this.api = new Aroari.Enroll();
+	}
 	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'PUT') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
@@ -189,9 +167,97 @@ class EnrollService extends AbstractService
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
-	execute(request, response) {
-		// TODO:
-		// Always send response.setHeader('Access-Control-Allow-Origin', request.headers['origin']);
+	#processGet(headers, response) {
+		if (this.approvalCallback('enumerateDevices', headers['referer'])) {
+			try {
+				let devices = this.api.enumerateDevices();
+				response.setHeader('Access-Control-Allow-Origin', headers['origin']);
+				response.setHeader('Content-Type', 'application/json');
+				response.write(JSON.stringify(devices));
+				response.statusCode = 200;
+			}
+			catch (error) {
+				// TODO: Implement a log engine
+				console.error(error);
+				response.statusCode = 500;
+			}
+		}
+		else response.statusCode = 401;
+	}
+	#processPost(headers, response, body) {
+		let ctype = headers['content-type'];
+		if (ctype && ctype === 'application/json') {
+			let param;
+			try {
+				param = JSON.parse(body.toString());
+				if (typeof param.device !== 'string') throw new Error('Invalid argument');
+				if (typeof param.keySize !== 'undefined') {
+					if (typeof param.keySize !== 'number') throw new Error('Invalid argument');
+				}
+				else param = Object.defineProperty(param, 'keySize', { value: 2048 });
+				if (typeof param.signAlg !== 'undefined') {
+					if (typeof param.signAlg !== 'number') throw new Error('Invalid argument');
+				}
+				else param = Object.defineProperty(param, 'signAlg', { value: Aroari.SignMechanism.CKM_SHA256_RSA_PKCS });
+				if (typeof param.rdn === 'undefined' || typeof param.rdn.cn === 'undefined') throw new Error('Invalid argument');
+			}
+			catch (err) { response.statusCode = 400; }
+			if (this.approvalCallback('generateCSR', headers['referer'])) {
+				try {
+					let pkcs7 = this.api.generateCSR(param);
+					response.setHeader('Access-Control-Allow-Origin', headers['origin']);
+					response.setHeader('Content-Type', 'text/plain');
+					response.write(pkcs7);
+					response.statusCode = 200;
+				}
+				catch (error) {
+					// TODO: Implement a log engine
+					console.error(error);
+					response.statusCode = 500;
+				}
+			}
+			else response.statusCode = 401;
+		}
+		else response.statusCode = 415;
+	}
+	#processPut(headers, response, body) {
+		let ctype = headers['content-type'];
+		if (ctype && ctype === 'application/json') {
+			let param;
+			try {
+				let json = JSON.parse(body.toString());
+				if (typeof json.pkcs7 !== 'string') throw new Error('Invalid argument');
+				let b64 = json.pkcs7.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
+				param = Aroari.Base64.atob(b64);
+			}
+			catch (err) { response.statusCode = 400; return; }
+			if (this.approvalCallback('installCertificates', headers['referer'])) {
+				try {
+					let done = this.api.installCertificates(param);
+					response.setHeader('Access-Control-Allow-Origin', headers['origin']);
+					if (done) response.statusCode = 201;
+					else response.statusCode = 200;
+				}
+				catch (error) {
+					// TODO: Implement a log engine
+					console.error(error);
+					if (
+						error.errorCode == Aroari.AroariError.INSTALL_SIGNER_CERT_ERROR ||
+						error.errorCode == Aroari.AroariError.CERTIFICATE_CHAIN_VERIFY_ERROR
+					)	response.statusCode = 451;
+					else response.statusCode = 500;
+				}
+			}
+			else response.statusCode = 401;
+		}
+		else response.statusCode = 415;
+	}
+	execute(request, response, body) {
+		const { method, headers } = request;
+		if      (method === 'GET')  this.#processGet(headers, response);
+		else if (method === 'POST') this.#processPost(headers, response, body);
+		else if (method === 'PUT')  this.#processPut(headers, response, body);
+		else response.statusCode = 405;
 	}
 }
 
@@ -202,7 +268,7 @@ class EnrollService extends AbstractService
  */
 class SignService extends AbstractService
 {
-	constructor(corsMaxAge) { super('/sign', corsMaxAge); }
+	constructor(corsMaxAge, approvalCallback) { super('/sign', corsMaxAge, approvalCallback); }
 	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
@@ -212,7 +278,7 @@ class SignService extends AbstractService
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
-	execute(request, response) {
+	execute(request, response, body) {
 		// TODO:
 	}
 }
@@ -224,7 +290,7 @@ class SignService extends AbstractService
  */
 class VerifyService extends AbstractService
 {
-	constructor(corsMaxAge) { super('/verify', corsMaxAge); }
+	constructor(corsMaxAge, approvalCallback) { super('/verify', corsMaxAge, approvalCallback); }
 	accept(method) { return (method === 'POST') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
@@ -234,7 +300,7 @@ class VerifyService extends AbstractService
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
-	execute(request, response) {
+	execute(request, response, body) {
 		// TODO:
 	}
 }
@@ -247,6 +313,9 @@ class VerifyService extends AbstractService
  * @param { String | ArrayBuffer } value Informação apropriada à operação. Por exemplo, o conteúdo a ser assinado
  * @returns { Boolean } Valor lógico indicando a aprovação (ou não) da operação
  */
+ function approvalCallback(operationId, referer, value) {
+	return true;
+}
 
 /**
  * Opções de inicialização do servidor Hekura
@@ -257,9 +326,10 @@ class VerifyService extends AbstractService
  * @property { Object } cors Implementação de bloqueio de origens não confiáveis. Se definido deve ser uma herança de
  * {@link Hekura.CORSBlockade}. Caso o parâmetro não seja informado ou o objeto não seja uma instância de CORSBlockade, 
  * esta impementação é utilizada silenciosamente
- * @property { approvalCallback } callback Função a ser chamada visando obter a aprovação do usuário para a operação criptográfica.
+ * @property { approvalCallback } callback Função a ser chamada visando obter a aprovação do usuário para a operação criptográfica. Visando simplificar
+ * os testes de regressão, a propriedade assume como default uma função que sempre retorna true. No entanto, em vista do modelo de ameaças da solução,
+ * é esperado que um valor seja passado.
  */
-
 
 /**
  * Servidor HTTP de atendimento REST
@@ -274,14 +344,15 @@ class HTTPServer
 	constructor({
 		port = 9171,
 		maxAge = 1800,
-		cors = new CORSBlockade 
+		cors = new CORSBlockade ,
+		callback = approvalCallback
 	} = {}) {
 		this.blockade = cors;
 		this.services = new Map();
-		this.services.set('/', new RootService(maxAge));
-		this.services.set('/enroll', new EnrollService(maxAge));
-		this.services.set('/sign', new SignService(maxAge));
-		this.services.set('/verify', new VerifyService(maxAge));
+		this.services.set('/', new RootService(maxAge, callback));
+		this.services.set('/enroll', new EnrollService(maxAge, callback));
+		this.services.set('/sign', new SignService(maxAge, callback));
+		this.services.set('/verify', new VerifyService(maxAge, callback));
 		this.server = http.createServer(this.#listener.bind(this));
 		this.checkPort = new Promise((resolve) => {
 			tcp.check(port, '127.0.0.1').
@@ -293,24 +364,36 @@ class HTTPServer
 	}
 
 	#listener(request, response) {
-		if (this.blockade.allowOrigin(request.headers)) {
-			let svc = this.services.get(request.url);
-			if (svc) {
-				if (svc.accept(request.method)) {
-					if (request.method === 'OPTIONS') {
-						let headers = svc.preflight(request.headers);
-						headers.forEach((value, key) => { response.setHeader(key, value); });
-						response.statusCode = 204;
+		let chunks = [];
+		const { method, headers, url } = request;
+		request.on('error', (err) => {
+			// TODO: Implement a log engines
+			console.error(err);
+			response.statusCode = 500;
+			response.end();
+		})
+		.on('data', (chunk) => { chunks.push(chunk); })
+		.on('end', () => {
+			let body = Buffer.concat(chunks);
+			if (this.blockade.allowOrigin(headers)) {
+				let svc = this.services.get(url);
+				if (svc) {
+					if (svc.accept(method)) {
+						if (method === 'OPTIONS') {
+							let responseHeaders = svc.preflight(headers);
+							responseHeaders.forEach((value, key) => { response.setHeader(key, value); });
+							response.statusCode = 204;
+						}
+						else svc.execute(request, response, body);
 					}
-					else svc.execute(request, response);
+					else response.statusCode = 405;
 				}
-				else response.statusCode = 405;
+				else response.statusCode = 404;
 			}
-			else response.statusCode = 404;
-		}
-		else response.statusCode = 403;
-		// TODO: Implement a Log engine
-		response.end();
+			else response.statusCode = 403;
+			// TODO: Implement a Log engine
+			response.end();
+		});
 	}
 
 	/**
@@ -345,26 +428,4 @@ module.exports = {
 	ServiceError: ServiceError,
 	CORSBlockade: CORSBlockade,
 	HTTPServer: HTTPServer
-}</code></pre>
-        </article>
-    </section>
-
-
-
-
-</div>
-
-<nav>
-    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hekura.html">Hekura</a></li></ul><h3>Classes</h3><ul><li><a href="Hekura.AbstractService.html">AbstractService</a></li><li><a href="Hekura.CORSBlockade.html">CORSBlockade</a></li><li><a href="Hekura.EnrollService.html">EnrollService</a></li><li><a href="Hekura.HTTPServer.html">HTTPServer</a></li><li><a href="Hekura.RootService.html">RootService</a></li><li><a href="Hekura.ServerOptions.html">ServerOptions</a></li><li><a href="Hekura.ServiceError.html">ServiceError</a></li><li><a href="Hekura.SignService.html">SignService</a></li><li><a href="Hekura.VerifyService.html">VerifyService</a></li></ul><h3><a href="global.html">Global</a></h3>
-</nav>
-
-<br class="clear">
-
-<footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Jan 18 2022 10:26:28 GMT-0300 (Horário Padrão de Brasília)
-</footer>
-
-<script> prettyPrint(); </script>
-<script src="scripts/linenumber.js"> </script>
-</body>
-</html>
+}
