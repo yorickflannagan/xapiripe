@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const Aroari = require('../src/aroari');
+const Aroari = require(path.join(__dirname, '..'));
 const assert = require('assert');
 const cp = require('child_process');
 const LOG = process.stdout;
@@ -207,7 +207,7 @@ class SignTest
 			assert(typeof certs[i].subject === 'string', 'Xapiripe.Certificate.subject member must exist as a string');
 			assert(typeof certs[i].issuer  === 'string', 'Xapiripe.Certificate.issuer member must exist as a string');
 			assert(typeof certs[i].serial  === 'string', 'Xapiripe.Certificate.serial member must exist as a string');
-			assert(typeof certs[i].handle != 'undefined' && !isNaN(certs[i].handle) & certs[i].handle > 0, 'Xapiripe.Certificate.handle must be a positive number');
+			assert(typeof certs[i].handle != 'undefined' && !isNaN(certs[i].handle) && certs[i].handle > 0, 'Xapiripe.Certificate.handle must be a positive number');
 			i++;
 		}
 		LOG.write(' done!\n');

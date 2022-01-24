@@ -8,7 +8,7 @@
 const tcp = require('tcp-port-used');
 const http = require('http');
 const path = require('path');
-const Aroari = require(path.join(__dirname, '..', '..', 'aroari', 'src', 'aroari'));
+const Aroari = require(path.join(__dirname, '..', '..', 'aroari'));
 const fs = require('fs');
 
 /**
@@ -189,19 +189,20 @@ class EnrollService extends AbstractService
 		if (ctype && ctype === 'application/json') {
 			let param;
 			try {
+				// TODO: Implement a reviver callback to reject unknown fields
 				param = JSON.parse(body.toString());
-				if (typeof param.device !== 'string') throw new Error('Invalid argument');
+				if (typeof param.device !== 'string') throw new Error('Argumento inválido');
 				if (typeof param.keySize !== 'undefined') {
-					if (typeof param.keySize !== 'number') throw new Error('Invalid argument');
+					if (typeof param.keySize !== 'number') throw new Error('Argumento inválido');
 				}
 				else param = Object.defineProperty(param, 'keySize', { value: 2048 });
 				if (typeof param.signAlg !== 'undefined') {
-					if (typeof param.signAlg !== 'number') throw new Error('Invalid argument');
+					if (typeof param.signAlg !== 'number') throw new Error('Argumento inválido');
 				}
 				else param = Object.defineProperty(param, 'signAlg', { value: Aroari.SignMechanism.CKM_SHA256_RSA_PKCS });
-				if (typeof param.rdn === 'undefined' || typeof param.rdn.cn === 'undefined') throw new Error('Invalid argument');
+				if (typeof param.rdn === 'undefined' || typeof param.rdn.cn === 'undefined') throw new Error('Argumento inválido');
 			}
-			catch (err) { response.statusCode = 400; }
+			catch (err) { response.statusCode = 400; return; }
 			if (this.approvalCallback('generateCSR', headers['referer'])) {
 				try {
 					let pkcs7 = this.api.generateCSR(param);
@@ -213,7 +214,8 @@ class EnrollService extends AbstractService
 				catch (error) {
 					// TODO: Implement a log engine
 					console.error(error);
-					response.statusCode = 500;
+					if (error.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
+					else response.statusCode = 500;
 				}
 			}
 			else response.statusCode = 401;
@@ -225,8 +227,9 @@ class EnrollService extends AbstractService
 		if (ctype && ctype === 'application/json') {
 			let param;
 			try {
+				// TODO: Implement a reviver callback to reject unknown fields
 				let json = JSON.parse(body.toString());
-				if (typeof json.pkcs7 !== 'string') throw new Error('Invalid argument');
+				if (typeof json.pkcs7 !== 'string') throw new Error('Argumento inválido');
 				let b64 = json.pkcs7.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
 				param = Aroari.Base64.atob(b64);
 			}
@@ -241,7 +244,8 @@ class EnrollService extends AbstractService
 				catch (error) {
 					// TODO: Implement a log engine
 					console.error(error);
-					if (
+					if (error.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
+					else if (
 						error.errorCode == Aroari.AroariError.INSTALL_SIGNER_CERT_ERROR ||
 						error.errorCode == Aroari.AroariError.CERTIFICATE_CHAIN_VERIFY_ERROR
 					)	response.statusCode = 451;
@@ -268,7 +272,10 @@ class EnrollService extends AbstractService
  */
 class SignService extends AbstractService
 {
-	constructor(corsMaxAge, approvalCallback) { super('/sign', corsMaxAge, approvalCallback); }
+	constructor(corsMaxAge, approvalCallback) {
+		super('/sign', corsMaxAge, approvalCallback);
+		this.api = new Aroari.Sign();
+	}
 	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
@@ -278,8 +285,80 @@ class SignService extends AbstractService
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
+	#processGet(headers, response) {
+		if (this.approvalCallback('enumerateCertificates', headers['referer'])) {
+			try {
+				let certs = this.api.enumerateCertificates();
+				response.setHeader('Access-Control-Allow-Origin', headers['origin']);
+				response.setHeader('Content-Type', 'application/json');
+				response.write(JSON.stringify(certs));
+				response.statusCode = 200;
+			}
+			catch (error) {
+				// TODO: Implement a log engine
+				console.error(error);
+				response.statusCode = 500;
+			}
+		}
+		else response.statusCode = 401;
+	}
+	#processPost(headers, response, body) {
+		let ctype = headers['content-type'];
+		if (ctype && ctype === 'application/json') {
+			let param = new Object();
+			try {
+				// TODO: Implement a reviver callback to reject unknown fields
+				let json = JSON.parse(body.toString());
+				if (typeof json.handle !== 'number') throw new Error('Argumento inválido');
+				param = Object.defineProperty(param, 'handle', { value : json.handle });
+				if (typeof json.toBeSigned !== 'object' || typeof json.toBeSigned.data !== 'string') throw new Error('Argumento inválido');
+				let convert = false;
+				if (typeof json.toBeSigned.binary !== 'undefined') {
+					if (typeof json.toBeSigned.binary !== 'boolean') throw new Error('Argumento inválido');
+					convert = json.toBeSigned.binary;
+				}
+				let dataToSign;
+				if (convert) dataToSign = Aroari.Base64.atob(json.toBeSigned.data).buffer;
+				else dataToSign = json.toBeSigned.data;
+				param = Object.defineProperty(param, 'toBeSigned', { value: dataToSign });
+				if (typeof json.attach !== 'undefined') {
+					if (typeof json.attach !== 'boolean') throw new Error('Argumento inválido');
+					param = Object.defineProperty(param, 'attach', { value: json.attach });
+				}
+				if (typeof json.algorithm !== 'undefined') {
+					if (typeof json.algorithm !== 'number') throw new Error('Argumento inválido');
+					param = Object.defineProperty(param, 'algorithm', { value: json.algorithm });
+				}
+				if (typeof json.cades !== 'undefined') {
+					if (typeof json.cades !== 'object') throw new Error('Argumento inválido');
+					param = Object.defineProperty(param, 'cades', { value: json.cades });
+				}
+			}
+			catch (err) { response.statusCode = 400; return; }
+			if (this.approvalCallback('sign', headers['referer'], param.toBeSigned)) {
+				try {
+					let pkcs7 = this.api.sign(param);
+					response.setHeader('Access-Control-Allow-Origin', headers['origin']);
+					response.setHeader('Content-Type', 'text/plain');
+					response.write(pkcs7);
+					response.statusCode = 200;
+				}
+				catch (error) {
+					// TODO: Implement a log engine
+					console.error(error);
+					if (error.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
+					else response.statusCode = 500;
+				}
+			}
+			else response.statusCode = 401;
+		}
+		else response.statusCode = 415;
+	}
 	execute(request, response, body) {
-		// TODO:
+		const { method, headers } = request;
+		if      (method === 'GET') this.#processGet(headers, response);
+		else if (method === 'POST') this.#processPost(headers, response, body);
+		else response.statusCode = 405;
 	}
 }
 
@@ -288,6 +367,18 @@ class SignService extends AbstractService
  * @extends Hekura.AbstractService
  * @memberof Hekura
  */
+const ALLOW_LIST = [
+	'signatureVerification',
+	'messageDigestVerification',
+	'signingCertVerification',
+	'certChainVerification',
+	'signerIdentifier',
+	'issuer',
+	'serialNumber',
+	'eContent',
+	'data',
+	'binary'
+];
 class VerifyService extends AbstractService
 {
 	constructor(corsMaxAge, approvalCallback) { super('/verify', corsMaxAge, approvalCallback); }
@@ -301,7 +392,112 @@ class VerifyService extends AbstractService
 		return ret;
 	}
 	execute(request, response, body) {
-		// TODO:
+		const { method, headers } = request;
+		if (method !== 'POST') { response.statusCode = 405; return; }
+		let ctype = headers['content-type'];
+		if (!ctype || ctype !== 'application/json') { response.statusCode = 415; return; }
+		let cmsSignedData;
+		let vrfyParam = new Object();
+		let verifyTrustworthy = false;
+		let getSignerIdentifier = false;
+		let getSignedContent = false;
+		try {
+			// TODO: Implement a reviver callback to reject unknown fields
+			let json = JSON.parse(body.toString());
+			if (typeof json.pkcs7 !== 'object' && typeof json.pkcs7.data !== 'string') throw new Error('Argumento inválido');
+			let convert = false;
+			if (typeof json.pkcs7.binary !== 'undefined') {
+				if (typeof json.pkcs7.binary !== 'boolean') throw new Error('Argumento inválido');
+				convert = json.pkcs7.binary;
+			}
+			let input;
+			if (convert) input = Aroari.Base64.atob(json.pkcs7.data).buffer;
+			else input = json.pkcs7.data;
+			cmsSignedData = new Aroari.CMSSignedData(input);
+			if (typeof json.signingCert !== 'undefined') {
+				if (typeof json.signingCert.data !== 'string') throw new Error('Argumento inválido');
+				convert = false;
+				if (typeof json.signingCert.binary !== 'undefined') {
+					if (typeof json.signingCert.binary !== 'boolean') throw new Error('Argumento inválido');
+					convert = json.signingCert.binary;
+				}
+				if (convert) input = Aroari.Base64.atob(json.signingCert.data).buffer;
+				else input = json.signingCert.data;
+				vrfyParam = Object.defineProperty(vrfyParam, 'signingCert', { value: input });
+			}
+			if (typeof json.eContent !== 'undefined') {
+				if (typeof json.eContent.data !== 'string') throw new Error('Argumento inválido');
+				convert = false;
+				if (typeof json.eContent.binary !== 'undefined') {
+					if (typeof json.eContent.binary !== 'boolean') throw new Error('Argumento inválido');
+					convert = json.eContent.binary;
+				}
+				if (convert) input = Aroari.Base64.atob(json.eContent.data).buffer;
+				else input = json.eContent.data;
+				vrfyParam = Object.defineProperty(vrfyParam, 'eContent', { value: input });
+			}
+			if (typeof json.verifyTrustworthy !== 'undefined') {
+				if (typeof json.verifyTrustworthy !== 'boolean') throw new Error('Argumento inválido');
+				verifyTrustworthy = json.verifyTrustworthy;
+			}
+			if (typeof json.getSignerIdentifier !== 'undefined') {
+				if (typeof json.getSignerIdentifier !== 'boolean') throw new Error('Argumento inválido');
+				getSignerIdentifier = json.getSignerIdentifier;
+			}
+			if (typeof json.getSignedContent !== 'undefined') {
+				if (typeof json.getSignedContent !== 'boolean') throw new Error('Argumento inválido');
+				getSignedContent = json.getSignedContent;
+			}
+		}
+		catch (err) { response.statusCode = 400; return; }
+
+		let signatureVerification;
+		let messageDigestVerification;
+		let signingCertVerification;
+		let certChainVerification;
+		let sid;
+		let eContent;
+		if (this.approvalCallback('verify', headers['referer'])) {
+			try {
+				cmsSignedData.verify(vrfyParam);
+				signatureVerification = true;
+				messageDigestVerification = true;
+				signingCertVerification = true;
+				if (verifyTrustworthy) {
+					cmsSignedData.verifyTrustworthy(vrfyParam.signingCert);
+					certChainVerification = true
+				}
+				if (getSignerIdentifier) sid = cmsSignedData.getSignerIdentifier();
+				if (getSignedContent) {
+					eContent = { data: null, binary: true };
+					eContent.data = Aroari.Base64.btoa(new Uint8Array(cmsSignedData.getSignedContent()));
+				}
+				response.statusCode = 200;
+			}
+			catch (error) {
+				// TODO: Implement a log engine
+				console.error(error);
+				if      (error.errorCode == Aroari.AroariError.CMS_SIGNATURE_DOES_NOT_MATCH) signatureVerification = false;
+				else if (error.errorCode == Aroari.AroariError.CMS_MESSAGE_DIGEST_NOT_MATCH) messageDigestVerification = false;
+				else if (error.errorCode == Aroari.AroariError.CMS_SIGNING_CERTIFICATEV2_NOT_MATCH) signingCertVerification = false;
+				else if (error.errorCode == Aroari.AroariError.CMS_VRFY_NO_ISSUER_CERT_FOUND) certChainVerification = false;
+				else response.statusCode = 400;
+			}
+			if (response.statusCode != 400) {
+				let ret = new Object();
+				ret = Object.defineProperty(ret, 'signatureVerification', { value: signatureVerification });
+				ret = Object.defineProperty(ret, 'messageDigestVerification', { value: messageDigestVerification });
+				ret = Object.defineProperty(ret, 'signingCertVerification', { value: signingCertVerification });
+				if (certChainVerification) ret = Object.defineProperty(ret, 'certChainVerification', { value: certChainVerification });
+				if (sid) ret = Object.defineProperty(ret, 'signerIdentifier', { value: sid });
+				if (eContent) ret = Object.defineProperty(ret, 'eContent', { value: eContent });
+				response.setHeader('Access-Control-Allow-Origin', headers['origin']);
+				response.setHeader('Content-Type', 'application/json');
+				let body = JSON.stringify(ret, ALLOW_LIST);
+				response.write(body);
+			}
+		}
+		else response.statusCode = 401;
 	}
 }
 

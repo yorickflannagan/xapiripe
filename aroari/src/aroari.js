@@ -6,7 +6,8 @@
 
 'use strict';
 
-const Hamahiri = require('../../hamahiri/lib/hamahiri');
+const path = require('path');
+const Hamahiri = require(path.join(__dirname, '..', '..', 'hamahiri'));
 const asn1js = require('asn1js');
 const crypto = require('crypto');
 

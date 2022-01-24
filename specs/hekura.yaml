@@ -85,6 +85,13 @@ paths:
                 type: string
                 format: byte
                 description: Requisição assinada de certificado digital, conforme RFC 2986, no formato PEM
+        '400':
+          description: Objeto JSON recebido no corpo da requisição é inválido
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Mensagem padrão (Bad request)
         '401':
           description: O usuário recusou a realização da operação
           content:
@@ -145,6 +152,13 @@ paths:
               schema:
                 type: string
                 description: Mensagem padrão (Created)
+        '400':
+          description: Objeto JSON recebido no corpo da requisição é inválido
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Mensagem padrão (Bad request)
         '401':
           description: O usuário recusou a realização da operação
           content:
@@ -268,6 +282,13 @@ paths:
                 type: string
                 format: byte
                 description: Documento CMS SignedData codificado em Base64 segundo a convenção PEM
+        '400':
+          description: Objeto JSON recebido no corpo da requisição é inválido
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Mensagem padrão (Bad request)
         '401':
           description: O usuário recusou a realização da operação
           content:
@@ -282,13 +303,6 @@ paths:
               schema:
                 type: string
                 description: Mensagem padrão (Forbidden). Detalhes podem ser obtidos no log do serviço.
-        '404':
-          description: O handle para o certificado do assinante não foi encontrado no dispositivo
-          content:
-            text/plain:
-              schema:
-                type: string
-                description: Mensagem descritiva 
         '500':
           description: Falha na realização da operação
           content:
@@ -315,13 +329,11 @@ paths:
               type: object
               properties:
                 pkcs7:
-                  type: string
-                  format: byte
-                  description: Documento CMS Signed Data para ser verificado, no formato PEM
+                  $ref: '#/components/schemas/AltString'
+                  description: Documento CMS Signed Data para ser verificado
                 signingCert:
-                  type: string
-                  format: byte
-                  description: Certificado do assinante, no formato PEM, se não embarcado no documento CMS
+                  $ref: '#/components/schemas/AltString'
+                  description: Certificado do assinante se não embarcado no documento CMS
                 eContent:
                   $ref: '#/components/schemas/AltString'
                   description: Conteúdo assinado, se não embarcado no documento CMS
@@ -353,16 +365,19 @@ paths:
                 properties:
                   signatureVerification:
                     description: Relatório da verificação criptográfica da assinatura
-                    $ref: '#/components/schemas/Report'
+                    type: boolean
                   messageDigestVerification:
                     description: Relatório da verificação do atributo assinado Message Digest
-                    $ref: '#/components/schemas/Report'
+                    type: boolean
                   signingCertVerification:
                     description: Relatório da verificação do atributo assinado ESS signing-certificate-v2, se presente
-                    $ref: '#/components/schemas/Report'
+                    type: boolean
                   certChainVerification:
                     description: Relatório da verificação da confiabilidade do certificado do assinante, se solicitada
-                    $ref: '#/components/schemas/Report'
+                    type: boolean
+                  eContent:
+                    description: Conteúdo assinado, caso tenha sido solicitado
+                    $ref: '#/components/schemas/AltString'
                   signerIdentifier:
                     description: Identificação do assinante, se solicitada
                     oneOf:
@@ -370,6 +385,13 @@ paths:
                     - $ref: '#/components/schemas/SubjectKeyIdentifier'
                 additionalProperties: false
                 required: [ matchSignature, matchMessageDigest ]
+        '400':
+          description: Objeto JSON recebido no corpo da requisição é inválido
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Mensagem padrão (Bad request)
         '401':
           description: O usuário recusou a realização da operação
           content:
@@ -465,18 +487,6 @@ components:
             1.2.840.113549.1.9.16.6.6 (proofOfCreation), para indicar que o assinante criou o conteúdo, mas não
             necessariamente o enviou ou aprovou.
       additionalProperties: false
-    Report:
-      type: object
-      description: Resultado de uma operação
-      properties:
-        success:
-          type: boolean
-          description: Indicador de sucesso da operação
-        error:
-          type: string
-          description: Descrição do erro, em caso de falha
-      additionalProperties: false
-      required: [ success ]
     IssuerAndSerialNumber:
       type: object
       description: Identificação do assinante por emissor e número de série do certificado

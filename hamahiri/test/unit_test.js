@@ -1,11 +1,11 @@
 'use strict';
 
-const Hamahiri = require('../lib/hamahiri.js');
+const path = require('path');
+const Hamahiri = require(path.join(__dirname, '..'));
 const assert = require('assert');
 const process = require('process');
 const crypto = require('crypto');
 const asn1js = require('asn1js');
-const path = require('path');
 const fs = require('fs');
 const cp = require('child_process');
 

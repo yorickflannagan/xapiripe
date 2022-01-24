@@ -5,7 +5,8 @@
  */
 
 'use strict';
-const addon = require('../build/Release/hamahiri-native');
+const path = require('path');
+const addon = require(path.join(__dirname, '..', 'build', 'Release', 'hamahiri-native'));
 
 /**
  * Global objects
