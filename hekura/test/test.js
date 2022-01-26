@@ -14,6 +14,7 @@ const http = require('http');
 const fs = require('fs');
 const cp = require('child_process');
 const Aroari = require(path.join(__dirname, '..', '..', 'aroari'));
+const Wanhamou = require(path.join(__dirname, '..', '..', 'wanhamou'));
 
 let PKIDir = __dirname;
 let indexCN = 0;
@@ -558,6 +559,8 @@ async function unit_test() {
 	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
 	else fs.writeFileSync(indexFile, indexCN.toString());
 	new OpenSSLWrapper();
+	let current = path.resolve(__dirname);
+	Wanhamou.Logger.logConfig({ path: current, level: Wanhamou.LogLevel.DEBUG });
 
 	console.log('Hekura test case battery')
 	let test = new TestService();
@@ -663,6 +666,7 @@ async function unit_test() {
 
 	LOG.write(test.tests.toString());
 	LOG.write(' test cases performed.\n')
+	fs.unlinkSync(path.join(current, 'xapiripe-0.log'));
 }
 
 let i = 2;

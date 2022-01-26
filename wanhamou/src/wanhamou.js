@@ -27,6 +27,7 @@ const fs = require('fs');
  * @property { Number } level	Nível corrente do log. Serão logados somente as mensagens com valor igual ou maior. Valor default INFO
  */
 
+
 /**
  * Níveis de log
  */
@@ -61,6 +62,7 @@ class LogLevel
 	 static ERROR = 3; 
 }
 
+
 /**
  * Dispositivo simplificado de log
  */
@@ -84,7 +86,7 @@ class LogDevice
 		if (typeof options.fname === 'string' && options.fname.includes('-n')) this.cfgLogPattern = options.fname;
 		if (typeof options.maxSize === 'number') this.cfgLogMaxSize = options.maxSize;
 		if (typeof options.rotate === 'number') this.cfgLogRotate = options.rotate;
-		if (typeof options.level === 'number' && this.options.level >= LogLevel.DEBUG && options.level <= LogLevel.ERROR) cfgLogLevel = options.level;
+		if (typeof options.level === 'number' && options.level >= LogLevel.DEBUG && options.level <= LogLevel.ERROR) this.cfgLogLevel = options.level;
 	}
 
 	/**
@@ -129,7 +131,7 @@ class LogDevice
 		let mtime = new Date();
 		let oldest = '';
 		while (i < LogDevice.cfgLogRotate && fd == 0) {
-			let fName = path.join(__dirname, LogDevice.cfgLogPattern.replace('-n', '-'.concat(i.toString())));
+			let fName = path.join(LogDevice.cfgFilePath, LogDevice.cfgLogPattern.replace('-n', '-'.concat(i.toString())));
 			if (fs.existsSync(fName)) {
 				let stats = fs.lstatSync(fName);
 				if (stats.size < LogDevice.cfgLogMaxSize * 1024) fd = fs.openSync(fName, 'a');

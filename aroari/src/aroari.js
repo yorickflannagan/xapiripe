@@ -290,6 +290,24 @@ const crypto = require('crypto');
 		this.errorCode = errorCode;
 		this.native = native ? native : null;
 	}
+	toString() {
+		let value = 'Mensagem de erro: '.concat(
+			this.message, '\r\n',
+			'Componente: ', this.component, '\r\n',
+			'Método: ', this.method, '\r\n',
+			'Código de erro: ', this.errorCode.toString()
+		);
+		if (typeof this.native !== 'undefined') {
+			value.concat('\r\n',
+				'Mensagem fornecida pelo componente nativo: ', this.native.message, '\r\n',
+				'Componente nativo: ', this.native.component, '\r\n',
+				'Método nativo: ', this.native.method, '\r\n',
+				'Código de erro nativo: ', this.native.errorCode.toString()
+			);
+			if (typeof this.native.apiError !== 'undefined')  value.concat('\r\n', 'Código de erro Windows: ', this.native.apiError.toString());
+		}
+		return value;
+	}
 }
 
 /**
@@ -839,7 +857,7 @@ class Enroll
 			throw new APIError(request.error, 'generateCSR', APIError.DER_ENCODE_REQUEST_ERROR);
 		}
 		this.addon.releaseKeyHandle(keyPair.privKey);
-		return '-----BEGIN CERTIFICATE REQUEST-----\n' + Base64.btoa(csr, true) + '\n-----END CERTIFICATE REQUEST-----';
+		return '-----BEGIN CERTIFICATE REQUEST-----\r\n' + Base64.btoa(csr, true) + '\r\n-----END CERTIFICATE REQUEST-----';
 	}
 
 	/**
@@ -1282,7 +1300,7 @@ class Sign
 		]});
 		let encoded = contentInfo.toBER(false);
 		if (encoded.byteLength == 0) throw new APIError('Falha ao codificar o documento CMS em DER', 'sign', APIError.DER_ENCODE_CMS_ERROR);
-		return '-----BEGIN PKCS7-----\n' + Base64.btoa(new Uint8Array(encoded), true) + '\n-----END PKCS7-----';
+		return '-----BEGIN PKCS7-----\r\n' + Base64.btoa(new Uint8Array(encoded), true) + '\r\n-----END PKCS7-----';
 	}
 }
 
