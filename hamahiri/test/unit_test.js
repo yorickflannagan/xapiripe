@@ -259,8 +259,8 @@ class EnrollTest
 		let toBeSigned = Buffer.from(certificateRequestInfo.toBER(false));
 		let hash = crypto.createHash('sha256');
 		hash.update(toBeSigned);
-		assert(this.enroll.sign, 'The expected Enroll.sign() method is undefined');
-		let signed = this.enroll.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, keyPair.privKey);
+		assert(this.enroll.signRequest, 'The expected Enroll.sign() method is undefined');
+		let signed = this.enroll.signRequest(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, keyPair.privKey);
 		assert(signed, 'Signature failure');
 		assert(signed instanceof Uint8Array, 'Data returned member must be a Uint8Array');
 		return this.#makeCertificationRequest(certificateRequestInfo, signed);
@@ -433,10 +433,10 @@ class SignTest
 		let certs = this.sign.enumerateCertificates();
 		let len = certs.length;
 		certs = this.sign.enumerateCertificates();
-		//assert(certs.length == len, 'Sign.enumerateCertificates() must not enumerate certificates more than once');
+		assert(certs.length == len, 'Sign.enumerateCertificates() must not enumerate certificates more than once');
 		LOG.write(' done!\n');
 		this.tests++;
-		console.log(certs);
+		return certs;
 	}
 	selectCert(certs, expression) {
 		let i = 0;
@@ -482,17 +482,6 @@ class SignTest
 		else LOG.write(' done!\n');
 		this.tests++;
 		return chain;
-	}
-	releaseKeyTestCase(cert) {
-		LOG.write('Testing release certificate handle...');
-		assert(this.sign.releaseKeyHandle, 'The expected Sign.releaseKeyHandle() method is undefined');
-		this.sign.releaseKeyHandle(cert.handle);
-		let hash = crypto.createHash('sha256');
-		hash.update('Transaction to sign');
-		try { this.sign.sign(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, cert.handle); }
-		catch (err) { checkError(err, 3); }
-		this.tests++;
-		LOG.write(' done!\n');
 	}
 	validateIssuerTestCase(cert) {
 		LOG.write('Testing certificate issuer validation... ');
@@ -543,7 +532,7 @@ function main() {
 	LOG.write('Tests battery of digital signature:\n');
 	let sign = new SignTest();
 	let certs = sign.enumCertsTestCase();
-	sign.checkEnumCertsTestCase();
+	certs = sign.checkEnumCertsTestCase();
 	console.log('Installed signing certificates:');
 	console.log(certs);
 	let signCert = sign.selectCert(certs, /CryptoAPI/gi);
@@ -554,7 +543,6 @@ function main() {
 		let signature = sign.signWithLegacyKeyTestCase(signCert);
 		if (!signature) console.log('Warning! Signature Uint8Array did not return!')
 		chain = sign.getChainTestCase(signCert);
-		sign.releaseKeyTestCase(signCert);
 	}
 	else console.log('Warning! Could not find a signing legacy certificate. Cannot complete test battery!');
 	if (chain) sign.validateIssuerTestCase(chain[0]);
@@ -566,7 +554,6 @@ function main() {
 		let signature = sign.signWithCNGKeyTestCase(signCert);
 		if (!signature) console.log('Warning! Signature Uint8Array did not return!')
 		chain = sign.getChainTestCase(signCert);
-		sign.releaseKeyTestCase(signCert);
 	}
 	else console.log('Warning! Could not find a signing CNG certificate. Cannot complete test battery!');
 	if (chain) sign.validateIssuerTestCase(chain[0]);

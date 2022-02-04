@@ -837,7 +837,7 @@ class Enroll
 		let hash = crypto.createHash(hashAlg);
 		hash.update(toBeSigned);
 		let signature;
-		try { signature = this.addon.sign(hash.digest(), signAlg, keyPair.privKey); }
+		try { signature = this.addon.signRequest(hash.digest(), signAlg, keyPair.privKey); }
 		catch (err) {
 			this.addon.deleteKeyPair(keyPair.privKey);
 			throw new APIError('Falha ao assinar a requisição de certificado', 'generateCSR', APIError.REQUEST_SIGN_ERROR, err);

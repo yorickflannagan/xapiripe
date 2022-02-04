@@ -94,7 +94,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line138">line 138</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line107">line 107</a>
     </li></ul></dd>
     
 
@@ -285,7 +285,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line200">line 200</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line201">line 201</a>
     </li></ul></dd>
     
 
@@ -372,6 +372,182 @@
     
 
     
+    <h4 class="name" id="deleteKeyPair"><span class="type-signature"></span>deleteKeyPair<span class="signature">(key)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Remove do repositório criptográfico um par de chaves criado por generateKeyPair
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>key</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Handle para a chave gerada, obtido por Enroll.generateKeyPair</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line159">line 159</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Throws:</h5>
+
+        
+
+<dl>
+    <dt>
+        <div class="param-desc">
+        Dispara uma instância de <a href="Hamahiri.Failure.html">Hamahiri.Failure</a> em caso de argumentos inválidos
+        </div>
+    </dt>
+    <dd></dd>
+    <dt>
+        <dl>
+            <dt>
+                Type
+            </dt>
+            <dd>
+                
+<span class="param-type">Failure</span>
+
+
+            </dd>
+        </dl>
+    </dt>
+    <dd></dd>
+</dl>
+
+
+    
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    Indicador de sucesso da operação. Uma chave inexistente não é considerada uma falha.
+</div>
+
+
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
     <h4 class="name" id="enumerateDevices"><span class="type-signature"></span>enumerateDevices<span class="signature">()</span><span class="type-signature"> &rarr; {Array}</span></h4>
     
 
@@ -424,7 +600,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line147">line 147</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line116">line 116</a>
     </li></ul></dd>
     
 
@@ -635,7 +811,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line158">line 158</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line127">line 127</a>
     </li></ul></dd>
     
 
@@ -823,7 +999,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line169">line 169</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line170">line 170</a>
     </li></ul></dd>
     
 
@@ -1013,7 +1189,7 @@ AC final assinou um certificado de usuário com instalação prévia bem sucedid
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line181">line 181</a>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line182">line 182</a>
     </li></ul></dd>
     
 
@@ -1096,6 +1272,428 @@ anteriormente, retorna false
 
 
         
+            
+
+    
+
+    
+    <h4 class="name" id="releaseKeyHandle"><span class="type-signature"></span>releaseKeyHandle<span class="signature">(hHandle)</span><span class="type-signature"> &rarr; {boolean}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Libera o handle para uma chave privada
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>hHandle</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Handle retornado anteriormente</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line149">line 149</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Throws:</h5>
+
+        
+
+<dl>
+    <dt>
+        <div class="param-desc">
+        Dispara uma instância de <a href="Hamahiri.Failure.html">Hamahiri.Failure</a> em caso de falha
+        </div>
+    </dt>
+    <dd></dd>
+    <dt>
+        <dl>
+            <dt>
+                Type
+            </dt>
+            <dd>
+                
+<span class="param-type">Failure</span>
+
+
+            </dd>
+        </dl>
+    </dt>
+    <dd></dd>
+</dl>
+
+
+    
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    Indicador de sucesso
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">boolean</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="signRequest"><span class="type-signature"></span>signRequest<span class="signature">(hash, algorithm, key)</span><span class="type-signature"> &rarr; {Uint8Array}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Assina o buffer contendo o hash da requisição de assinatura de certificado
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>hash</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Uint8Array</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Hash do conteúdo. Deve ter o tamanho apropriado às chaves RSA e ao algoritmo especificado.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>algorithm</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">SignMechanism</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Constante PKCS #11 do algoritmo de assinatura</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>key</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Handle para a chave privada de assinatura, obtido previamente</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="hamahiri.js.html">hamahiri.js</a>, <a href="hamahiri.js.html#line139">line 139</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Throws:</h5>
+
+        
+
+<dl>
+    <dt>
+        <div class="param-desc">
+        Dispara uma instância de <a href="Hamahiri.Failure.html">Hamahiri.Failure</a> em caso de falha
+        </div>
+    </dt>
+    <dd></dd>
+    <dt>
+        <dl>
+            <dt>
+                Type
+            </dt>
+            <dd>
+                
+<span class="param-type">Failure</span>
+
+
+            </dd>
+        </dl>
+    </dt>
+    <dd></dd>
+</dl>
+
+
+    
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    Buffer assinado.
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Uint8Array</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
     
 
     
@@ -1117,7 +1715,7 @@ anteriormente, retorna false
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed Jan 05 2022 16:55:58 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Fri Feb 04 2022 18:23:03 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

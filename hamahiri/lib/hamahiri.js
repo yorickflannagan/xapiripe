@@ -97,38 +97,6 @@ const addon = require(path.join(__dirname, '..', 'build', 'Release', 'hamahiri-n
  class Hamahiri
 {
 	constructor() { this.addon = new addon.Hamahiri(); }
-
-	/**
-	 * Assina o buffer contendo o hash do conteúdo
-	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
-	 * @param   { Uint8Array    } hash      Hash do conteúdo. Deve ter o tamanho apropriado às chaves RSA e ao algoritmo especificado.
-	 * @param   { SignMechanism } algorithm Constante PKCS #11 do algoritmo de assinatura
-	 * @param   { Number        } key       Handle para a chave privada de assinatura, obtido previamente
-	 * @returns { Uint8Array } Buffer assinado.
-	 */
-	 sign(hash, algorithm, key) {
-		return this.addon.sign(hash, algorithm, key);
-	}
-
-	/**
-	 * Libera o handle para uma chave privada
-	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
-	 * @param { Number } hHandle Handle retornado anteriormente
-	 * @returns { boolean } Indicador de sucesso
-	 */
-	 releaseKeyHandle(hHandle) {
-		return this.addon.releaseKeyHandle(hHandle);
-	}
-
-	/**
-	 * Remove do repositório criptográfico um par de chaves criado por generateKeyPair
-	 * @throws {Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de argumentos inválidos
-	 * @param { Number } key Handle para a chave gerada, obtido por {@link Enroll.generateKeyPair}
-	 * @returns Indicador de sucesso da operação. Uma chave inexistente não é considerada uma falha.
-	 */
-	 deleteKeyPair(key) {
-		return this.addon.deleteKeyPair(key);
-	}
 }
 
 /**
@@ -145,7 +113,7 @@ const addon = require(path.join(__dirname, '..', 'build', 'Release', 'hamahiri-n
 	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @return { Array } Lista de strings contendo os nomes dos dispositivos presentes
 	 */
-	 enumerateDevices() {
+	enumerateDevices() {
 		return this.addon.enumerateDevices();
 	};
 
@@ -161,13 +129,45 @@ const addon = require(path.join(__dirname, '..', 'build', 'Release', 'hamahiri-n
 	}
 
 	/**
+	 * Assina o buffer contendo o hash da requisição de assinatura de certificado
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param   { Uint8Array    } hash      Hash do conteúdo. Deve ter o tamanho apropriado às chaves RSA e ao algoritmo especificado.
+	 * @param   { SignMechanism } algorithm Constante PKCS #11 do algoritmo de assinatura
+	 * @param   { Number        } key       Handle para a chave privada de assinatura, obtido previamente
+	 * @returns { Uint8Array } Buffer assinado.
+	 */
+	signRequest(hash, algorithm, key) {
+		return this.addon.signRequest(hash, algorithm, key);
+	}
+
+	/**
+	 * Libera o handle para uma chave privada
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param { Number } hHandle Handle retornado anteriormente
+	 * @returns { boolean } Indicador de sucesso
+	 */
+	releaseKeyHandle(hHandle) {
+		return this.addon.releaseKeyHandle(hHandle);
+	}
+
+	/**
+	 * Remove do repositório criptográfico um par de chaves criado por generateKeyPair
+	 * @throws {Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de argumentos inválidos
+	 * @param { Number } key Handle para a chave gerada, obtido por {@link Enroll.generateKeyPair}
+	 * @returns Indicador de sucesso da operação. Uma chave inexistente não é considerada uma falha.
+	 */
+	deleteKeyPair(key) {
+		return this.addon.deleteKeyPair(key);
+	}
+
+	/**
 	 * Instala o certificado de usuário, caso a chave pública esteja associada a uma chave privada existente
 	 * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @param { Uint8Array } userCertificate Certificado do usuário codificado em DER
 	 * @returns { boolean } Indicador de sucesso da operação. Caso o certificado tenha sido instalado
 	 * anteriormente, retorna false
 	 */
-	 installCertificate(userCertificate) {
+	installCertificate(userCertificate) {
 		return this.addon.installCertificate(userCertificate);
 	}
 
@@ -179,7 +179,7 @@ const addon = require(path.join(__dirname, '..', 'build', 'Release', 'hamahiri-n
 	 * @returns { boolean } Indicador de sucesso da operação. Caso a cadeia tenha sido instalada
 	 * anteriormente, retorna false
 	 */
-	 installChain(chain) {
+	installChain(chain) {
 		let i = 0;
 		let added = true;
 		while (i < chain.length)
@@ -219,6 +219,18 @@ const addon = require(path.join(__dirname, '..', 'build', 'Release', 'hamahiri-n
 	 */
 	 enumerateCertificates() {
 		return this.addon.enumerateCertificates();
+	}
+
+	/**
+	 * Assina o buffer contendo o hash do conteúdo
+	 * @throws  { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
+	 * @param   { Uint8Array    } hash      Hash do conteúdo. Deve ter o tamanho apropriado às chaves RSA e ao algoritmo especificado.
+	 * @param   { SignMechanism } algorithm Constante PKCS #11 do algoritmo de assinatura
+	 * @param   { Number        } key       Handle para a chave privada de assinatura, obtido previamente
+	 * @returns { Uint8Array } Buffer assinado.
+	 */
+	 sign(hash, algorithm, key) {
+		return this.addon.sign(hash, algorithm, key);
 	}
 
 	/**

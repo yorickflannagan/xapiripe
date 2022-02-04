@@ -28,7 +28,6 @@ void THROW_JS_ERROR(Napi::Env env, char* message, char* method, unsigned long er
 	THROW_JS_ERROR(env, message, method, errorCode, 0L);
 }
 
-
 // * * * * * * * * * * * * * * *
 // Javascript ArrayBuffer free
 // * * * * * * * * * * * * * * *
@@ -38,9 +37,39 @@ void cleanupHook(Napi::Env env, void* arg)
 }
 
 
-// * * * * * * * * * * * * * * *
-// Windows native functions
-// * * * * * * * * * * * * * * *
+// * * * * * * * * * * * * * * * * * *
+// Enroll key and Certificate wrappers
+// * * * * * * * * * * * * * * * * * *
+EnrollKeyWrapper::EnrollKeyWrapper(const std::string& container, const DWORD dwType, const std::string& provider)
+{
+	this->keyName.assign(container);
+	this->dwProvType = dwType;
+	this->provider.assign(provider);
+}
+EnrollKeyHandler::EnrollKeyHandler()
+{
+	this->handlers = 0;
+}
+EnrollKeyHandler::~EnrollKeyHandler()
+{
+	for (std::map<int, EnrollKeyWrapper*>::iterator it = this->keys.begin(); it != this->keys.end(); ++it) delete it->second;
+}
+int EnrollKeyHandler::AddKey(const std::string& container, const DWORD dwType, const std::string& provider)
+{
+	EnrollKeyWrapper* key = new EnrollKeyWrapper(container, dwType, provider);
+	int hHandle = ++this->handlers;
+	this->keys.insert(std::pair<int, EnrollKeyWrapper*>(hHandle, key));
+	return hHandle;
+}
+void EnrollKeyHandler::ReleaseKey(const int hHandle)
+{
+	std::map<int, EnrollKeyWrapper*>::iterator it = this->keys.find(hHandle);
+	if (it != this->keys.end())
+	{
+		delete it->second;
+		this->keys.erase(hHandle);
+	}
+}
 void cngDeleteKey(const Napi::Env env, const std::wstring& provider, const std::wstring& keyName)
 {
 	NCRYPT_PROV_HANDLE hProv;
@@ -74,6 +103,69 @@ void capiDeleteKey(const Napi::Env env, const std::string& provider, const DWORD
 	BOOL ret = CryptAcquireContextA(&hProv, keyContainer.c_str(), provider.c_str(), dwProvType, CRYPT_DELETEKEYSET);
 	if (!ret) THROW_JS_ERROR(env, "Could not delete legacy key", "capiDeleteKey", HH_CAPI_DELETE_KEY_ERROR,  GetLastError());
 }
+void EnrollKeyHandler::DeleteKey(const Napi::Env& env, const int hHandle)
+{
+	std::map<int, EnrollKeyWrapper*>::iterator it = this->keys.find(hHandle);
+	if (it != this->keys.end())
+	{
+		if (it->second->dwProvType == 0)
+		{
+			std::wstring provider(it->second->provider.cbegin(), it->second->provider.cend());
+			std::wstring keyName(it->second->keyName.cbegin(), it->second->keyName.cend());
+			cngDeleteKey(env, provider, keyName);
+		}
+		else capiDeleteKey(env, it->second->provider, it->second->dwProvType, it->second->keyName);
+		delete it->second;
+		this->keys.erase(hHandle);
+	}
+}
+EnrollKeyWrapper* EnrollKeyHandler::GetKey(const int hHandle)
+{
+	EnrollKeyWrapper* ret = NULL;
+	std::map<int, EnrollKeyWrapper*>::iterator it = this->keys.find(hHandle);
+	if (it != this->keys.end()) ret = it->second;
+	return ret;
+}
+
+CertificateWrapper::CertificateWrapper(const std::string& subject, const std::string& issuer, const std::string& serial, const std::vector<uint8_t>& encoded)
+{
+	this->subject.assign(subject);
+	this->issuer.assign(issuer);
+	this->serial.assign(serial);
+	this->encoded.assign(encoded.cbegin(), encoded.cend());
+}
+CertificateHandler::CertificateHandler()
+{
+	this->handlers = 16384;
+}
+CertificateHandler::~CertificateHandler()
+{
+	for (std::map<int, CertificateWrapper*>::iterator it = this->keys.begin(); it != this->keys.end(); ++it) delete it->second;
+}
+int CertificateHandler::AddKey(const std::string& subject, const std::string& issuer, const std::string& serial, const std::vector<uint8_t>& encoded)
+{
+	CertificateWrapper* key = new CertificateWrapper(subject, issuer, serial, encoded);
+	int hHandle = ++this->handlers;
+	this->keys.insert(std::pair<int, CertificateWrapper*>(hHandle, key));
+	return hHandle;
+}
+void CertificateHandler::Clear()
+{
+	this->keys.clear();
+}
+CertificateWrapper* CertificateHandler::GetKey(const int hHandle)
+{
+	CertificateWrapper* ret = NULL;
+	std::map<int, CertificateWrapper*>::iterator it = this->keys.find(hHandle);
+	if (it != this->keys.end()) ret = it->second;
+	return ret;
+}
+
+
+// * * * * * * * * * * * * * * *
+// The API itself: Enroll
+// * * * * * * * * * * * * * * *
+Hamahiri::Hamahiri(const Napi::CallbackInfo& info) : ObjectWrap(info) {}
 
 void cngEnumerateProviders(const Napi::Env env, std::vector<std::wstring>& list)
 {
@@ -120,6 +212,55 @@ void capiEnumerateProviders(const Napi::Env env, const DWORD dwProvType, std::ve
 	DWORD dwError = GetLastError();
 	if (dwError != ERROR_NO_MORE_ITEMS)
 		THROW_JS_ERROR(env, "Error enumerating legacy providers", "capiEnumerateProviders", HH_ENUM_PROV_ERROR, dwError);
+}
+void Hamahiri::enumProviders(const Napi::Env& env)
+{
+	std::vector<Provider> provs;
+	std::vector<std::wstring> cng;
+	cngEnumerateProviders(env, cng);
+	if (env.IsExceptionPending()) return;
+	for (size_t i = 0; i < cng.size(); i++)
+	{
+		std::string provName(cng.at(i).cbegin(), cng.at(i).cend());
+		Provider prov;
+		prov.dwProvType = 0;
+		prov.name.assign(provName);
+		provs.push_back(prov);
+	}
+
+	std::vector<std::string> legacy;
+	capiEnumerateProviders(env, PROV_RSA_FULL, legacy);
+	if (env.IsExceptionPending()) return;
+	for (size_t i = 0; i < legacy.size(); i++)
+	{
+		Provider prov;
+		prov.dwProvType = PROV_RSA_FULL;
+		prov.name.assign(legacy.at(i));
+		provs.push_back(prov);
+	}
+
+	legacy.clear();
+	capiEnumerateProviders(env, PROV_RSA_AES, legacy);
+	if (env.IsExceptionPending()) return;
+	for (size_t i = 0; i < legacy.size(); i++)
+	{
+		Provider prov;
+		prov.dwProvType = PROV_RSA_AES;
+		prov.name.assign(legacy.at(i));
+		provs.push_back(prov);
+	}
+
+	this->providers.clear();
+	for (size_t i = 0; i < provs.size(); i++) if (!provs.at(i).name.empty()) this->providers.push_back(provs.at(i));
+}
+Napi::Value Hamahiri::EnumerateDevices(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	this->enumProviders(env);
+	if (env.IsExceptionPending()) return env.Null();
+	Napi::Array ret = Napi::Array::New(env, this->providers.size());
+	for (size_t i = 0; i < this->providers.size(); i++) ret[i] = Napi::String::New(env, this->providers.at(i).name.c_str());
+	return ret;
 }
 
 Napi::Value cngGenerateKeyPair(const Napi::Env& env, const std::wstring& provider, const DWORD ulKeyLen, std::wstring& keyName)
@@ -307,6 +448,97 @@ Napi::Value capiGenerateKeyPair(const Napi::Env& env, std::string& provider, con
 	CryptReleaseContext(hProv, 0);
 	return Napi::TypedArrayOf<uint8_t>::New(env, cbEncoded, buffer, 0, napi_uint8_array);
 }
+Napi::Value Hamahiri::GenerateKeyPair(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 2)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "generateKeyPair", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+    if (!info[0].IsString())
+	{
+		THROW_JS_ERROR(env, "Argument device required", "generateKeyPair", HH_ARGUMENT_ERROR);
+		return env.Null();
+    }
+	if (!info[1].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument keySize required", "generateKeyPair", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (this->providers.size() == 0) this->enumProviders(env);
+	std::string provider = info[0].As<Napi::String>().Utf8Value();
+	size_t i = 0;
+	DWORD dwProvType = 0;
+	bool bFound = false;
+	while (!bFound && i < this->providers.size())
+	{
+		if ((bFound = this->providers.at(i).name.compare(provider) == 0)) dwProvType = this->providers.at(i).dwProvType;
+		i++;
+	}
+	if (!bFound)
+	{
+		THROW_JS_ERROR(env, "The device argument does not correspond to an installed cryptographic device", "generateKeyPair", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+
+	int hHandle = 0;
+	std::string keyContainer;
+	Napi::Value retPubKey;
+	if (dwProvType != 0) 
+	{
+		retPubKey = capiGenerateKeyPair(env, provider, dwProvType, info[1].As<Napi::Number>().Int32Value(), keyContainer);
+	}
+	else
+	{
+		std::wstring cngProv(provider.cbegin(), provider.cend());
+		std::wstring keyName;
+		retPubKey = cngGenerateKeyPair(env, cngProv, info[1].As<Napi::Number>().Int32Value(), keyName);
+		if (env.IsExceptionPending()) return env.Null();
+		keyContainer.assign(keyName.cbegin(), keyName.cend());
+	}
+	if (env.IsExceptionPending()) return env.Null();
+	hHandle = this->keyHandler.AddKey(keyContainer, dwProvType, provider);
+
+	Napi::Object ret = Napi::Object::New(env);
+	ret.Set("privKey", hHandle);
+	ret.Set("pubKey", retPubKey.As<Napi::TypedArrayOf<uint8_t>>());
+	return ret;
+}
+
+Napi::Value Hamahiri::ReleaseKeyHandle(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 1)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "releaseKeyHandle", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument handle required", "releaseKeyHandle", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	this->keyHandler.ReleaseKey(info[0].As<Napi::Number>().Int32Value());
+	return Napi::Boolean::New(env, true);
+}
+
+Napi::Value Hamahiri::DeleteKeyPair(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 1)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "releaseKeyHandle", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument handle required", "releaseKeyHandle", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	this->keyHandler.DeleteKey(env, info[0].As<Napi::Number>().Int32Value());
+	return Napi::Boolean::New(env, true);
+}
 
 Napi::Value cngSign(const Napi::Env env, const NCRYPT_KEY_HANDLE hKey, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
 {
@@ -467,32 +699,49 @@ Napi::Value capiEnrollSign(const Napi::Env env, const std::string& provider, con
 	}
 	return ret;
 }
-Napi::Value sign(const Napi::Env env, const BYTE* pbEncoded, const DWORD cbEncoded, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
+Napi::Value Hamahiri::SignRequest(const Napi::CallbackInfo& info)
 {
-	PCCERT_CONTEXT hCert = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pbEncoded, cbEncoded);
-	if (!hCert)
+	Napi::Env env = info.Env();
+	if (info.Length() < 3)
 	{
-		THROW_JS_ERROR(env, "Could not create a certificate context to encoding", "sign", HH_CERT_PARSING_ERROR, GetLastError());
+		THROW_JS_ERROR(env, "Wrong number of arguments", "signRequest", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
-	HCRYPTPROV_OR_NCRYPT_KEY_HANDLE hKey;
-	DWORD dwKeySpec;
-	BOOL mustFree;
-	if (!CryptAcquireCertificatePrivateKey(hCert, CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG, NULL, &hKey, &dwKeySpec, &mustFree))
+	if (!info[0].IsTypedArray())
 	{
-		THROW_JS_ERROR(env, "Could not acquire key from certificate context", "sign", HH_ACQUIRE_KEY_ERRROR, GetLastError());
-		CertFreeCertificateContext(hCert);
+		THROW_JS_ERROR(env, "Argument hash must be Uint8Array", "signRequest", HH_ARGUMENT_ERROR);
 		return env.Null();
 	}
+	if (!info[1].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument algorithm must be a number", "signRequest", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[2].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument key must be a number", "signRequest", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
+	BYTE* pbData = (BYTE*) data.Data();
+	DWORD cbData = data.ByteLength();
+	uint32_t mechanism = info[1].As<Napi::Number>().Uint32Value();
+	EnrollKeyWrapper* wrapper = this->keyHandler.GetKey(info[2].As<Napi::Number>().Int32Value());
+	if (!wrapper)
+	{
+		THROW_JS_ERROR(env, "Invalid signing key handle", "sign", HH_INVALID_KEY_HANDLE);
+		return env.Null();
+	}
+
 	Napi::Value ret;
-	if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) ret = cngSign(env, hKey, mechanism, pbData, cbData);
-	else ret = capiSign(env, hKey, mechanism, pbData, cbData);
-	if (mustFree)
+	if (wrapper->dwProvType == 0)
 	{
-		if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) NCryptFreeObject(hKey);
-		else CryptReleaseContext(hKey, 0);
+		std::wstring cngProv(wrapper->provider.cbegin(), wrapper->provider.cend());
+		std::wstring cngKey(wrapper->keyName.cbegin(), wrapper->keyName.cend());
+		ret = cngEnrollSign(env, cngProv, cngKey, mechanism, pbData, cbData);
 	}
-	CertFreeCertificateContext(hCert);
+	else ret = capiEnrollSign(env, wrapper->provider, wrapper->dwProvType, wrapper->keyName, mechanism, pbData, cbData);
+	if (env.IsExceptionPending()) return env.Null();
 	return ret;
 }
 
@@ -608,6 +857,27 @@ bool installCertificate(const Napi::Env& env, const BYTE* pbEncoded, DWORD cbEnc
 	CertFreeCertificateContext(hCert);
 	return added;
 }
+Napi::Value Hamahiri::InstallCertificate(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 1)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "installCertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsTypedArray())
+	{
+		THROW_JS_ERROR(env, "Argument userCert must be an Uint8Array", "installCertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
+	BYTE* pbEncoded = (BYTE*) data.Data();
+	DWORD cbEncoded = data.ByteLength();
+	bool added = installCertificate(env, pbEncoded, cbEncoded);
+	if (env.IsExceptionPending()) return env.Null();
+	return Napi::Boolean::New(env, added);
+}
+
 bool installCACertificate(const Napi::Env& env, const BYTE* pbEncoded, const DWORD cbEncoded)
 {
 	PCCERT_CONTEXT hCert = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pbEncoded, cbEncoded);
@@ -678,6 +948,27 @@ bool installCACertificate(const Napi::Env& env, const BYTE* pbEncoded, const DWO
 	CertFreeCertificateContext(hCert);
 	return added;
 }
+Napi::Value Hamahiri::InstallCACertificate(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 1)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "installCACertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsTypedArray())
+	{
+		THROW_JS_ERROR(env, "Argument userCert must be an Uint8Array", "installCACertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
+	BYTE* pbEncoded = (BYTE*) data.Data();
+	DWORD cbEncoded = data.ByteLength();
+	bool added = installCACertificate(env, pbEncoded, cbEncoded);
+	if (env.IsExceptionPending()) return env.Null();
+	return Napi::Boolean::New(env, added);
+}
+
 bool removeCertificate(const Napi::Env& env, const CHAR* szSubject, const CHAR* szIssuer, const CHAR* szSubsystem)
 {
 	HCERTSTORE hStore = CertOpenSystemStoreA(NULL, szSubsystem);
@@ -713,6 +1004,44 @@ bool removeCertificate(const Napi::Env& env, const CHAR* szSubject, const CHAR* 
 	CertCloseStore(hStore, 0);
 	return removed;
 }
+Napi::Value Hamahiri::DeleteCertificate(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 2)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "deleteCertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsString())
+	{
+		THROW_JS_ERROR(env, "Argument subject must be a string", "deleteCertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[1].IsString())
+	{
+		THROW_JS_ERROR(env, "Argument issuer must be a string", "deleteCertificate", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	std::string szSubject = info[0].As<Napi::String>().Utf8Value();
+	std::string szIssuer = info[1].As<Napi::String>().Utf8Value();
+
+	CHAR* szSubystem[] = { "MY", "CA", "Root" };
+	bool removed = false;
+	int i = 0;
+	while (!removed && i < 2)
+	{
+		removed = removeCertificate(env, szSubject.c_str(), szIssuer.c_str(), szSubystem[i]);
+		if (env.IsExceptionPending()) return env.Null();
+		i++;
+	}
+	return Napi::Boolean::New(env, removed);
+}
+
+
+
+// * * * * * * * * * * * * * * *
+// The API itself: Sign
+// * * * * * * * * * * * * * * *
 void enumCerts(const Napi::Env& env, std::vector<Certificate>& out)
 {
 	HCERTSTORE hStore = CertOpenSystemStoreA(NULL, "MY");
@@ -766,6 +1095,95 @@ void enumCerts(const Napi::Env& env, std::vector<Certificate>& out)
 	}
 	CertCloseStore(hStore, 0);
 }
+Napi::Value Hamahiri::EnumerateCertificates(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	std::vector<Certificate> certs;
+	enumCerts(env, certs);
+	if (env.IsExceptionPending()) return env.Null();
+	this->certHandler.Clear();
+	std::vector<Napi::Object> certsJS;
+	for (std::vector<Certificate>::iterator it = certs.begin(); it != certs.end(); ++it)
+	{
+		int hHandle = this->certHandler.AddKey(it->subject, it->issuer, it->serial, it->encoded);
+		Napi::Object cert = Napi::Object::New(env);
+		cert.Set("subject", it->subject);
+		cert.Set("issuer", it->issuer);
+		cert.Set("serial", it->serial);
+		cert.Set("handle", hHandle);
+		certsJS.push_back(cert);
+	}
+	Napi::Array ret = Napi::Array::New(env, certsJS.size());
+	for (unsigned int i = 0; i < certsJS.size(); i++) ret[i] = certsJS.at(i);
+	return ret;
+}
+
+Napi::Value sign(const Napi::Env env, const BYTE* pbEncoded, const DWORD cbEncoded, const uint32_t mechanism, BYTE* pbData, DWORD cbData)
+{
+	PCCERT_CONTEXT hCert = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pbEncoded, cbEncoded);
+	if (!hCert)
+	{
+		THROW_JS_ERROR(env, "Could not create a certificate context to encoding", "sign", HH_CERT_PARSING_ERROR, GetLastError());
+		return env.Null();
+	}
+	HCRYPTPROV_OR_NCRYPT_KEY_HANDLE hKey;
+	DWORD dwKeySpec;
+	BOOL mustFree;
+	if (!CryptAcquireCertificatePrivateKey(hCert, CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG, NULL, &hKey, &dwKeySpec, &mustFree))
+	{
+		THROW_JS_ERROR(env, "Could not acquire key from certificate context", "sign", HH_ACQUIRE_KEY_ERRROR, GetLastError());
+		CertFreeCertificateContext(hCert);
+		return env.Null();
+	}
+	Napi::Value ret;
+	if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) ret = cngSign(env, hKey, mechanism, pbData, cbData);
+	else ret = capiSign(env, hKey, mechanism, pbData, cbData);
+	if (mustFree)
+	{
+		if (dwKeySpec == CERT_NCRYPT_KEY_SPEC) NCryptFreeObject(hKey);
+		else CryptReleaseContext(hKey, 0);
+	}
+	CertFreeCertificateContext(hCert);
+	return ret;
+}
+Napi::Value Hamahiri::Sign(const Napi::CallbackInfo& info) 
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 3)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "sign", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsTypedArray())
+	{
+		THROW_JS_ERROR(env, "Argument hash must be Uint8Array", "sign", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[1].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument algorithm must be a number", "sign", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[2].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument key must be a number", "sign", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
+	BYTE* pbData = (BYTE*) data.Data();
+	DWORD cbData = data.ByteLength();
+	uint32_t mechanism = info[1].As<Napi::Number>().Uint32Value();
+	CertificateWrapper* wrapper = this->certHandler.GetKey(info[2].As<Napi::Number>().Int32Value());
+	if (!wrapper)
+	{
+		THROW_JS_ERROR(env, "Invalid signing key handle", "sign", HH_INVALID_KEY_HANDLE);
+		return env.Null();
+	}
+
+	Napi::Value ret = sign(env, wrapper->encoded.data(), wrapper->encoded.size(), mechanism, pbData, cbData);
+	if (env.IsExceptionPending()) return env.Null();
+	return ret;
+}
 
 void getChain(const Napi::Env& env, const BYTE* pbEncoded, const DWORD cbEncoded, std::vector<std::vector<uint8_t>>& out)
 {
@@ -793,6 +1211,44 @@ void getChain(const Napi::Env& env, const BYTE* pbEncoded, const DWORD cbEncoded
 	}
 	CertFreeCertificateChain(pChain);
 	CertFreeCertificateContext(hCert);
+}
+Napi::Value Hamahiri::GetCertificateChain(const Napi::CallbackInfo& info)
+{
+	Napi::Env env = info.Env();
+	if (info.Length() < 1)
+	{
+		THROW_JS_ERROR(env, "Wrong number of arguments", "getCertificateChain", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	if (!info[0].IsNumber())
+	{
+		THROW_JS_ERROR(env, "Argument handle must be a Number", "getCertificateChain", HH_ARGUMENT_ERROR);
+		return env.Null();
+	}
+	CertificateWrapper* wrapper = this->certHandler.GetKey(info[0].As<Napi::Number>().Int32Value());
+	if (!wrapper)
+	{
+		THROW_JS_ERROR(env, "Invaid signing certificate handle", "getCertificateChain", HH_INVALID_KEY_HANDLE);
+		return env.Null();
+	}
+
+	std::vector<std::vector<uint8_t>> chain;
+	getChain(env, wrapper->encoded.data(), wrapper->encoded.size(), chain);
+	if (env.IsExceptionPending()) return env.Null();
+	Napi::Array ret = Napi::Array::New(env, chain.size());
+	for (size_t i = 0; i < chain.size(); i++)
+	{
+		BYTE* pbEncoded = (BYTE*) LocalAlloc(LMEM_ZEROINIT, chain[i]. size());
+		if (!pbEncoded)
+		{
+			THROW_JS_ERROR(env, "Out of memory error", "getCertificateChain", HH_OUT_OF_MEM_ERROR, GetLastError());
+			return env.Null();
+		}
+		memcpy(pbEncoded, chain[i].data(), chain[i].size());
+		Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, chain[i].size(), cleanupHook);
+		ret[i] = Napi::TypedArrayOf<uint8_t>::New(env, chain[i].size(), buffer, 0, napi_uint8_array);
+	}
+	return ret;
 }
 
 void searchIssuerInStore(const Napi::Env& env, PCCERT_CONTEXT hCert, LPCSTR szStore, std::vector<std::vector<uint8_t>>& out)
@@ -830,447 +1286,6 @@ void findIssuerOf(const Napi::Env& env, const BYTE* pbEncoded, DWORD cbEncoded, 
 	searchIssuerInStore(env, hCert, "Root", out);
 	CertFreeCertificateContext(hCert);
 }
-
-
-// * * * * * * * * * * * * * * *
-// Key/Certificates wrapper
-// * * * * * * * * * * * * * * *
-KeyWrap::KeyWrap(const std::string& provider, const DWORD dwType, const std::string& container)
-{
-	this->isEnroll = true;
-	this->provider.dwProvType = dwType;
-	this->provider.name.assign(provider);
-	this->keyName.assign(container);
-}
-KeyWrap::KeyWrap(const std::string& subject, const std::string& issuer, const std::string& serial, const std::vector<uint8_t>& encoded)
-{
-	this->isEnroll = false;
-	this->certificate.subject.assign(subject);
-	this->certificate.issuer.assign(issuer);
-	this->certificate.serial.assign(serial);
-	this->certificate.encoded.assign(encoded.cbegin(), encoded.cend());
-}
-
-KeyHandler::KeyHandler()
-{
-	this->handlers = 0;
-}
-KeyHandler::~KeyHandler()
-{
-	for (std::map<int, KeyWrap*>::iterator it = this->keys.begin(); it != this->keys.end(); ++it) delete it->second;
-}
-int KeyHandler::AddKey(const std::string& provider, const DWORD dwType, const std::string& keyName)
-{
-	KeyWrap* key = new KeyWrap(provider, dwType, keyName);
-	int hHandle = ++this->handlers;
-	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
-	return hHandle;
-}
-int KeyHandler::AddKey(const std::string& subject, const std::string& issuer, const std::string& serial, const std::vector<uint8_t>& encoded)
-{
-	KeyWrap* key = new KeyWrap(subject, issuer, serial, encoded);
-	int hHandle = ++this->handlers;
-	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
-	return hHandle;
-}
-int KeyHandler::AddKey(const char* szSubject, const char* szIssuer, const char* szSerial, const unsigned char* pbEncoded, unsigned long cbEncoded)
-{
-	std::string subject(szSubject);
-	std::string issuer(szIssuer);
-	std::string serial(szSerial);
-	std::vector<uint8_t> encoded(cbEncoded, 0);
-	for (unsigned long i = 0; i < cbEncoded; i++) encoded[i] = pbEncoded[i];
-
-	KeyWrap* key = new KeyWrap(subject, issuer, serial, encoded);
-	int hHandle = ++this->handlers;
-	this->keys.insert(std::pair<int, KeyWrap*>(hHandle, key));
-	return hHandle;
-}
-void KeyHandler::ReleaseKey(const int hHandle)
-{
-	std::map<int, KeyWrap*>::iterator it = this->keys.find(hHandle);
-	if (it != this->keys.end())
-	{
-		delete it->second;
-		this->keys.erase(hHandle);
-	}
-}
-void KeyHandler::DeleteKey(const Napi::Env& env, const int hHandle)
-{
-	std::map<int, KeyWrap*>::iterator it = this->keys.find(hHandle);
-	if (it != this->keys.end())
-	{
-		if (it->second->isEnroll)
-		{
-			if (it->second->provider.dwProvType == 0)
-			{
-				std::wstring provider(it->second->provider.name.cbegin(), it->second->provider.name.cend());
-				std::wstring keyName(it->second->keyName.cbegin(), it->second->keyName.cend());
-				cngDeleteKey(env, provider, keyName);
-			}
-			else capiDeleteKey(env, it->second->provider.name, it->second->provider.dwProvType, it->second->keyName);
-		}
-		delete it->second;
-		this->keys.erase(hHandle);
-	}
-}
-KeyWrap* KeyHandler::GetKey(const int hHandle)
-{
-	KeyWrap* ret = NULL;
-	std::map<int, KeyWrap*>::iterator it = this->keys.find(hHandle);
-	if (it != this->keys.end()) ret = it->second;
-	return ret;
-}
-std::map<int, KeyWrap*>& KeyHandler::GetHandlers()
-{
-	return this->keys;
-}
-
-
-// * * * * * * * * * * * * * * *
-// The API itself
-// * * * * * * * * * * * * * * *
-Hamahiri::Hamahiri(const Napi::CallbackInfo& info) : ObjectWrap(info)
-{
-	Napi::Env env = info.Env();
-	// TODO: What else?
-}
-void Hamahiri::enumProviders(const Napi::Env& env)
-{
-	std::vector<Provider> provs;
-	std::vector<std::wstring> cng;
-	cngEnumerateProviders(env, cng);
-	if (env.IsExceptionPending()) return;
-	for (size_t i = 0; i < cng.size(); i++)
-	{
-		std::string provName(cng.at(i).cbegin(), cng.at(i).cend());
-		Provider prov;
-		prov.dwProvType = 0;
-		prov.name.assign(provName);
-		provs.push_back(prov);
-	}
-
-	std::vector<std::string> legacy;
-	capiEnumerateProviders(env, PROV_RSA_FULL, legacy);
-	if (env.IsExceptionPending()) return;
-	for (size_t i = 0; i < legacy.size(); i++)
-	{
-		Provider prov;
-		prov.dwProvType = PROV_RSA_FULL;
-		prov.name.assign(legacy.at(i));
-		provs.push_back(prov);
-	}
-
-	legacy.clear();
-	capiEnumerateProviders(env, PROV_RSA_AES, legacy);
-	if (env.IsExceptionPending()) return;
-	for (size_t i = 0; i < legacy.size(); i++)
-	{
-		Provider prov;
-		prov.dwProvType = PROV_RSA_AES;
-		prov.name.assign(legacy.at(i));
-		provs.push_back(prov);
-	}
-
-	this->providers.clear();
-	for (size_t i = 0; i < provs.size(); i++) if (!provs.at(i).name.empty()) this->providers.push_back(provs.at(i));
-}
-Napi::Value Hamahiri::EnumerateDevices(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	this->enumProviders(env);
-	if (env.IsExceptionPending()) return env.Null();
-	Napi::Array ret = Napi::Array::New(env, this->providers.size());
-	for (size_t i = 0; i < this->providers.size(); i++) ret[i] = Napi::String::New(env, this->providers.at(i).name.c_str());
-	return ret;
-}
-
-Napi::Value Hamahiri::GenerateKeyPair(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	if (info.Length() < 2)
-	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "generateKeyPair", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-    if (!info[0].IsString())
-	{
-		THROW_JS_ERROR(env, "Argument device required", "generateKeyPair", HH_ARGUMENT_ERROR);
-		return env.Null();
-    }
-	if (!info[1].IsNumber())
-	{
-		THROW_JS_ERROR(env, "Argument keySize required", "generateKeyPair", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (this->providers.size() == 0) this->enumProviders(env);
-	std::string provider = info[0].As<Napi::String>().Utf8Value();
-	size_t i = 0;
-	DWORD dwProvType = 0;
-	bool bFound = false;
-	while (!bFound && i < this->providers.size())
-	{
-		if ((bFound = this->providers.at(i).name.compare(provider) == 0)) dwProvType = this->providers.at(i).dwProvType;
-		i++;
-	}
-	if (!bFound)
-	{
-		THROW_JS_ERROR(env, "The device argument does not correspond to an installed cryptographic device", "generateKeyPair", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-
-	int hHandle = 0;
-	std::string keyContainer;
-	Napi::Value retPubKey;
-	if (dwProvType != 0) 
-	{
-		retPubKey = capiGenerateKeyPair(env, provider, dwProvType, info[1].As<Napi::Number>().Int32Value(), keyContainer);
-	}
-	else
-	{
-		std::wstring cngProv(provider.cbegin(), provider.cend());
-		std::wstring keyName;
-		retPubKey = cngGenerateKeyPair(env, cngProv, info[1].As<Napi::Number>().Int32Value(), keyName);
-		if (env.IsExceptionPending()) return env.Null();
-		keyContainer.assign(keyName.cbegin(), keyName.cend());
-	}
-	if (env.IsExceptionPending()) return env.Null();
-	hHandle = this->handlers.AddKey(provider, dwProvType, keyContainer);
-
-	Napi::Object ret = Napi::Object::New(env);
-	ret.Set("privKey", hHandle);
-	ret.Set("pubKey", retPubKey.As<Napi::TypedArrayOf<uint8_t>>());
-	return ret;
-}
-
-Napi::Value Hamahiri::ReleaseKeyHandle(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	if (info.Length() < 1)
-	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "releaseKeyHandle", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[0].IsNumber())
-	{
-		THROW_JS_ERROR(env, "Argument handle required", "releaseKeyHandle", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	this->handlers.ReleaseKey(info[0].As<Napi::Number>().Int32Value());
-	return Napi::Boolean::New(env, true);
-}
-
-Napi::Value Hamahiri::DeleteKeyPair(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	if (info.Length() < 1)
-	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "releaseKeyHandle", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[0].IsNumber())
-	{
-		THROW_JS_ERROR(env, "Argument handle required", "releaseKeyHandle", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	this->handlers.DeleteKey(env, info[0].As<Napi::Number>().Int32Value());
-	return Napi::Boolean::New(env, true);
-}
-
-Napi::Value Hamahiri::Sign(const Napi::CallbackInfo& info) 
-{
-	Napi::Env env = info.Env();
-	if (info.Length() < 3)
-	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "sign", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[0].IsTypedArray())
-	{
-		THROW_JS_ERROR(env, "Argument hash must be Uint8Array", "sign", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[1].IsNumber())
-	{
-		THROW_JS_ERROR(env, "Argument algorithm must be a number", "sign", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[2].IsNumber())
-	{
-		THROW_JS_ERROR(env, "Argument key must be a number", "sign", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
-	BYTE* pbData = (BYTE*) data.Data();
-	DWORD cbData = data.ByteLength();
-	uint32_t mechanism = info[1].As<Napi::Number>().Uint32Value();
-	KeyWrap* wrapper = this->handlers.GetKey(info[2].As<Napi::Number>().Int32Value());
-	if (!wrapper)
-	{
-		THROW_JS_ERROR(env, "Invalid signing key handle", "sign", HH_INVALID_KEY_HANDLE);
-		return env.Null();
-	}
-
-	Napi::Value ret;
-	if (wrapper->isEnroll)
-	{
-		if (wrapper->provider.dwProvType == 0)
-		{
-			std::wstring cngProv(wrapper->provider.name.cbegin(), wrapper->provider.name.cend());
-			std::wstring cngKey(wrapper->keyName.cbegin(), wrapper->keyName.cend());
-			ret = cngEnrollSign(env, cngProv, cngKey, mechanism, pbData, cbData);
-		}
-		else ret = capiEnrollSign(env, wrapper->provider.name, wrapper->provider.dwProvType, wrapper->keyName, mechanism, pbData, cbData);
-	}
-	else ret = sign(env, wrapper->certificate.encoded.data(), wrapper->certificate.encoded.size(), mechanism, pbData, cbData);
-	if (env.IsExceptionPending()) return env.Null();
-	return ret;
-}
-
-Napi::Value Hamahiri::InstallCertificate(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	if (info.Length() < 1)
-	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "installCertificate", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[0].IsTypedArray())
-	{
-		THROW_JS_ERROR(env, "Argument userCert must be an Uint8Array", "installCertificate", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
-	BYTE* pbEncoded = (BYTE*) data.Data();
-	DWORD cbEncoded = data.ByteLength();
-	bool added = installCertificate(env, pbEncoded, cbEncoded);
-	if (env.IsExceptionPending()) return env.Null();
-	return Napi::Boolean::New(env, added);
-}
-
-Napi::Value Hamahiri::InstallCACertificate(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	if (info.Length() < 1)
-	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "installCACertificate", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[0].IsTypedArray())
-	{
-		THROW_JS_ERROR(env, "Argument userCert must be an Uint8Array", "installCACertificate", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	Napi::ArrayBuffer data = info[0].As<Napi::TypedArrayOf<uint8_t>>().ArrayBuffer();
-	BYTE* pbEncoded = (BYTE*) data.Data();
-	DWORD cbEncoded = data.ByteLength();
-	bool added = installCACertificate(env, pbEncoded, cbEncoded);
-	if (env.IsExceptionPending()) return env.Null();
-	return Napi::Boolean::New(env, added);
-}
-
-Napi::Value Hamahiri::DeleteCertificate(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	if (info.Length() < 2)
-	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "deleteCertificate", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[0].IsString())
-	{
-		THROW_JS_ERROR(env, "Argument subject must be a string", "deleteCertificate", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[1].IsString())
-	{
-		THROW_JS_ERROR(env, "Argument issuer must be a string", "deleteCertificate", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	std::string szSubject = info[0].As<Napi::String>().Utf8Value();
-	std::string szIssuer = info[1].As<Napi::String>().Utf8Value();
-
-	CHAR* szSubystem[] = { "MY", "CA", "Root" };
-	bool removed = false;
-	int i = 0;
-	while (!removed && i < 2)
-	{
-		removed = removeCertificate(env, szSubject.c_str(), szIssuer.c_str(), szSubystem[i]);
-		if (env.IsExceptionPending()) return env.Null();
-		i++;
-	}
-	return Napi::Boolean::New(env, removed);
-}
-
-Napi::Value Hamahiri::EnumerateCertificates(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	std::vector<Certificate> certs;
-	enumCerts(env, certs);
-	if (env.IsExceptionPending()) return env.Null();
-	for (std::vector<Certificate>::iterator it = certs.begin(); it != certs.end(); ++it)
-	{
-		this->handlers.AddKey(it->subject, it->issuer, it->serial, it->encoded);
-	}
-
-	std::map<int, KeyWrap*> keys = this->handlers.GetHandlers();
-	std::vector<Napi::Object> certsJS;
-	for (std::map<int, KeyWrap*>::iterator it = keys.begin(); it != keys.end(); ++it)
-	{
-		if (!it->second->isEnroll)
-		{
-			Napi::Object cert = Napi::Object::New(env);
-			cert.Set("subject", it->second->certificate.subject);
-			cert.Set("issuer", it->second->certificate.issuer);
-			cert.Set("serial", it->second->certificate.serial);
-			cert.Set("handle", it->first);
-			certsJS.push_back(cert);
-		}
-	}
-	Napi::Array ret = Napi::Array::New(env, certsJS.size());
-	for (unsigned int i = 0; i < certsJS.size(); i++) ret[i] = certsJS.at(i);
-	return ret;
-}
-
-Napi::Value Hamahiri::GetCertificateChain(const Napi::CallbackInfo& info)
-{
-	Napi::Env env = info.Env();
-	if (info.Length() < 1)
-	{
-		THROW_JS_ERROR(env, "Wrong number of arguments", "getCertificateChain", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	if (!info[0].IsNumber())
-	{
-		THROW_JS_ERROR(env, "Argument handle must be a Number", "getCertificateChain", HH_ARGUMENT_ERROR);
-		return env.Null();
-	}
-	KeyWrap* wrapper = this->handlers.GetKey(info[0].As<Napi::Number>().Int32Value());
-	if (!wrapper)
-	{
-		THROW_JS_ERROR(env, "Invaid signing certificate handle", "getCertificateChain", HH_INVALID_KEY_HANDLE);
-		return env.Null();
-	}
-
-	std::vector<std::vector<uint8_t>> chain;
-	getChain(env, wrapper->certificate.encoded.data(), wrapper->certificate.encoded.size(), chain);
-	if (env.IsExceptionPending()) return env.Null();
-	Napi::Array ret = Napi::Array::New(env, chain.size());
-	for (size_t i = 0; i < chain.size(); i++)
-	{
-		BYTE* pbEncoded = (BYTE*) LocalAlloc(LMEM_ZEROINIT, chain[i]. size());
-		if (!pbEncoded)
-		{
-			THROW_JS_ERROR(env, "Out of memory error", "getCertificateChain", HH_OUT_OF_MEM_ERROR, GetLastError());
-			return env.Null();
-		}
-		memcpy(pbEncoded, chain[i].data(), chain[i].size());
-		Napi::ArrayBuffer buffer = Napi::ArrayBuffer::New(env, pbEncoded, chain[i].size(), cleanupHook);
-		ret[i] = Napi::TypedArrayOf<uint8_t>::New(env, chain[i].size(), buffer, 0, napi_uint8_array);
-	}
-	return ret;
-}
-
 Napi::Value Hamahiri::GetIssuerOf(const Napi::CallbackInfo& info)
 {
 	Napi::Env env = info.Env();
@@ -1315,11 +1330,13 @@ Napi::Function Hamahiri::GetClass(Napi::Env env)
 		Hamahiri::InstanceMethod("generateKeyPair",       &Hamahiri::GenerateKeyPair),
 		Hamahiri::InstanceMethod("releaseKeyHandle",      &Hamahiri::ReleaseKeyHandle),
 		Hamahiri::InstanceMethod("deleteKeyPair",         &Hamahiri::DeleteKeyPair),
-		Hamahiri::InstanceMethod("sign",                  &Hamahiri::Sign),
+		Hamahiri::InstanceMethod("signRequest",           &Hamahiri::SignRequest),
 		Hamahiri::InstanceMethod("installCertificate",    &Hamahiri::InstallCertificate),
 		Hamahiri::InstanceMethod("installCACertificate",  &Hamahiri::InstallCACertificate),
 		Hamahiri::InstanceMethod("deleteCertificate",     &Hamahiri::DeleteCertificate),
+
 		Hamahiri::InstanceMethod("enumerateCertificates", &Hamahiri::EnumerateCertificates),
+		Hamahiri::InstanceMethod("sign",                  &Hamahiri::Sign),
 		Hamahiri::InstanceMethod("getCertificateChain",   &Hamahiri::GetCertificateChain),
 		Hamahiri::InstanceMethod("getIssuerOf",           &Hamahiri::GetIssuerOf)
 	});

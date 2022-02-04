@@ -6,6 +6,53 @@
 #include <map>
 #include <vector>
 
+class EnrollKeyWrapper
+{
+public:
+	std::string keyName;	// Windows key container or CNG key name
+	DWORD dwProvType;		// Legacy CSP type; 0 if provider is CNG
+	std::string provider;	// Enroll provider
+
+	EnrollKeyWrapper(const std::string&, const DWORD, const std::string&);
+};
+class EnrollKeyHandler
+{
+public:
+	EnrollKeyHandler();
+	~EnrollKeyHandler();
+	int AddKey(const std::string&, const DWORD, const std::string&);
+	void ReleaseKey(const int);
+	void DeleteKey(const Napi::Env&, const int);
+	EnrollKeyWrapper* GetKey(const int);
+private:
+	int handlers;
+	std::map<int, EnrollKeyWrapper*> keys;
+};
+class CertificateWrapper
+{
+public:
+	std::string subject;			// Signing certificate subject
+	std::string issuer;				// Signing certificate issuer
+	std::string serial;				// Signing certificate serial number
+	std::vector<uint8_t> encoded;	// Certificate DER encoded
+
+	CertificateWrapper(const std::string&, const std::string&, const std::string&, const std::vector<uint8_t>&);
+};
+class CertificateHandler
+{
+public:
+	CertificateHandler();
+	~CertificateHandler();
+	int AddKey(const std::string&, const std::string&, const std::string&, const std::vector<uint8_t>&);
+	void Clear();
+	CertificateWrapper* GetKey(const int);
+private:
+	int handlers;
+	std::map<int, CertificateWrapper*> keys;
+};
+
+
+
 class Provider
 {
 public:
@@ -64,18 +111,21 @@ public:
 	Napi::Value GenerateKeyPair(const Napi::CallbackInfo&);			// Implements generateKeyPair() member of Enroll
 	Napi::Value DeleteKeyPair(const Napi::CallbackInfo&);			// Implements deleteKeyPair() member of Enroll
 	Napi::Value ReleaseKeyHandle(const Napi::CallbackInfo&);		// Implements releaseKeyHandle() member of Hamahiri
-	Napi::Value Sign(const Napi::CallbackInfo&);					// Implements sign() member of Hamahiri
+	Napi::Value SignRequest(const Napi::CallbackInfo&);				// Implements signRequest() member of Hamahiri
 	Napi::Value InstallCertificate(const Napi::CallbackInfo&);		// Implements installCertificate() member of Enroll
 	Napi::Value InstallCACertificate(const Napi::CallbackInfo&);	// Implements installChain() member of Enroll
 	Napi::Value DeleteCertificate(const Napi::CallbackInfo&);		// Implements deleteCertificate() member of Enroll
+
 	Napi::Value EnumerateCertificates(const Napi::CallbackInfo&);	// Implements enumerateCertificates member of Sign
+	Napi::Value Sign(const Napi::CallbackInfo&);					// Implements sign() member of Hamahiri
 	Napi::Value GetCertificateChain(const Napi::CallbackInfo&);		// Implements getCertificateChain member of Sign
 	Napi::Value GetIssuerOf(const Napi::CallbackInfo&);				// Implements getIssuerOf member of Sign
 
 	static Napi::Function GetClass(Napi::Env);
 
 private:
-	KeyHandler handlers;
+	EnrollKeyHandler keyHandler;
+	CertificateHandler certHandler;
 	std::vector<Provider> providers;
 
 	void enumProviders(const Napi::Env&);
