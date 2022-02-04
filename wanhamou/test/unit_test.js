@@ -63,7 +63,7 @@ class LogTest
 	}
 	logRotationTestCase() {
 		LOG.write('Testing log file rotation...');
-		Wanhamou.Logger.logConfig({ maxSize: 1 });
+		Wanhamou.Logger.logConfig({ maxSize: 1, rotate: 3 });
 		let logger = Wanhamou.Logger.getLogger('LogTest');
 		for (let i = 0; i < 9; i++) logger.info('Mensagem feita para forçar o estouro do log');
 		logger.info('Mensagem feita para forçar o estouro do log');
@@ -83,7 +83,7 @@ class LogTest
 	}
 	logTruncationTestCase() {
 		LOG.write('Testing log file rotation and truncation...');
-		Wanhamou.Logger.logConfig({ maxSize: 1 });
+		Wanhamou.Logger.logConfig({ maxSize: 1, rotate: 3 });
 		let logger = Wanhamou.Logger.getLogger('LogTest');
 		for (let i = 0; i < 11; i++) logger.info('Mensagem feita para forçar o estouro do log');
 		let file = path.join(__dirname, '..', 'src', Wanhamou.Logger.cfgLogPattern.replace('-n', '-2'));

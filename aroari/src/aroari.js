@@ -293,18 +293,18 @@ const crypto = require('crypto');
 	toString() {
 		let value = 'Mensagem de erro: '.concat(
 			this.message, '\r\n',
-			'Componente: ', this.component, '\r\n',
-			'Método: ', this.method, '\r\n',
-			'Código de erro: ', this.errorCode.toString()
+			'\tComponente: ', this.component, '\r\n',
+			'\tMétodo: ', this.method, '\r\n',
+			'\tCódigo de erro: ', this.errorCode.toString()
 		);
 		if (typeof this.native !== 'undefined') {
-			value.concat('\r\n',
+			value.concat('\r\n\t',
 				'Mensagem fornecida pelo componente nativo: ', this.native.message, '\r\n',
-				'Componente nativo: ', this.native.component, '\r\n',
-				'Método nativo: ', this.native.method, '\r\n',
-				'Código de erro nativo: ', this.native.errorCode.toString()
+				'\t\tComponente nativo: ', this.native.component, '\r\n',
+				'\t\tMétodo nativo: ', this.native.method, '\r\n',
+				'\t\tCódigo de erro nativo: ', this.native.errorCode.toString()
 			);
-			if (typeof this.native.apiError !== 'undefined')  value.concat('\r\n', 'Código de erro Windows: ', this.native.apiError.toString());
+			if (typeof this.native.apiError !== 'undefined')  value.concat('\r\n', '\t\tCódigo de erro Windows: ', this.native.apiError.toString());
 		}
 		return value;
 	}
@@ -1247,7 +1247,7 @@ class Sign
 			if (typeof options.cades !== 'object') throw new APIError('Argumento options.cades, se presente, deve ser um objeto do tipo Aroari.CAdES', 'sign', APIError.ARGUMENT_ERROR);
 			if (typeof options.cades.policy !== 'undefined') {
 				if (typeof options.cades.policy !== 'string') throw new APIError('Argumento options.cades.policy, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
-				if (options.cades.policy.localCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
+				if (options.cades.policy.localeCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
 			}
 			if (typeof options.cades.addSigningTime !== 'undefined' && typeof options.cades.addSigningTime != 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
 			if (typeof options.cades.commitmentType !=='undefined')
@@ -1770,6 +1770,7 @@ class CMSSignedData
 		if (!(eContent instanceof asn1js.OctetString)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
 		return eContent.valueBlock.valueHex;
 	}
+	// TODO: Implement getSigningTime()
 }
 
 module.exports = {

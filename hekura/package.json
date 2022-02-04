@@ -5,7 +5,8 @@
 	"main": "src/hekura.js",
 	"scripts": {
 		"test": "node ./test/test.js pki=../pki service=false",
-		"start": "node ./test/test.js pki=../pki service=true"
+		"install": "node ./test/test.js pki=../pki service=true",
+		"start": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip"
 	},
 	"repository": {
 		"type": "git",

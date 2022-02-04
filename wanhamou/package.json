@@ -4,7 +4,8 @@
 	"description": "Simple log device",
 	"main": "src/wanhamou.js",
 	"scripts": {
-		"test": "node ./test/unit_test.js"
+		"test": "node ./test/unit_test.js",
+		"start": "node ./src/wanhamou.js"
 	},
 	"repository": {
 		"type": "git",

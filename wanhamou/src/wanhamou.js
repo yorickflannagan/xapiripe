@@ -23,7 +23,7 @@ const fs = require('fs');
  * @property { String } fname	Padrão de nome do log, na forma [nome]-n.[ext], onde nome é o nome e ext a extensão 
  * que se deseja para o arquivo. Valor default xapiripe-n.log
  * @property { Number } maxSize	Tamanho máximo (em KB) do arquivo de log antes de ser obrigado a rotacionar. Valor default: 2048
- * @property { Number } rotate	Quantidade máxima de arquivos de log antes que seja necessário sobrescrever o mais antigo. Valor default: 3
+ * @property { Number } rotate	Quantidade máxima de arquivos de log antes que seja necessário sobrescrever o mais antigo. Valor default: 5
  * @property { Number } level	Nível corrente do log. Serão logados somente as mensagens com valor igual ou maior. Valor default INFO
  */
 
@@ -71,7 +71,7 @@ class LogDevice
 	static cfgFilePath = __dirname;
 	static cfgLogPattern = 'xapiripe-n.log';
 	static cfgLogMaxSize = 2048;
-	static cfgLogRotate = 3;
+	static cfgLogRotate = 5;
 	static cfgLogLevel = LogLevel.INFO;
 
 	static globalFD = 0;
@@ -230,7 +230,30 @@ class LogDevice
 	error(msg) { this.log(LogLevel.ERROR, msg); }
 }
 
+function beautify(input) {
+	let output;
+	try {
+		let data = JSON.parse(input);
+		output = JSON.stringify(data, null, 2);
+	}
+	catch (e)  { output = input; }
+	return output;
+}
+
+function sprintf() {
+	let output = '';
+	if (arguments.length > 0) {
+		let replacer = [];
+		for (let i = arguments.length - 1; i > 0; i--) replacer.push(arguments[i]);
+		let input = arguments[0];
+		output = input.replaceAll('%s', () => { return replacer.pop(); });
+	}
+	return output;
+}
+
 module.exports = {
 	LogLevel: LogLevel,
-	Logger: LogDevice
+	Logger: LogDevice,
+	beautify: beautify,
+	sprintf: sprintf
 }

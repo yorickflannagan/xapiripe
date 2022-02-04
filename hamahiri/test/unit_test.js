@@ -2,12 +2,12 @@
 
 const path = require('path');
 const Hamahiri = require(path.join(__dirname, '..'));
+const OpenSSLWrapper = require(path.join(__dirname, '..', '..', 'pki')).OpenSSLWrapper;
 const assert = require('assert');
 const process = require('process');
 const crypto = require('crypto');
 const asn1js = require('asn1js');
 const fs = require('fs');
-const cp = require('child_process');
 
 const LOG = process.stdout;
 const LEGACY_PROVIDER = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
@@ -144,93 +144,6 @@ class Base64
 	}
 }
 
-class OpenSSLWrapper
-{
-	constructor() {
-		this.pki = PKIDir;
-		this.openSSL = path.resolve(this.pki, 'openssl.exe');
-		this.caConf = path.resolve(this.pki, 'caend.cnf');
-		this.signConf = path.resolve(this.pki, 'sign.cnf');
-		this.options = {cwd: this.pki, windowsHide: false };
-		this.endCert = path.resolve(this.pki, 'endcert.pem');
-		this.interCert = path.resolve(this.pki, 'intercert.pem');
-		this.rootCert = path.resolve(this.pki, 'caroot.pem');
-		if (!(
-			fs.existsSync(this.openSSL) &&
-			fs.existsSync(this.caConf) &&
-			fs.existsSync(this.signConf) &&
-			fs.existsSync(this.endCert) &&
-			fs.existsSync(this.interCert) &&
-			fs.existsSync(this.rootCert)
-		))	throw 'Some of the PKI required files does not found';
-	}
-	execOpenSSL(args) {
-		let ret = cp.spawnSync(this.openSSL, args, this.options);
-		if (ret.status != 0)
-		{
-			if (ret.stderr) console.log(new TextDecoder().decode(ret.stderr));
-			throw 'OpenSSL has exited with status code ' + ret.status.toString();
-		}
-		if (ret.stdout) console.log(new TextDecoder().decode(ret.stdout));
-		if (ret.stderr) console.log(new TextDecoder().decode(ret.stderr));
-	}
-	signCert(request) {
-		let req = path.resolve(__dirname, request);
-		let out = path.format({
-			dir: __dirname,
-			name: path.basename(request, path.extname(request)),
-			ext: '.pem'
-		});
-		let args = [
-			'ca',
-			'-config',
-			this.caConf,
-			'-notext',
-			'-passin',
-			'pass:secret',
-			'-batch',
-			'-in',
-			req,
-			'-out',
-			out,
-			'-days',
-			'1825',
-			'-extfile',
-			this.signConf,
-			'-extensions',
-			'altv3sign'
-		];
-		if (!fs.existsSync(req)) throw 'Request file must exists at current directory';
-		if (fs.existsSync(out)) throw 'Request file must not have extension .pem';
-		this.execOpenSSL(args);
-		return out;
-	}
-	mountPKCS7(cert) {
-		let out = path.format({
-			dir: __dirname,
-			name: path.basename(cert, path.extname(cert)),
-			ext: '.p7b'
-		});
-		if (!fs.existsSync(cert)) throw 'End user certificate file must be at current directory';
-		if (fs.existsSync(out)) throw 'A PKCS #7 file with certificate base name must not exists at current directory';
-		let args = [
-			'crl2pkcs7',
-			'-nocrl',
-			'-certfile',
-			cert,
-			'-certfile',
-			this.endCert,
-			'-certfile',
-			this.interCert,
-			'-certfile',
-			this.rootCert,
-			'-out',
-			out
-		];
-		this.execOpenSSL(args);
-		return out;
-	}
-}
 
 function checkError(err, expectedCode) {
 	assert(err instanceof Error, 'Must throw an Error subclass');
@@ -515,6 +428,16 @@ class SignTest
 		this.tests++;
 		return certs;
 	}
+	checkEnumCertsTestCase() {
+		LOG.write('Checking certificates enumeration bug correction...');
+		let certs = this.sign.enumerateCertificates();
+		let len = certs.length;
+		certs = this.sign.enumerateCertificates();
+		//assert(certs.length == len, 'Sign.enumerateCertificates() must not enumerate certificates more than once');
+		LOG.write(' done!\n');
+		this.tests++;
+		console.log(certs);
+	}
 	selectCert(certs, expression) {
 		let i = 0;
 		while (i < certs.length)
@@ -620,6 +543,7 @@ function main() {
 	LOG.write('Tests battery of digital signature:\n');
 	let sign = new SignTest();
 	let certs = sign.enumCertsTestCase();
+	sign.checkEnumCertsTestCase();
 	console.log('Installed signing certificates:');
 	console.log(certs);
 	let signCert = sign.selectCert(certs, /CryptoAPI/gi);
@@ -662,4 +586,3 @@ function main() {
 	LOG.write(' test cases performed.\n')
 	fs.writeFileSync(indexFile, indexCN.toString());
 }   main();
-
