@@ -39,6 +39,9 @@ const path = require('path');
 const Aroari = require(path.join(__dirname, '..', '..', 'aroari'));
 const fs = require('fs');
 const Wanhamou = require(path.join(__dirname, '..', '..', 'wanhamou'));
+const Logger = Wanhamou.Logger;
+const sprintf = Wanhamou.sprintf;
+
 
 /**
  * Callback chamada sempre que uma operação criptográfica está para ser realizada, visando obter a aprovação do usuário.
@@ -64,7 +67,7 @@ const Wanhamou = require(path.join(__dirname, '..', '..', 'wanhamou'));
  * @property { String } fname	Padrão de nome do log, na forma [nome]-n.[ext], onde nome é o nome e ext a extensão 
  * que se deseja para o arquivo. Valor default xapiripe-n.log
  * @property { Number } maxSize	Tamanho máximo (em KB) do arquivo de log antes de ser obrigado a rotacionar. Valor default: 2048
- * @property { Number } rotate	Quantidade máxima de arquivos de log antes que seja necessário sobrescrever o mais antigo. Valor default: 3
+ * @property { Number } rotate	Quantidade máxima de arquivos de log antes que seja necessário sobrescrever o mais antigo. Valor default: 5
  * @property { Number } level	Nível corrente do log. Serão logados somente as mensagens com valor igual ou maior. Valor default INFO
  */
 
@@ -186,27 +189,29 @@ class AbstractService
  */
 class RootService extends AbstractService
 {
-	constructor(corsMaxAge, callback) { super('/', corsMaxAge, approvalCallback); }
+	constructor(corsMaxAge, approvalCallback) { super('/', corsMaxAge, approvalCallback); }
 	accept(method) { return (method === 'GET'); }
 	execute(request, response) {
-		let logger = Wanhamou.Logger.getLogger('RootService');
+		let logger = Logger.getLogger('RootService');
+		let origin = request.headers['origin'];
 		let target = path.join(__dirname, 'hekura-schema.json');
 		try {
 			let schema = fs.readFileSync(target, { encoding: 'utf-8' });
-			response.setHeader('Access-Control-Allow-Origin', request.headers['origin']);
 			response.setHeader('Content-Type', 'application/json');
 			response.write(schema);
 			response.statusCode = 200;
-			logger.debug('Especificação REST enviada à origem '.concat(request.headers['origin'], ': [\r\n', schema, '\r\n]'));
+			logger.debug(sprintf('Espeficação REST enviada à origem %s: [\r\n%s\r\n]', origin, Wanhamou.beautify(schema)));
 		}
 		catch (err) {
-			logger.error('Ocorreu o seguinte erro ao obter a especificação REST: '.concat(err.toString()));
+			logger.debug(sprintf('Ocorreu o seguinte erro ao obter a especificação REST a partir da requisição originada em %s: %s', origin, err.toString()));
 			response.statusCode = 500;
 		}
-		Wanhamou.Logger.releaseLogger();
+		Logger.releaseLogger();
 	}
 }
 
+const generateCSRProps = new Set([ '', 'device', 'keySize', 'signAlg', 'rdn', 'c', 'o', 'ou', 'cn' ]);
+const installCertificatesProps = new Set([ '', 'pkcs7' ]);
 /**
  * Serviço de atendimento às operações de emissão de certificado
  * @extends Hekura.AbstractService
@@ -221,43 +226,46 @@ class EnrollService extends AbstractService
 	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'PUT') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
-		ret.set('Access-Control-Allow-Origin', headers['origin']);	// We suppose that it is true since origin validation was already done
 		ret.set('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
 		if (headers['access-control-request-headers']) ret.set('Access-Control-Allow-Headers', 'Content-Type');
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
 	#processGet(headers, response) {
-		let logger = Wanhamou.Logger.getLogger('EnrollService');
-		if (this.approvalCallback('enumerateDevices', headers['referer'])) {
+		let logger = Logger.getLogger('EnrollService');
+		let origin = headers['origin'];
+		let referer = headers['referer'];
+		if (this.approvalCallback('enumerateDevices', referer)) {
 			try {
 				let devices = this.api.enumerateDevices();
-				response.setHeader('Access-Control-Allow-Origin', headers['origin']);
 				response.setHeader('Content-Type', 'application/json');
 				response.write(JSON.stringify(devices));
 				response.statusCode = 200;
-				logger.debug('O serviço enumerateDevices retornou o seguinte objeto à origem '.concat(headers['origin'], ': ', JSON.stringify(devices)));
+				logger.debug(sprintf('O serviço enumerateDevices retornou o seguinte objeto à origem %s: %s', origin, JSON.stringify(devices, null, 2)));
 			}
 			catch (err) {
-				logger.error('Ocorreu o seguinte erro ao processar o serviço enumerateDevices: '.concat(err.toString()));
+				logger.error('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço enumerateDevices: %s', origin, err.toString());
 				response.statusCode = 500;
 			}
 		}
 		else {
 			response.statusCode = 401;
-			logger.warn('Serviço enumerateDevices originado em '.concat(headers['referer'], ' rejeitado pelo usuário'));
+			logger.warn(sprintf('Serviço enumerateDevices originado em %s rejeitado pelo usuário', referer));
 		}
-		Wanhamou.Logger.releaseLogger();
+		Logger.releaseLogger();
 	}
 	#processPost(headers, response, body) {
-		let logger = Wanhamou.Logger.getLogger('EnrollService');
-		logger.debug('Parâmetros recebidos pelo serviço generateCSR: '.concat(body.toString()));
+		let logger = Logger.getLogger('EnrollService');
+		let origin = headers['origin'];
+		let referer = headers['referer'];
 		let ctype = headers['content-type'];
 		if (ctype &amp;&amp; ctype === 'application/json') {
 			let param;
 			try {
-				// TODO: Implement a reviver callback to reject unknown fields
-				param = JSON.parse(body.toString());
+				param = JSON.parse(body.toString(), (key, value) => {
+					if (generateCSRProps.has(key)) return value;
+					throw new Error(sprintf('Propriedade não especificada de nome %s foi encontrada', key));
+				});
 				if (typeof param.device !== 'string') throw new Error('Argumento device inválido');
 				if (typeof param.keySize !== 'undefined') {
 					if (typeof param.keySize !== 'number') throw new Error('Argumento keySize inválido');
@@ -265,69 +273,75 @@ class EnrollService extends AbstractService
 				if (typeof param.signAlg !== 'undefined') {
 					if (typeof param.signAlg !== 'number') throw new Error('Argumento signAlg inválido');
 				}
-				if (typeof param.rdn === 'undefined' || typeof param.rdn.cn === 'undefined') throw new Error('Argumento rdn inválido');
+				if (typeof param.rdn === 'undefined' || typeof param.rdn.cn !== 'string') throw new Error('Argumento rdn inválido');
 			}
 			catch (err) {
-				logger.warn('Ocorreu o seguinte erro ao processar os parâmetros do serviço generateCSR: '.concat(err.toString()));
-				Wanhamou.Logger.releaseLogger();
+				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da requisição originada em %s pelo serviço generateCSR: %s', origin, err.toString()))
+				Logger.releaseLogger();
 				response.statusCode = 400;
 				return;
 			}
-			if (this.approvalCallback('generateCSR', headers['referer'])) {
+			if (this.approvalCallback('generateCSR', referer)) {
 				try {
 					let pkcs7 = this.api.generateCSR(param);
-					response.setHeader('Access-Control-Allow-Origin', headers['origin']);
 					response.setHeader('Content-Type', 'text/plain');
 					response.write(pkcs7);
 					response.statusCode = 200;
-					logger.debug('O serviço generateCSR respondeu à requisição originada em '.concat(headers['origin'], ' com o seguinte CSR: ', pkcs7));
+					logger.debug(sprintf('O serviço generateCSR respondeu à requisição originada em %s com o seguinte CSR:\r\n%s', origin, pkcs7));
 				}
 				catch (err) {
-					logger.error('Ocorreu o seguinte erro ao processar o serviço generateCSR originado em '.concat(headers['origin'], ': ', err.toString()));
+					logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço generateCSR: \r\n\t%s', origin, err.toString()));
 					if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
 					else response.statusCode = 500;
 				}
 			}
 			else {
 				response.statusCode = 401;
-				logger.warn('Serviço generateCSR originado em '.concat(headers['referer'], ' rejeitado pelo usuário'));
+				logger.warn(sprintf('Serviço generateCSR originado em %s rejeitado pelo usuário', referer));
 			}
 		}
 		else {
 			response.statusCode = 415;
-			logger.warn('Tipo de conteúdo '.concat(ctype, ' originado em ', headers['origin'], ' não suportado pelo serviço generateCSR'));
+			logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço generateCSR', ctype, origin));
 		}
-		Wanhamou.Logger.releaseLogger();
+		Logger.releaseLogger();
 	}
 	#processPut(headers, response, body) {
-		let logger = Wanhamou.Logger.getLogger('EnrollService');
-		logger.debug('Parâmetros recebidos pelo serviço installCertificates: '.concat(body.toString()));
+		let logger = Logger.getLogger('EnrollService');
+		let origin = headers['origin'];
+		let referer = headers['referer'];
 		let ctype = headers['content-type'];
 		if (ctype &amp;&amp; ctype === 'application/json') {
 			let param;
 			try {
-				// TODO: Implement a reviver callback to reject unknown fields
-				let json = JSON.parse(body.toString());
-				if (typeof json.pkcs7 !== 'string') throw new Error('Argumento inválido');
-				let b64 = json.pkcs7.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
+				let json = JSON.parse(body.toString(), (key, value) => {
+					if (installCertificatesProps.has(key)) return value;
+					throw new Error(sprintf('Propriedade não especificada %s encontrada', key));
+				});
+				if (typeof json.pkcs7 !== 'string') throw new Error('Argumento pkcs7 inválido');
+				let b64 = json.pkcs7
+					.replace('-----BEGIN PKCS7-----', '')
+					.replace('-----END PKCS7-----', '')
+					.replace('-----BEGIN CMS-----', '')
+					.replace('-----END CMS-----', '')
+					.replace(/\r?\n|\r|\n|\n/g, '');
 				param = Aroari.Base64.atob(b64);
 			}
 			catch (err) {
-				logger.warn('Ocorreu o seguinte erro ao processar os parâmetros do serviço installCertificates: '.concat(err.toString()));
+				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da requisição originada em %s pelo serviço installCertificates: %s', origin, err.toString()));
 				response.statusCode = 400;
-				Wanhamou.Logger.releaseLogger();
+				Logger.releaseLogger();
 				return;
 			}
-			if (this.approvalCallback('installCertificates', headers['referer'])) {
+			if (this.approvalCallback('installCertificates', referer)) {
 				try {
 					let done = this.api.installCertificates(param);
-					response.setHeader('Access-Control-Allow-Origin', headers['origin']);
 					if (done) response.statusCode = 201;
 					else response.statusCode = 200;
-					logger.debug('Código de estado HTTP retornado à requisição originada em '.concat(headers['origin'], 'pelo serviço installCertificates: ', response.statusCode.toString()));
+					logger.debug(sprintf('Código HTTP %s retornado à requisição originada em %s pelo serviço installCertificates', response.statusCode.toString(), origin));
 				}
 				catch (err) {
-					logger.error('Ocorreu o seguinte erro ao processar o serviço installCertificates: '.concat(err.toString()));
+					logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço installCertificates: %s', origin, err.toString()));
 					if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
 					else if (
 						err.errorCode == Aroari.AroariError.INSTALL_SIGNER_CERT_ERROR ||
@@ -338,14 +352,14 @@ class EnrollService extends AbstractService
 			}
 			else {
 				response.statusCode = 401;
-				logger.warn('Serviço installCertificates originado em '.concat(headers['referer'], ' rejeitado pelo usuário'));
+				logger.warn(sprintf('Serviço installCertificates originado em %s rejeitado pelo usuário', referer));
 			}
 		}
 		else {
 			response.statusCode = 415;
-			logger.warn('Tipo de conteúdo '.concat(ctype, ' originado em ', headers['origin'], ' não suportado pelo serviço installCertificates'));
+			logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço installCertificates', ctype, origin));
 		} 
-		Wanhamou.Logger.releaseLogger();
+		Logger.releaseLogger();
 	}
 	execute(request, response, body) {
 		const { method, headers } = request;
@@ -356,6 +370,8 @@ class EnrollService extends AbstractService
 	}
 }
 
+
+const signProps = new Set([ '', 'handle', 'toBeSigned', 'data', 'binary', 'attach', 'algorithm', 'cades', 'policy', 'addSigningTime', 'commitmentType' ]);
 /**
  * Serviço de atendimento às operações de assinatura digital
  * @extends Hekura.AbstractService
@@ -370,43 +386,46 @@ class SignService extends AbstractService
 	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
-		ret.set('Access-Control-Allow-Origin', headers['origin']);	// We suppose that it is true since origin validation was already done
 		ret.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 		if (headers['access-control-request-headers']) ret.set('Access-Control-Allow-Headers', 'Content-Type');
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
 	#processGet(headers, response) {
-		let logger = Wanhamou.Logger.getLogger('SignService');
-		if (this.approvalCallback('enumerateCertificates', headers['referer'])) {
+		let logger = Logger.getLogger('SignService');
+		let referer = headers['referer'];
+		let origin = headers['origin'];
+		if (this.approvalCallback('enumerateCertificates', referer)) {
 			try {
 				let certs = this.api.enumerateCertificates();
-				response.setHeader('Access-Control-Allow-Origin', headers['origin']);
 				response.setHeader('Content-Type', 'application/json');
 				response.write(JSON.stringify(certs));
 				response.statusCode = 200;
-				logger.debug('O serviço enumerateCertificates retornou o seguinte objeto à requisição originada em '.concat(headers['origin'], ': ', JSON.stringify(certs)));
+				logger.debug(sprintf('O serviço enumerateCertificates retornou o seguinte objeto à requisição originada em %s: %s', origin, JSON.stringify(certs, null, 2)));
 			}
 			catch (err) {
-				logger.debug('Ocorreu o seguinte erro no processamento do serviço enumerateCertificates: '.concat(err.toString()));
+				logger.debug(sprintf('Ocorreu o seguinte erro no processamento originado em %s pelo serviço enumerateCertificates: %s', origin, err.toString()));
 				response.statusCode = 500;
 			}
 		}
 		else {
 			response.statusCode = 401;
-			logger.warn('A requisição do serviço enumerateCertificates originada em '.concat(headers['referer'], ' foi rejeitada pelo usuário'));
+			logger.warn(sprintf('A requisição do serviço enumerateCertificates originada em %s foi rejeitada pelo usuário', referer));
 		}
-		Wanhamou.Logger.releaseLogger();
+		Logger.releaseLogger();
 	}
 	#processPost(headers, response, body) {
-		let logger = Wanhamou.Logger.getLogger('SignService');
-		logger.debug('Parâmetros recebidos pelo serviço sign: '.concat(body.toString()));
+		let logger = Logger.getLogger('SignService');
+		let referer = headers['referer'];
+		let origin = headers['origin'];
 		let ctype = headers['content-type'];
 		if (ctype &amp;&amp; ctype === 'application/json') {
 			let param = new Object();
 			try {
-				// TODO: Implement a reviver callback to reject unknown fields
-				let json = JSON.parse(body.toString());
+				let json = JSON.parse(body.toString(), (key, value) => {
+					if (signProps.has(key)) return value;
+					throw new Error(sprintf('Propriedade não especificada %s encontrada', key));
+				});
 				if (typeof json.handle !== 'number') throw new Error('Argumento handle inválido');
 				param = Object.defineProperty(param, 'handle', { value : json.handle });
 				if (typeof json.toBeSigned !== 'object' || typeof json.toBeSigned.data !== 'string') throw new Error('Argumento toBeSigned inválido');
@@ -433,69 +452,57 @@ class SignService extends AbstractService
 				}
 			}
 			catch (err) {
-				logger.warn('Ocorreu o seguinte erro ao processar os parâmetros do serviço sign: '.concat(err.toString()));
+				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros recebidos na requisição originada em %s pelo serviço sign: %s', origin, err.toString()));
 				response.statusCode = 400;
-				Wanhamou.Logger.releaseLogger();
+				Logger.releaseLogger();
 				return;
 			}
-			if (this.approvalCallback('sign', headers['referer'], param.toBeSigned)) {
+			if (this.approvalCallback('sign', referer, param.toBeSigned)) {
 				try {
 					let pkcs7 = this.api.sign(param);
-					response.setHeader('Access-Control-Allow-Origin', headers['origin']);
 					response.setHeader('Content-Type', 'text/plain');
 					response.write(pkcs7);
 					response.statusCode = 200;
-					logger.debug('O serviço sign respondeu à requisição originada em '.concat(headers['origin'], ': ', pkcs7));
+					logger.debug(sprintf('O serviço sign respondeu à requisição originada em %s com o documento: %s\r\n', origin, pkcs7));
 				}
 				catch (err) {
-					logger.error('Ocorreu o seguinte erro no processamento do serviço sign: '.concat(err.toString()));
+					logger.error(sprintf('Ocorreu o seguinte erro no processamento da requisição originada em %s pelo serviço sign: %s', origin,  err.toString()));
 					if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
 					else response.statusCode = 500;
 				}
 			}
 			else {
 				response.statusCode = 401;
-				logger.warn('A requisição do serviço sign originada em '.concat(headers['referer'], ' foi rejeitada pelo usuário'));
+				logger.warn(sprintf('A requisição do serviço sign originada em %s foi rejeitada pelo usuário', referer));
 			}
 		}
 		else {
 			response.statusCode = 415;
-			logger.warn('Tipo de conteúdo '.concat(ctype, ' originado em ', headers['origin'], ' não suportado pelo serviço sign'));
+			logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço sign', ctype, origin));
 		}
-		Wanhamou.Logger.releaseLogger();
+		Logger.releaseLogger();
 	}
 	execute(request, response, body) {
 		const { method, headers } = request;
-		if      (method === 'GET') this.#processGet(headers, response);
+		if      (method === 'GET')  this.#processGet(headers, response);
 		else if (method === 'POST') this.#processPost(headers, response, body);
 		else response.statusCode = 405;
 	}
 }
 
+const verifyProps = new Set([ '', 'pkcs7', 'data', 'binary', 'signingCert', 'eContent', 'verifyTrustworthy', 'getSignerIdentifier', 'getSignedContent', 'getSigningTime']);
+const allowList = [ 'signatureVerification', 'messageDigestVerification', 'signingCertVerification', 'certChainVerification', 'signerIdentifier', 'issuer', 'serialNumber', 'eContent', 'data', 'binary', 'signingTime' ];
 /**
  * Serviço de atendimento às operações de verificação de assinaturas digitais
  * @extends Hekura.AbstractService
  * @memberof Hekura
  */
-const ALLOW_LIST = [
-	'signatureVerification',
-	'messageDigestVerification',
-	'signingCertVerification',
-	'certChainVerification',
-	'signerIdentifier',
-	'issuer',
-	'serialNumber',
-	'eContent',
-	'data',
-	'binary'
-];
 class VerifyService extends AbstractService
 {
 	constructor(corsMaxAge, approvalCallback) { super('/verify', corsMaxAge, approvalCallback); }
 	accept(method) { return (method === 'POST') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
-		ret.set('Access-Control-Allow-Origin', headers['origin']);	// We suppose that it is true since origin validation was already done
 		ret.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
 		if (headers['access-control-request-headers']) ret.set('Access-Control-Allow-Headers', 'Content-Type');
 		ret.set('Access-Control-Max-Age', this.maxAge);
@@ -503,19 +510,20 @@ class VerifyService extends AbstractService
 	}
 	execute(request, response, body) {
 		const { method, headers } = request;
-		let logger = Wanhamou.Logger.getLogger('VerifyService');
-		logger.debug('Parâmetros recebidos pelo serviço verify: '.concat(body.toString()));
+		let logger = Logger.getLogger('VerifyService');
+		let origin = headers['origin'];
+		let referer = headers['referer'];
 		if (method !== 'POST') {
 			response.statusCode = 405;
-			logger.warn('Método '.concat(method, ' recebido da origem ', headers['origin'], ' não suportado'));
-			Wanhamou.Logger.releaseLogger();
+			logger.warn(sprintf('Método %s recebido da origem %s não suportado', method, origin));
+			Logger.releaseLogger();
 			return;
 		}
 		let ctype = headers['content-type'];
 		if (!ctype || ctype !== 'application/json') {
 			response.statusCode = 415;
-			logger.warn('Tipo de conteúdo '.concat(ctype, ' recebido da origem ', headers['origin'], ' não suportado'));
-			Wanhamou.Logger.releaseLogger();
+			logger.warn(sprintf('Tipo de conteúdo %s recebido da origem %s não suportado', ctype, origin));
+			Logger.releaseLogger();
 			return;
 		}
 		let cmsSignedData;
@@ -523,9 +531,12 @@ class VerifyService extends AbstractService
 		let verifyTrustworthy = false;
 		let getSignerIdentifier = false;
 		let getSignedContent = false;
+		let getSigningTime = false;
 		try {
-			// TODO: Implement a reviver callback to reject unknown fields
-			let json = JSON.parse(body.toString());
+			let json = JSON.parse(body.toString(), (key, value) => {
+				if (verifyProps.has(key)) return value;
+				throw new Error(sprintf('Propriedade não especificada %s encontrada', key));
+			});
 			if (typeof json.pkcs7 !== 'object' &amp;&amp; typeof json.pkcs7.data !== 'string') throw new Error('Argumento pkcs7 inválido');
 			let convert = false;
 			if (typeof json.pkcs7.binary !== 'undefined') {
@@ -570,11 +581,15 @@ class VerifyService extends AbstractService
 				if (typeof json.getSignedContent !== 'boolean') throw new Error('Argumento getSignedContent inválido');
 				getSignedContent = json.getSignedContent;
 			}
+			if (typeof json.getSigningTime !== 'undefined') {
+				if (typeof json.getSigningTime !== 'boolean') throw new Error('Argumento getSigningTime inválido');
+				getSigningTime = json.getSigningTime;
+			}
 		}
 		catch (err) {
 			response.statusCode = 400;
-			logger.warn('Ocorreu o seguinte erro ao processar os parâmetros recebidos da origem '.concat(headers['origin'], ': ', err.toString()));
-			Wanhamou.Logger.releaseLogger();
+			logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros recebidos da origem %s pelo serviço verify: %s', origin, err.toString()));
+			Logger.releaseLogger();
 			return;
 		}
 
@@ -584,7 +599,8 @@ class VerifyService extends AbstractService
 		let certChainVerification;
 		let sid;
 		let eContent;
-		if (this.approvalCallback('verify', headers['referer'])) {
+		let signingTime;
+		if (this.approvalCallback('verify', referer)) {
 			try {
 				cmsSignedData.verify(vrfyParam);
 				signatureVerification = true;
@@ -599,6 +615,10 @@ class VerifyService extends AbstractService
 					eContent = { data: null, binary: true };
 					eContent.data = Aroari.Base64.btoa(new Uint8Array(cmsSignedData.getSignedContent()));
 				}
+				if (getSigningTime) {
+					let time = cmsSignedData.getSigningTime();
+					if (time) signingTime = time;
+				}
 				response.statusCode = 200;
 			}
 			catch (error) {
@@ -608,7 +628,7 @@ class VerifyService extends AbstractService
 				else if (error.errorCode == Aroari.AroariError.CMS_VRFY_NO_ISSUER_CERT_FOUND) certChainVerification = false;
 				else {
 					response.statusCode = 400;
-					logger.warn('Ocorreu o seguinte erro ao processar os parâmetros da origem '.concat(headers['origin'], ': ', error.toString()));
+					logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da origem %s pelo serviço verify: %s', origin, error.toString()));
 				}
 			}
 			if (response.statusCode != 400) {
@@ -619,18 +639,18 @@ class VerifyService extends AbstractService
 				if (certChainVerification) ret = Object.defineProperty(ret, 'certChainVerification', { value: certChainVerification });
 				if (sid) ret = Object.defineProperty(ret, 'signerIdentifier', { value: sid });
 				if (eContent) ret = Object.defineProperty(ret, 'eContent', { value: eContent });
-				response.setHeader('Access-Control-Allow-Origin', headers['origin']);
+				if (signingTime) ret = Object.defineProperty(ret, 'signingTime', { value: signingTime });
 				response.setHeader('Content-Type', 'application/json');
-				let responseBody = JSON.stringify(ret, ALLOW_LIST);
+				let responseBody = JSON.stringify(ret, allowList);
 				response.write(responseBody);
-				logger.debug('O serviço  verify respondeu à requisição recebida da origem '.concat(headers['origin'], ': ', responseBody));
+				logger.debug(sprintf('O serviço  verify respondeu à requisição recebida da origem %s com o seguinte objeto: [\r\n%s\r\n]', origin, JSON.stringify(ret, allowList, 2)));
 			}
 		}
 		else {
 			response.statusCode = 401;
-			logger.warn('Requisição recebida da origem '.concat(headers['referer'], ' rejeitada pelo usuário'));
+			logger.warn(sprintf('Requisição recebida da origem %s rejeitada pelo usuário', referer));
 		}
-		Wanhamou.Logger.releaseLogger();
+		Logger.releaseLogger();
 	}
 }
 
@@ -664,7 +684,7 @@ class HTTPServer
 		cors = new CORSBlockade ,
 		callback = approvalCallback
 	} = {}) {
-		this.logger = Wanhamou.Logger.getLogger('Hekura Service');
+		this.logger = Logger.getLogger('Hekura Service');
 		this.blockade = cors;
 		this.services = new Map();
 		this.services.set('/', new RootService(maxAge, callback));
@@ -679,63 +699,66 @@ class HTTPServer
 				return resolve(!ready);
 			});
 		});
-		let origins = '[';
-		this.blockade.trustedOrigins.forEach((val, value) => {
-			origins.concat(value, '\r\n');
-		});
-		origins.concat(']');
-		let msg = 'O serviço foi instanciado com os seguintes parâmetros:\r\n'.concat(
-			'Porta: ', port.toString(), '\r\n',
-			'Access-Control-Max-Age: ', maxAge.toString(), '\r\n',
-			'Origens confiáveis: ', origins
-		);
-		this.logger.debug(msg);
+		let origins = '[\r\n';
+		let it = this.blockade.trustedOrigins.values();
+		let item = it.next();
+		while (!item.done) {
+			origins = origins.concat('\t\t', item.value, '\r\n');
+			item = it.next();
+		}
+		this.logger.debug(sprintf('O serviço foi instanciado com os seguintes parâmetros:\r\n\tPorta: %s\r\n\tAccess-Control-Max-Age: %s\r\n\tOrigens confiáveis: %s]', port.toString(), maxAge.toString(), origins));
 	}
 
 	#listener(request, response) {
 		let chunks = [];
 		const { method, headers, url } = request;
-		let msg = 'Cabeçalhos da requisição: [\r\n';
-		for (let item in headers) { msg.concat(item, '=', headers[item], '\r\n'); }
-		this.logger.debug(msg.concat(']'));
+		let origin = headers['origin'];
+		this.logger.debug(sprintf('Recebida requisição com o método %s da origem %s destinada à url %s, contendo os seguintes cabeçalhos: [\r\n%s\r\n]', method, origin, url, JSON.stringify(headers, null, 2)));
 		request.on('error', (err) => {
-			this.logger.error('Ocorreu o seguinte erro ao processar o corpo da requisição recebida: '.concat(err.toString()));
+			this.logger.error(sprintf('Ocorreu o seguinte erro ao processar o corpo da requisição recebida da origem %s: %s', origin, err.toString()));
 			response.statusCode = 500;
 			response.end();
 		})
 		.on('data', (chunk) => { chunks.push(chunk); })
 		.on('end', () => {
 			let body = Buffer.concat(chunks);
-			this.logger.debug('Corpo da requisição: [\r\n'.concat(body.toString(), ']'));
+			if (body.length > 0) this.logger.debug(sprintf('Corpo da requisição: [\r\n%s]', Wanhamou.beautify(body.toString().replace(/\\r?\\n|\\r|\\n/g, '\r\n'))));
 			if (this.blockade.allowOrigin(headers)) {
+				response.setHeader('Access-Control-Allow-Origin', origin);
 				let svc = this.services.get(url);
 				if (svc) {
 					if (svc.accept(method)) {
 						if (method === 'OPTIONS') {
 							let responseHeaders = svc.preflight(headers);
-							responseHeaders.forEach((value, key) => { response.setHeader(key, value); });
+							let it = responseHeaders.keys();
+							let item = it.next();
+							let msg = 'Cabeçalhos devolvidos como resposta ao preflight: [\r\n';
+							while (!item.done) {
+								let key = item.value;
+								let value = responseHeaders.get(key);
+								response.setHeader(key, value);
+								msg = msg.concat('\t', key, ': ', value, '\r\n');
+								item = it.next();
+							}
+							msg = msg.concat('\tAccess-Control-Allow-Origin: ', origin, '\r\n]');
 							response.statusCode = 204;
-							let msg = 'Cabeçalhos devolvidos como reposta ao preflight: [\r\n';
-							responseHeaders.forEach((value, key) => { msg.concat(key, ': ', value, '\r\n'); });
-							this.logger.debug(msg.concat(']'));
+							this.logger.debug(msg);
 						}
-						else {
-							svc.execute(request, response, body);
-							this.logger.info('Atendida a requisição originada em ', headers['origin'], ' e destinada à URL: '.concat(url));
-						}
+						else svc.execute(request, response, body);
+						this.logger.info(sprintf('Atendida a requisição com o método %s originada em %s e destinada à URL %s', method, origin, url));
 					}
 					else {
-						this.logger.warn('Método '.concat(method, ' originado em', headers['origin'], ' rejeitado pelo processador'));
+						this.logger.warn(sprintf('Método %s da requisição originada em %s rejeitado pelo processador', method, origin));
 						response.statusCode = 405;
 					}
 				}
 				else {
-					this.logger.warn('Destino '.concat(url, ' originado em', headers['origin'], ' não encontrado'));
+					this.logger.warn(sprintf('Destino %s da requisição originada em %s não encontrado', url, origin));
 					response.statusCode = 404;
 				}
 			}
 			else {
-				this.logger.warn('Origem '.concat(headers['origin'], ' rejeitada como não confiável'));
+				this.logger.warn(sprintf('Origem %s rejeitada como não confiável', origin));
 				response.statusCode = 403;
 			}
 			response.end();
@@ -751,7 +774,7 @@ class HTTPServer
 			return this.checkPort.then((ready) => {
 				if (!ready) return reject(ServiceError.HTTP_PORT_ALREADY_USED);
 				this.server.listen(this.port, () => {
-					this.logger.info('Serviço iniciado');
+					this.logger.info(sprintf('Serviço iniciado na porta %s', this.port.toString()));
 					return resolve(true);
 				});
 			});
@@ -766,11 +789,11 @@ class HTTPServer
 			this.server.close((err) => {
 				if (!err) {
 					this.logger.info('Serviço finalizado corretamente');
-					Wanhamou.Logger.releaseLogger();
+					Logger.releaseLogger();
 					return resolve(true);
 				}
-				this.logger.error('Ocorreu a seguinte falha na finalização do serviço: '.concat(err.toString()));
-				Wanhamou.Logger.releaseLogger();
+				this.logger.error(sprintf('Ocorreu a seguinte falha na finalização do serviço: %s', err.toString()));
+				Logger.releaseLogger();
 				return reject(err);
 			});
 		});
@@ -791,13 +814,13 @@ module.exports = {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hekura.html">Hekura</a></li><li><a href="Wanhamou.html">Wanhamou</a></li></ul><h3>Classes</h3><ul><li><a href="Hekura.AbstractService.html">AbstractService</a></li><li><a href="Hekura.CORSBlockade.html">CORSBlockade</a></li><li><a href="Hekura.EnrollService.html">EnrollService</a></li><li><a href="Hekura.HTTPServer.html">HTTPServer</a></li><li><a href="Hekura.RootService.html">RootService</a></li><li><a href="Hekura.ServerOptions.html">ServerOptions</a></li><li><a href="Hekura.ServiceError.html">ServiceError</a></li><li><a href="Hekura.SignService.html">SignService</a></li><li><a href="Wanhamou.LogOptions.html">LogOptions</a></li></ul><h3><a href="global.html">Global</a></h3>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hekura.html">Hekura</a></li><li><a href="Wanhamou.html">Wanhamou</a></li></ul><h3>Classes</h3><ul><li><a href="Hekura.AbstractService.html">AbstractService</a></li><li><a href="Hekura.CORSBlockade.html">CORSBlockade</a></li><li><a href="Hekura.EnrollService.html">EnrollService</a></li><li><a href="Hekura.HTTPServer.html">HTTPServer</a></li><li><a href="Hekura.RootService.html">RootService</a></li><li><a href="Hekura.ServerOptions.html">ServerOptions</a></li><li><a href="Hekura.ServiceError.html">ServiceError</a></li><li><a href="Hekura.SignService.html">SignService</a></li><li><a href="Hekura.VerifyService.html">VerifyService</a></li><li><a href="Wanhamou.LogOptions.html">LogOptions</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed Jan 26 2022 16:44:53 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Feb 15 2022 17:35:39 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -169,7 +169,6 @@ class RootService extends AbstractService
 		let target = path.join(__dirname, 'hekura-schema.json');
 		try {
 			let schema = fs.readFileSync(target, { encoding: 'utf-8' });
-			response.setHeader('Access-Control-Allow-Origin', origin);
 			response.setHeader('Content-Type', 'application/json');
 			response.write(schema);
 			response.statusCode = 200;
@@ -199,7 +198,6 @@ class EnrollService extends AbstractService
 	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'PUT') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
-		ret.set('Access-Control-Allow-Origin', headers['origin']);
 		ret.set('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
 		if (headers['access-control-request-headers']) ret.set('Access-Control-Allow-Headers', 'Content-Type');
 		ret.set('Access-Control-Max-Age', this.maxAge);
@@ -212,7 +210,6 @@ class EnrollService extends AbstractService
 		if (this.approvalCallback('enumerateDevices', referer)) {
 			try {
 				let devices = this.api.enumerateDevices();
-				response.setHeader('Access-Control-Allow-Origin', origin);
 				response.setHeader('Content-Type', 'application/json');
 				response.write(JSON.stringify(devices));
 				response.statusCode = 200;
@@ -259,14 +256,13 @@ class EnrollService extends AbstractService
 			if (this.approvalCallback('generateCSR', referer)) {
 				try {
 					let pkcs7 = this.api.generateCSR(param);
-					response.setHeader('Access-Control-Allow-Origin', origin);
 					response.setHeader('Content-Type', 'text/plain');
 					response.write(pkcs7);
 					response.statusCode = 200;
 					logger.debug(sprintf('O serviço generateCSR respondeu à requisição originada em %s com o seguinte CSR:\r\n%s', origin, pkcs7));
 				}
 				catch (err) {
-					logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço generateCSR: %s', origin, err.toString()));
+					logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço generateCSR: \r\n\t%s', origin, err.toString()));
 					if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
 					else response.statusCode = 500;
 				}
@@ -312,7 +308,6 @@ class EnrollService extends AbstractService
 			if (this.approvalCallback('installCertificates', referer)) {
 				try {
 					let done = this.api.installCertificates(param);
-					response.setHeader('Access-Control-Allow-Origin', origin);
 					if (done) response.statusCode = 201;
 					else response.statusCode = 200;
 					logger.debug(sprintf('Código HTTP %s retornado à requisição originada em %s pelo serviço installCertificates', response.statusCode.toString(), origin));
@@ -363,7 +358,6 @@ class SignService extends AbstractService
 	accept(method) { return (method === 'GET') || (method === 'POST') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
-		ret.set('Access-Control-Allow-Origin', headers['origin']);
 		ret.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 		if (headers['access-control-request-headers']) ret.set('Access-Control-Allow-Headers', 'Content-Type');
 		ret.set('Access-Control-Max-Age', this.maxAge);
@@ -376,7 +370,6 @@ class SignService extends AbstractService
 		if (this.approvalCallback('enumerateCertificates', referer)) {
 			try {
 				let certs = this.api.enumerateCertificates();
-				response.setHeader('Access-Control-Allow-Origin', origin);
 				response.setHeader('Content-Type', 'application/json');
 				response.write(JSON.stringify(certs));
 				response.statusCode = 200;
@@ -439,11 +432,10 @@ class SignService extends AbstractService
 			if (this.approvalCallback('sign', referer, param.toBeSigned)) {
 				try {
 					let pkcs7 = this.api.sign(param);
-					response.setHeader('Access-Control-Allow-Origin', origin);
 					response.setHeader('Content-Type', 'text/plain');
 					response.write(pkcs7);
 					response.statusCode = 200;
-					logger.debug(sprintf('O serviço sign respondeu à requisição originada em %s com o documento:\r\n', origin, pkcs7));
+					logger.debug(sprintf('O serviço sign respondeu à requisição originada em %s com o documento: %s\r\n', origin, pkcs7));
 				}
 				catch (err) {
 					logger.error(sprintf('Ocorreu o seguinte erro no processamento da requisição originada em %s pelo serviço sign: %s', origin,  err.toString()));
@@ -470,9 +462,8 @@ class SignService extends AbstractService
 	}
 }
 
-// TODO: VerifyService must implement getSigningTime
-const verifyProps = new Set([ '', 'pkcs7', 'data', 'binary', 'signingCert', 'eContent', 'verifyTrustworthy', 'getSignerIdentifier', 'getSignedContent']);
-const allowList = [ 'signatureVerification', 'messageDigestVerification', 'signingCertVerification', 'certChainVerification', 'signerIdentifier', 'issuer', 'serialNumber', 'eContent', 'data', 'binary' ];
+const verifyProps = new Set([ '', 'pkcs7', 'data', 'binary', 'signingCert', 'eContent', 'verifyTrustworthy', 'getSignerIdentifier', 'getSignedContent', 'getSigningTime']);
+const allowList = [ 'signatureVerification', 'messageDigestVerification', 'signingCertVerification', 'certChainVerification', 'signerIdentifier', 'issuer', 'serialNumber', 'eContent', 'data', 'binary', 'signingTime' ];
 /**
  * Serviço de atendimento às operações de verificação de assinaturas digitais
  * @extends Hekura.AbstractService
@@ -484,7 +475,6 @@ class VerifyService extends AbstractService
 	accept(method) { return (method === 'POST') || (method === 'OPTIONS'); }
 	preflight(headers) {
 		let ret = new Map();
-		ret.set('Access-Control-Allow-Origin', headers['origin']);
 		ret.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
 		if (headers['access-control-request-headers']) ret.set('Access-Control-Allow-Headers', 'Content-Type');
 		ret.set('Access-Control-Max-Age', this.maxAge);
@@ -513,6 +503,7 @@ class VerifyService extends AbstractService
 		let verifyTrustworthy = false;
 		let getSignerIdentifier = false;
 		let getSignedContent = false;
+		let getSigningTime = false;
 		try {
 			let json = JSON.parse(body.toString(), (key, value) => {
 				if (verifyProps.has(key)) return value;
@@ -562,6 +553,10 @@ class VerifyService extends AbstractService
 				if (typeof json.getSignedContent !== 'boolean') throw new Error('Argumento getSignedContent inválido');
 				getSignedContent = json.getSignedContent;
 			}
+			if (typeof json.getSigningTime !== 'undefined') {
+				if (typeof json.getSigningTime !== 'boolean') throw new Error('Argumento getSigningTime inválido');
+				getSigningTime = json.getSigningTime;
+			}
 		}
 		catch (err) {
 			response.statusCode = 400;
@@ -576,6 +571,7 @@ class VerifyService extends AbstractService
 		let certChainVerification;
 		let sid;
 		let eContent;
+		let signingTime;
 		if (this.approvalCallback('verify', referer)) {
 			try {
 				cmsSignedData.verify(vrfyParam);
@@ -590,6 +586,10 @@ class VerifyService extends AbstractService
 				if (getSignedContent) {
 					eContent = { data: null, binary: true };
 					eContent.data = Aroari.Base64.btoa(new Uint8Array(cmsSignedData.getSignedContent()));
+				}
+				if (getSigningTime) {
+					let time = cmsSignedData.getSigningTime();
+					if (time) signingTime = time;
 				}
 				response.statusCode = 200;
 			}
@@ -611,11 +611,11 @@ class VerifyService extends AbstractService
 				if (certChainVerification) ret = Object.defineProperty(ret, 'certChainVerification', { value: certChainVerification });
 				if (sid) ret = Object.defineProperty(ret, 'signerIdentifier', { value: sid });
 				if (eContent) ret = Object.defineProperty(ret, 'eContent', { value: eContent });
-				response.setHeader('Access-Control-Allow-Origin', origin);
+				if (signingTime) ret = Object.defineProperty(ret, 'signingTime', { value: signingTime });
 				response.setHeader('Content-Type', 'application/json');
 				let responseBody = JSON.stringify(ret, allowList);
 				response.write(responseBody);
-				logger.debug(sprintf('O serviço  verify respondeu à requisição recebida da origem %s com o seguinte objeto: [\r\n%s\r\n]', origin, JSON.stringify(ret, null, 2)));
+				logger.debug(sprintf('O serviço  verify respondeu à requisição recebida da origem %s com o seguinte objeto: [\r\n%s\r\n]', origin, JSON.stringify(ret, allowList, 2)));
 			}
 		}
 		else {
@@ -696,6 +696,7 @@ class HTTPServer
 			let body = Buffer.concat(chunks);
 			if (body.length > 0) this.logger.debug(sprintf('Corpo da requisição: [\r\n%s]', Wanhamou.beautify(body.toString().replace(/\\r?\\n|\\r|\\n/g, '\r\n'))));
 			if (this.blockade.allowOrigin(headers)) {
+				response.setHeader('Access-Control-Allow-Origin', origin);
 				let svc = this.services.get(url);
 				if (svc) {
 					if (svc.accept(method)) {
@@ -711,8 +712,9 @@ class HTTPServer
 								msg = msg.concat('\t', key, ': ', value, '\r\n');
 								item = it.next();
 							}
+							msg = msg.concat('\tAccess-Control-Allow-Origin: ', origin, '\r\n]');
 							response.statusCode = 204;
-							this.logger.debug(msg.concat(']'));
+							this.logger.debug(msg);
 						}
 						else svc.execute(request, response, body);
 						this.logger.info(sprintf('Atendida a requisição com o método %s originada em %s e destinada à URL %s', method, origin, url));
@@ -744,7 +746,7 @@ class HTTPServer
 			return this.checkPort.then((ready) => {
 				if (!ready) return reject(ServiceError.HTTP_PORT_ALREADY_USED);
 				this.server.listen(this.port, () => {
-					this.logger.info('Serviço iniciado');
+					this.logger.info(sprintf('Serviço iniciado na porta %s', this.port.toString()));
 					return resolve(true);
 				});
 			});

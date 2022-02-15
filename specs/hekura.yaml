@@ -345,13 +345,18 @@ paths:
                 getSignerIdentifier:
                   type: boolean
                   description: >-
-                    Indicador de que é requerido que a operação devolva, na sua resposta, o campo
+                    Indicador de que é requerido para que a operação devolva, na sua resposta, o campo
                     de identificação do assinante.  Se não estiver presente assume-se o valor false
                 getSignedContent:
                   type: boolean
                   description: >-
-                    Indicador de que é requerido que a operação devolva, na sua resposta, o valor do campo
+                    Indicador de que é requerido para que a operação devolva, na sua resposta, o valor do campo
                     EncapsulatedContentInfo.  Se não estiver presente assume-se o valor false
+                getSigningTime:
+                  type: boolean
+                  description: >-
+                    Indicador de que é requerido que a operação devolva, na sua resposta, o atributo
+                    assinado SigningTime, se existir no documento.  Se não estiver presente assume-se o valor false
               additionalProperties: false
               required: [ pkcs7 ]
       responses:
@@ -383,6 +388,10 @@ paths:
                     oneOf:
                     - $ref: '#/components/schemas/IssuerAndSerialNumber'
                     - $ref: '#/components/schemas/SubjectKeyIdentifier'
+                  signingTime:
+                    description: Data da assinatura
+                    type: string
+                    format: date-time
                 additionalProperties: false
                 required: [ matchSignature, matchMessageDigest ]
         '400':

@@ -9,6 +9,7 @@ dist/
 build/
 pki/newcerts/*.pem
 pki/CNindex.txt
+pki/usr/
 
 # Compiled Java class files
 *.class

@@ -288,7 +288,7 @@ const crypto = require('crypto');
 		this.component = 'Aroari';
 		this.method = method;
 		this.errorCode = errorCode;
-		this.native = native ? native : null;
+		if (typeof native !== 'undefined') this.native = native;
 	}
 	toString() {
 		let value = 'Mensagem de erro: '.concat(
@@ -298,13 +298,13 @@ const crypto = require('crypto');
 			'\tCódigo de erro: ', this.errorCode.toString()
 		);
 		if (typeof this.native !== 'undefined') {
-			value.concat('\r\n\t',
+			value = value.concat('\r\n\t',
 				'Mensagem fornecida pelo componente nativo: ', this.native.message, '\r\n',
 				'\t\tComponente nativo: ', this.native.component, '\r\n',
 				'\t\tMétodo nativo: ', this.native.method, '\r\n',
 				'\t\tCódigo de erro nativo: ', this.native.errorCode.toString()
 			);
-			if (typeof this.native.apiError !== 'undefined')  value.concat('\r\n', '\t\tCódigo de erro Windows: ', this.native.apiError.toString());
+			if (typeof this.native.apiError !== 'undefined')  value = value.concat('\r\n', '\t\tCódigo de erro Windows: ', this.native.apiError.toString());
 		}
 		return value;
 	}
@@ -1770,7 +1770,22 @@ class CMSSignedData
 		if (!(eContent instanceof asn1js.OctetString)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
 		return eContent.valueBlock.valueHex;
 	}
-	// TODO: Implement getSigningTime()
+
+	/**
+	 * Obtém a data alegada da assinatura, se presente
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIError} em caso de falha.
+	 * @returns { Date } O conteúdo do atributo assinado, se presente, ou null.
+	 */
+	getSigningTime() {
+		let ret = null;
+		let signedAttrs = this.#getSignedAttributes();
+		let fetched = this.#findAttribute(signedAttrs, ASN1FieldOID.cmsSigningTime);
+		if (fetched) {
+			if (!fetched instanceof asn1js.GeneralizedTime) throw new APIError('Falha ao desencodar o atributo Signing Time', 'getSigningTime', APIError.DER_DECODE_CMS_ERROR);
+			ret = fetched.toDate();
+		}
+		return ret;
+	}
 }
 
 module.exports = {

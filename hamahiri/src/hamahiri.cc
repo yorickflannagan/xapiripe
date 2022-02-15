@@ -1228,7 +1228,7 @@ Napi::Value Hamahiri::GetCertificateChain(const Napi::CallbackInfo& info)
 	CertificateWrapper* wrapper = this->certHandler.GetKey(info[0].As<Napi::Number>().Int32Value());
 	if (!wrapper)
 	{
-		THROW_JS_ERROR(env, "Invaid signing certificate handle", "getCertificateChain", HH_INVALID_KEY_HANDLE);
+		THROW_JS_ERROR(env, "Invalid signing certificate handle", "getCertificateChain", HH_INVALID_KEY_HANDLE);
 		return env.Null();
 	}
 

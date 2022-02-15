@@ -34,10 +34,10 @@
 
 'use strict';
 
-const Hamahiri = require('../../hamahiri/lib/hamahiri');
+const path = require('path');
+const Hamahiri = require(path.join(__dirname, '..', '..', 'hamahiri'));
 const asn1js = require('asn1js');
 const crypto = require('crypto');
-const { join, relative } = require('path');
 
 
 /**
@@ -303,13 +303,38 @@ const { join, relative } = require('path');
 	 */
 	static CMS_VRFY_NO_ISSUER_CERT_FOUND = 94;
 
+	/**
+	 * Cria uma nova instância do relatório de erros
+	 * @param { String } msg Mensagem descritiva
+	 * @param { String } method Método ou função onde ocorreu o erro
+	 * @param { Number } errorCode Código de erro no módulo
+	 * @param { Object } native Objeto de erro do módulo nativo, ou null
+	 */
 	constructor(msg, method, errorCode, native)
 	{
 		super(msg);
 		this.component = 'Aroari';
 		this.method = method;
 		this.errorCode = errorCode;
-		this.native = native ? native : null;
+		if (typeof native !== 'undefined') this.native = native;
+	}
+	toString() {
+		let value = 'Mensagem de erro: '.concat(
+			this.message, '\r\n',
+			'\tComponente: ', this.component, '\r\n',
+			'\tMétodo: ', this.method, '\r\n',
+			'\tCódigo de erro: ', this.errorCode.toString()
+		);
+		if (typeof this.native !== 'undefined') {
+			value = value.concat('\r\n\t',
+				'Mensagem fornecida pelo componente nativo: ', this.native.message, '\r\n',
+				'\t\tComponente nativo: ', this.native.component, '\r\n',
+				'\t\tMétodo nativo: ', this.native.method, '\r\n',
+				'\t\tCódigo de erro nativo: ', this.native.errorCode.toString()
+			);
+			if (typeof this.native.apiError !== 'undefined')  value = value.concat('\r\n', '\t\tCódigo de erro Windows: ', this.native.apiError.toString());
+		}
+		return value;
 	}
 }
 
@@ -392,14 +417,14 @@ class Policy
 	static type2 = 'CAdES-X Type 2';
 
 	/**
-	 * Xtended Long Electronic Signature with Time Type 1
+	 * EXtended Long Electronic Signature with Time Type 1
 	 * @member { String }
 	 * @default CAdES-X Long Type 1
 	 */
 	static typeX1 = 'CAdES-X Long Type 1';
 
 	/**
-	 * Xtended Long Electronic Signature with Time Type 2
+	 * EXtended Long Electronic Signature with Time Type 2
 	 * @member { String }
 	 * @default CAdES-X Long Type 2
 	 */
@@ -835,12 +860,12 @@ class Enroll
 		let toBeSigned = Buffer.from(certificateRequestInfo.toBER(false));
 		if (certificateRequestInfo.error != '' &amp;&amp; toBeSigned.length == 0) {
 			this.addon.deleteKeyPair(keyPair.privKey);
-			throw new APIError(certificateRequestInfo.error, 'generateCSR', DER_ENCODE_REQUEST_INFO_ERROR);
+			throw new APIError(certificateRequestInfo.error, 'generateCSR', APIError.DER_ENCODE_REQUEST_INFO_ERROR);
 		}
 		let hash = crypto.createHash(hashAlg);
 		hash.update(toBeSigned);
 		let signature;
-		try { signature = this.addon.sign(hash.digest(), signAlg, keyPair.privKey); }
+		try { signature = this.addon.signRequest(hash.digest(), signAlg, keyPair.privKey); }
 		catch (err) {
 			this.addon.deleteKeyPair(keyPair.privKey);
 			throw new APIError('Falha ao assinar a requisição de certificado', 'generateCSR', APIError.REQUEST_SIGN_ERROR, err);
@@ -857,10 +882,10 @@ class Enroll
 		let csr = new Uint8Array(request.toBER(false));
 		if (request.error != '' &amp;&amp; csr.length == 0) {
 			this.addon.deleteKeyPair(keyPair.privKey);
-			throw new APIError(request.error, 'generateCSR', DER_ENCODE_REQUEST_ERROR);
+			throw new APIError(request.error, 'generateCSR', APIError.DER_ENCODE_REQUEST_ERROR);
 		}
 		this.addon.releaseKeyHandle(keyPair.privKey);
-		return '-----BEGIN CERTIFICATE REQUEST-----\n' + Base64.btoa(csr, true) + '\n-----END CERTIFICATE REQUEST-----';
+		return '-----BEGIN CERTIFICATE REQUEST-----\r\n' + Base64.btoa(csr, true) + '\r\n-----END CERTIFICATE REQUEST-----';
 	}
 
 	/**
@@ -971,7 +996,7 @@ class Enroll
  * @property { String  } policy Padrão de assinatura escolhido conforme a RFC 5126. Opcional. Valor default: CAdES-BES
  * @property { Boolean } addSigningTime Incluir atributo assinado Signing Time. Opcional. Valor default: true
  * @property { String } commitmentType Se contiver um valor descritivo, inclui o OID do atributo assinado Commitment
- * Type Indication conforme {@link Aroari.CommitmentType}. Opcional. Valor default: CommitmentType.proofOfSender.
+ * Type Indication conforme {@link Aroari.CommitmentType}. Opcional.
  */
 
 /**
@@ -1250,7 +1275,7 @@ class Sign
 			if (typeof options.cades !== 'object') throw new APIError('Argumento options.cades, se presente, deve ser um objeto do tipo Aroari.CAdES', 'sign', APIError.ARGUMENT_ERROR);
 			if (typeof options.cades.policy !== 'undefined') {
 				if (typeof options.cades.policy !== 'string') throw new APIError('Argumento options.cades.policy, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
-				if (options.cades.policy.localCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
+				if (options.cades.policy.localeCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
 			}
 			if (typeof options.cades.addSigningTime !== 'undefined' &amp;&amp; typeof options.cades.addSigningTime != 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
 			if (typeof options.cades.commitmentType !=='undefined')
@@ -1303,7 +1328,7 @@ class Sign
 		]});
 		let encoded = contentInfo.toBER(false);
 		if (encoded.byteLength == 0) throw new APIError('Falha ao codificar o documento CMS em DER', 'sign', APIError.DER_ENCODE_CMS_ERROR);
-		return '-----BEGIN PKCS7-----\n' + Base64.btoa(new Uint8Array(encoded), true) + '\n-----END PKCS7-----';
+		return '-----BEGIN PKCS7-----\r\n' + Base64.btoa(new Uint8Array(encoded), true) + '\r\n-----END PKCS7-----';
 	}
 }
 
@@ -1773,15 +1798,31 @@ class CMSSignedData
 		if (!(eContent instanceof asn1js.OctetString)) throw new APIError('Documento não tem as características de um CMS SignedData', 'getSignedContent', APIError.DER_DECODE_CMS_ERROR);
 		return eContent.valueBlock.valueHex;
 	}
+
+	/**
+	 * Obtém a data alegada da assinatura, se presente
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIError} em caso de falha.
+	 * @returns { Date } O conteúdo do atributo assinado, se presente, ou null.
+	 */
+	getSigningTime() {
+		let ret = null;
+		let signedAttrs = this.#getSignedAttributes();
+		let fetched = this.#findAttribute(signedAttrs, ASN1FieldOID.cmsSigningTime);
+		if (fetched) {
+			if (!fetched instanceof asn1js.GeneralizedTime) throw new APIError('Falha ao desencodar o atributo Signing Time', 'getSigningTime', APIError.DER_DECODE_CMS_ERROR);
+			ret = fetched.toDate();
+		}
+		return ret;
+	}
 }
 
 module.exports = {
-	SignMechanism: Hamahiri.SignMechanism,
 	AroariError: APIError,
+	SignMechanism: Hamahiri.SignMechanism,
+	CommitmentType: CommitmentType,
+	Base64: Base64,
 	Enroll: Enroll,
 	Sign: Sign,
-	Base64: Base64,
-	CommitmentType: CommitmentType,
 	CMSSignedData: CMSSignedData
 }</code></pre>
         </article>
@@ -1799,7 +1840,7 @@ module.exports = {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed Jan 05 2022 16:55:23 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Feb 15 2022 17:34:56 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -214,6 +214,16 @@ class SignTest
 		this.tests++;
 		return value;
 	}
+	getSigningTimeTestCase(cms) {
+		LOG.write('Testing get signing time signed attribute...')
+		assert(cms.getSigningTime, 'The expected CMSSignedData.getSigningTime() method is undefined');
+		let signingTime = cms.getSigningTime();
+		assert(signingTime, 'Signed attribute must be present');
+		assert(signingTime instanceof Date, 'Return value must be a Date');
+		LOG.write(' done!\n');
+		this.tests++;
+		return signingTime;
+	}
 }
 
 function main() {
@@ -261,6 +271,8 @@ function main() {
 	console.log(sid.serialNumber);
 	let eContent = signTest.getEncapsulatedContentTestCase(cms);
 	console.log('Signed content: ' + eContent);
+	let signingTime = signTest.getSigningTimeTestCase(cms);
+	console.log('Signing Time: ' + signingTime);
 
 	pkcs7 = signTest.basicSignTestCase(certs, /CNG/gi);
 	console.log('Signed document:');
@@ -275,6 +287,8 @@ function main() {
 	console.log(sid.serialNumber);
 	eContent = signTest.getEncapsulatedContentTestCase(cms);
 	console.log('Signed content: ' + eContent);
+	signingTime = signTest.getSigningTimeTestCase(cms);
+	console.log('Signing Time: ' + signingTime);
 
 	pkcs7 = signTest.signCommitmentTypeTestCase(certs, /CryptoAPI/gi);
 	console.log('Signed document:');
