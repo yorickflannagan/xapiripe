@@ -3,13 +3,13 @@
  * Software components for CAdES signatures
  * See https://datatracker.ietf.org/doc/html/rfc5126
  *
- * Copyleft (C) 2020 The Crypthing Initiative
+ * Copyleft (C) 2020-2022 The Crypthing Initiative
  * Authors:
  * 		yorick.flannagan@gmail.com
  * 		diego.sohsten@gmail.com
  *
  * Signithing - desktop application UI
- * See https://bitbucket.org/yorick-flannagan/signithing/src/master/
+ * See  https://bitbucket.org/yakoana/xapiripe/src/master/signthing
  * sign.css - sign.html styles sheet
  * 
  * This application is free software; you can redistribute it and/or
@@ -41,10 +41,10 @@ p#dv-choice {
 	padding-right: 10px;
 }
 .wizard {
-	height: 380px;
+	height: 370px;
 }
 .step {
-	height: 260px;
+	height: 330px;
 }
 .input-dir {
 	width: 345px;

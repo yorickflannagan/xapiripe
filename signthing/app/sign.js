@@ -3,13 +3,12 @@
  * Software components for CAdES signatures
  * See https://datatracker.ietf.org/doc/html/rfc5126
  *
- * Copyleft (C) 2020 The Crypthing Initiative
+ * Copyleft (C) 2020-2022 The Crypthing Initiative
  * Authors:
  * 		yorick.flannagan@gmail.com
- * 		diego.sohsten@gmail.com
  *
  * Signithing - desktop application UI
- * See https://bitbucket.org/yorick-flannagan/signithing/src/master/
+ * See https://bitbucket.org/yakoana/xapiripe/src/master/signthing
  * sign.js - sign.html behaviour
  * 
  * This application is free software; you can redistribute it and/or
@@ -52,24 +51,24 @@ function sigWizSetStep(number)
 	if (sigWizCurrentStep == FIRST_STEP)
 	{
 		prev.dataset.role = 'close';
-		prev.value = 'Cancel';
+		prev.value = 'Cancelar';
 	}
 	else
 	{
 		prev.dataset.role = 'previous';
-		prev.value = 'Previous';
+		prev.value = 'Anterior';
 	}
 
 	const next = iframe.contentWindow.document.getElementById('next');
 	if (sigWizCurrentStep == LAST_STEP)
 	{
 		next.dataset.role = 'close';
-		next.value = "Finish";
+		next.value = "Finalizar";
 	}
 	else
 	{
 		next.dataset.role = 'next';
-		next.value = 'Next';
+		next.value = 'Próximo';
 	}
 
 	if (lastStep > 0) iframe.contentWindow.document.getElementById(steps.get(lastStep)).style = 'display: none';
@@ -94,6 +93,7 @@ document.addEventListener('sign-wizard-open', () => {
 		const iframe = document.getElementById('sign-div');
 		const certList = iframe.contentWindow.document.getElementById('certificate');
 		const algorithm = iframe.contentWindow.document.getElementById('algorithm');
+		const commitment = iframe.contentWindow.document.getElementById('commitment');
 		const format = iframe.contentWindow.document.getElementById('format');
 		const remember = iframe.contentWindow.document.getElementById('remember');
 		const srcButton = iframe.contentWindow.document.getElementById('btn-source');
@@ -105,6 +105,13 @@ document.addEventListener('sign-wizard-open', () => {
 		const attach = iframe.contentWindow.document.getElementById('attach');
 		const srcFile = iframe.contentWindow.document.getElementById('src-file');
 		const tgtFile = iframe.contentWindow.document.getElementById('tgt-file');
+		if (
+			!certList || !algorithm || !commitment ||
+			!format || !remember || !srcButton ||
+			!tgtButton || !prevButton || !nextButton ||
+			!srcText || !tgtText || !attach ||
+			!srcFile || !tgtFile
+		)	throw new Error('Um dos elementos da interface não foi encontrado');
 
 		// Load available certificates
 		const certs = window.getCertificates();
@@ -119,21 +126,21 @@ document.addEventListener('sign-wizard-open', () => {
 		const cfg = window.getConfig();
 		certList.selectedIndex = cfg.signatureOptions.certificate;
 		algorithm.selectedIndex = cfg.signatureOptions.algorithm;
+		commitment.selectedIndex = cfg.signatureOptions.commitment;
 		format.selectedIndex = cfg.signatureOptions.format;
 		remember.checked = (cfg.signatureOptions.step > FIRST_STEP);
-		attach.checked = cfg.attach;
+		attach.checked = cfg.signatureOptions.attach;
 		sigWizSetStep(cfg.signatureOptions.step);
 
 		// Show open file dialog
 		if (!sigWizLoaded)
 		srcButton.addEventListener('click', () => {
 			let choice = window.openFile({
-				title: 'Select a file to sign',
+				title: 'Selecione um arquivo para assinar',
 				defaultPath: cfg.lastFolder,
 				properties: [ 'openFile' ]
 			});
-			if (choice !== undefined)
-			{
+			if (typeof choice !== undefined) {
 				srcText.value = choice[0];
 				tgtText.value = window.changeExt(choice[0], '.p7b');
 				cfg.lastFolder = window.parentFolder(choice[0]);
@@ -143,8 +150,8 @@ document.addEventListener('sign-wizard-open', () => {
 		// Show save file dialog
 		if (!sigWizLoaded)
 		tgtButton.addEventListener('click', () => {
-			let choice = window.saveFile( { title: 'Select a destination folder', defaultPath: cfg.lastFolder });
-			if (choice !== undefined) tgtText.value = choice;
+			let choice = window.saveFile( { title: 'Selecione um diretório de destino para o envelope assinado', defaultPath: cfg.lastFolder });
+			if (typeof choice !== undefined) tgtText.value = choice;
 		});
 
 		// Previous button
@@ -160,16 +167,16 @@ document.addEventListener('sign-wizard-open', () => {
 			switch (sigWizCurrentStep)
 			{
 			case FIRST_STEP:
-				if (certList.selectedIndex == -1 || algorithm.selectedIndex == -1 || format.selectedIndex == -1)
+				if (certList.selectedIndex == -1 || algorithm.selectedIndex == -1 || commitment.selectedIndex == -1 || format.selectedIndex == -1)
 				{
-					window.showMessage({ message: 'You must select all available options', title: 'Document signature', tipe: 'warning' });
+					window.showMessage({ message: 'Você deve selecionar todas as opções disponíveis', title: 'Assinatura de Documento', tipe: 'warning' });
 					return;
 				}
 				break;
 			case SECOND_STEP:
 				if (!window.fileExists(srcText.value) || window.fileExists(tgtText.value))
 				{
-					window.showMessage({ message: 'You must select all available options', title: 'Document signature', tipe: 'warning' });
+					window.showMessage({ message: 'Você deve selecionar todas as opções disponíveis', title: 'Assinatura de Documento', tipe: 'warning' });
 					return;
 				}
 				srcFile.innerHTML = srcText.value;
@@ -180,15 +187,17 @@ document.addEventListener('sign-wizard-open', () => {
 				{
 					cfg.signatureOptions.certificate = certList.selectedIndex;
 					cfg.signatureOptions.algorithm = algorithm.selectedIndex;
+					cfg.signatureOptions.commitment = commitment.selectedIndex;s
 					cfg.signatureOptions.format = format.selectedIndex;
 					cfg.signatureOptions.step = 2;
-					cfg.attach = attach.checked;
+					cfg.signatureOptions.attach = attach.checked;
 				}
 				cfg.lastFolder = window.parentFolder(srcText.value);
 				window.updateConfig(cfg);
 				let ret = window.sign({
 					signingCert: certList.options[certList.selectedIndex].text,
 					signingAlgorithm: algorithm.options[algorithm.selectedIndex].text,
+					commitment: commitment.options[commitment.selectedIndex].text,
 					envelopeFormat: format.options[format.selectedIndex].text,
 					saveChoices: remember.checked,
 					signedContents: srcText.value,
@@ -197,7 +206,7 @@ document.addEventListener('sign-wizard-open', () => {
 				});
 				window.showMessage({
 					message: ret.message,
-					title: 'Document Signature',
+					title: 'Assinatura de Documento',
 					type: ret.success ? 'info' : 'error',
 					detail: ret.detail
 				});
@@ -212,8 +221,8 @@ document.addEventListener('sign-wizard-open', () => {
 		window.showMessage({
 			message: err.message ? err.message : err,
 			type: 'error',
-			title: 'Error on loading page',
-			detail: 'The application is not functioning properly'
+			title: 'Erro ao carregar a página',
+			detail: 'A aplicação não está funcionando apropriadamente'
 		});
 	}
 	sigWizLoaded = true;

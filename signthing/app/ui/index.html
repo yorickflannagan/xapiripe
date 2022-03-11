@@ -6,13 +6,12 @@
  * Software components for CAdES signatures
  * See https://datatracker.ietf.org/doc/html/rfc5126
  *
- * Copyleft (C) 2020 The Crypthing Initiative
+ * Copyleft (C) 2020-2022 The Crypthing Initiative
  * Authors:
  * 		yorick.flannagan@gmail.com
- * 		diego.sohsten@gmail.com
  *
  * Signithing - desktop application UI
- * See https://bitbucket.org/yorick-flannagan/signithing/src/master/
+ * See https://bitbucket.org/yakoana/xapiripe/src/master/signthing
  * index.html - application UI
  * 
  * This application is free software; you can redistribute it and/or
@@ -37,11 +36,14 @@
 	<link rel="stylesheet" href="css/global.css" type="text/css" />
 	<script src = "../sign.js"></script>
 	<script src = "../verify.js"></script>
+	<script src = "../options.js"></script>
 	<title>Signthing</title>
 </head>
 <body id = "body">
 
-	<iframe id="sign-div"   src="sign.html"   height="440px" width="600px" style = "display: none"></iframe>
-	<iframe id="verify-div" src="verify.html" height="480px" width="640px" style = "display: none"></iframe>
+	<iframe id="sign-div"   src="sign.html"   height="460px" width="660px" style = "display: none"></iframe>
+	<iframe id="verify-div" src="verify.html" height="480px" width="680px" style = "display: none"></iframe>
+
+	<iframe id="options-div" src="options.html" height="480px" width="680px" style = "display: none"></iframe>
 </body>
 </html>

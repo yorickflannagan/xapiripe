@@ -3,10 +3,9 @@
  * Software components for CAdES signatures
  * See https://datatracker.ietf.org/doc/html/rfc5126
  *
- * Copyleft (C) 2020 The Crypthing Initiative
+ * Copyleft (C) 2020-2022 The Crypthing Initiative
  * Authors:
  * 		yorick.flannagan@gmail.com
- * 		diego.sohsten@gmail.com
  *
  * Signithing - desktop application UI
  * See https://bitbucket.org/yorick-flannagan/signithing/src/master/
@@ -29,11 +28,25 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const foreground = require('electron-process').foreground;
 
 
 /** * * * * * * * * * * * * * * *
  * UI exposed window functions
- *  * * * * * * * * * * * * * * */
+ */
+
+/**
+ * - askDialog
+ * Exibe diálogo para tomada de decisão
+ * - options: see https://www.electronjs.org/docs/api/dialog#dialogshowmessageboxbrowserwindow-options
+ * Return
+ * - Object:
+ * 		response: índice do botão selecionado (0 = Cancelar, 1 - OK)
+ * 		checkboxChecked: true se a escolha deve ser lembrada
+ */
+contextBridge.exposeInMainWorld('askDialog', (options) => {
+	return ipcRenderer.sendSync('ask-dialog', options);
+});
 
 /**
  * - getConfig
@@ -84,6 +97,17 @@ contextBridge.exposeInMainWorld('changeExt', (src, newExt) =>{
  */
 contextBridge.exposeInMainWorld('fileExists', (fileName) => {
 	return fs.existsSync(fileName);
+});
+
+contextBridge.exposeInMainWorld('dirExists', (path) => {
+	let ret = false;
+	try {
+		let dir = fs.opendirSync(path);
+		dir.closeSync();
+		ret = true;
+	}
+	catch (e) {}
+	return ret;
 });
 
 /**
@@ -253,20 +277,20 @@ contextBridge.exposeInMainWorld('getContentInfo', (handle) => {
 	return ipcRenderer.sendSync('release-cms-handle', handle);
 });
 
-
-
-/** * * * * * * * * * * * * * * *
- * Commands from main process
- *  * * * * * * * * * * * * * * */
-
 /**
  * - retreatCall
  * Resets flag of window opened, to avoid showing a new panel while another is still opened
  */
-let rendererHasWindowOpen = false;
-contextBridge.exposeInMainWorld('retreatCall', () => {
-	rendererHasWindowOpen = false;
-});
+ let rendererHasWindowOpen = false;
+ contextBridge.exposeInMainWorld('retreatCall', () => {
+	 rendererHasWindowOpen = false;
+ });
+ 
+ 
+
+/** * * * * * * * * * * * * * * *
+ * Commands from main process
+ *  * * * * * * * * * * * * * * */
 
 /**
  * - open-sign
@@ -275,7 +299,7 @@ contextBridge.exposeInMainWorld('retreatCall', () => {
 ipcRenderer.on('open-sign', () => {
 	if (!rendererHasWindowOpen)
 	{
-		document.getElementById('sign-div').style = 'dispĺay: block';
+		document.getElementById('sign-div').style = 'display: block';
 		document.dispatchEvent(new CustomEvent('sign-wizard-open'));
 		rendererHasWindowOpen = true;
 	}
@@ -288,8 +312,21 @@ ipcRenderer.on('open-sign', () => {
 ipcRenderer.on('open-verify', () => {
 	if (!rendererHasWindowOpen)
 	{
-		document.getElementById('verify-div').style = 'dispĺay: block';
+		document.getElementById('verify-div').style = 'display: block';
 		document.dispatchEvent(new CustomEvent('verify-loaded'));
+		rendererHasWindowOpen = true;
+	}
+});
+
+/**
+ * - open-options
+ * Show options panel
+ */
+ipcRenderer.on('open-options', () => {
+	if (!rendererHasWindowOpen)
+	{
+		document.getElementById('options-div').style = 'display: block';
+		document.dispatchEvent(new CustomEvent('options-open'));
 		rendererHasWindowOpen = true;
 	}
 });

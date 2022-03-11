@@ -4,7 +4,7 @@ Copyleft &copy; 2020 by The Crypthing Initiative
 ## Privacy Policy
 The Crypthing Initiative operates the Signthing application, a desktop application to sign files according to [CAdES-BES](https://datatracker.ietf.org/doc/html/rfc5126) &ndash; *Basic Electronic Signature* pattern (hereinafter  referred to as the *Application*).
 
-This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Extension and the choices you have associated with that data.
+This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our components and the choices you have associated with that data.
 
 ### Definitions
 * Application: is the desktop application operated by The Crypthing Initiative.
@@ -17,7 +17,7 @@ We do not collect any kind of information for any purpose.
 The Application does not transfer any data through any network by itself.
 
 ### Disclosure Of Data
-The Application only provides local services, such as digital signature, signature verification, and certificate enrollment. The user application is responsible to provide any required input data.
+The Application only provides local services, such as digital signature, signature verification, and certificate enrollment. It also provides web services to trusted web applications. So this web application is responsible to provide any required input data.
 
 ### Legal Requirements
 The Application does not collect nor store any personal information. Therefore, it cannot disclose anything.

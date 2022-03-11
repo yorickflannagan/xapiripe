@@ -30,7 +30,7 @@
 }
 div.title p {
 	transform: translateX(64px);
-	line-height: 110%;
+	line-height: 120%;
 }
 p.app {
 	font-size: 150%;

@@ -26,10 +26,11 @@
   },
   "homepage": "https://bitbucket.org/yakoana/xapiripe#readme",
   "devDependencies": {
-    "electron": "^13.1.6"
+    "electron": "^17.1.1",
+    "electron-packager": "^15.4.0"
   },
   "dependencies": {
-    "tmp": "0.2.1",
-    "w3-css": "^4.1.0"
+    "electron-process": "^0.2.0",
+    "tmp": "0.2.1"
   }
 }

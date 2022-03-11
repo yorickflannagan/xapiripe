@@ -3,13 +3,12 @@
  * Software components for CAdES signatures
  * See https://datatracker.ietf.org/doc/html/rfc5126
  *
- * Copyleft (C) 2020 The Crypthing Initiative
+ * Copyleft (C) 2020-2022 The Crypthing Initiative
  * Authors:
  * 		yorick.flannagan@gmail.com
- * 		diego.sohsten@gmail.com
  *
  * Signithing - desktop application UI
- * See https://bitbucket.org/yorick-flannagan/signithing/src/master/
+ * See https://bitbucket.org/yakoana/xapiripe/src/master/signthing
  * main.js - Electron main process
  * 
  * This application is free software; you can redistribute it and/or
@@ -26,23 +25,10 @@
  */
 'use strict';
 
-const {
-	app,
-	BrowserWindow,
-	Menu,
-	shell,
-	ipcMain,
-	dialog
-} = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const {
-	Config,
-	SigningData,
-	OperationResult,
-	VerifyData,
-	TempFile
-} = require('./module');
+const { Config, SigningData, OperationResult, VerifyData, TempFile } = require('./module');
 const {
 	XPEListCertificates,
 	XPEBasicSign,
@@ -55,48 +41,51 @@ const {
 	XPEReleaseCMSSignedData
 } = require('./native');
 const tmp = require('tmp');
-tmp.setGracefulCleanup();
 
 
 /** * * * * * * * * * * * *
  * UI
- *  * * * * * * * * * * * */
+ *  * *  * * * * * * * * */
 const optionsFile = path.join(app.getAppPath(), 'options.json');
 const template = [
 	{
-		label: 'File',
+		label: 'Arquivo',
 		submenu: [
-			{ label: 'Sign', click: () => {
-				main.webContents.send('open-sign');
+			{ label: 'Assinar...', click: () => {
+				mainWindow.webContents.send('open-sign');
 			}},
-			{ label: 'Verify', click: () => {
-				main.webContents.send('open-verify');
+			{ label: 'Verificar...', click: () => {
+				mainWindow.webContents.send('open-verify');
 			}},
 			{ 'type': 'separator' },
-			{ label: 'Exit', role: 'quit'}
+			{ label: 'Sair', role: 'quit'} // TODO: Emitir alerta para saída do serviço
 		]
 	},
 	{
-		label: 'Certificates',
+		label: 'Ferramentas',
 		submenu: [
-			{ label: 'Request' },
-			{ label: 'Import' }
+			{ label: 'Requisitar certificado...' },
+			{ label: 'Instalar certificado...' },
+			{ 'type': 'separator' },
+			{ label: 'Opções...', click: () => {
+				mainWindow.webContents.send('open-options');
+			}}
 		]
 	},
 	{
-		label: 'Help',
+		label: 'Ajuda',
 		submenu: [
-			{ label: 'License', click: async () => {
+			{ label: 'Licença', click: async () => {
 				shell.openExternal('https://opensource.org/licenses/LGPL-3.0');
 			}},
-			{ label: 'Privacy Policy', click: async () => {
-				shell.openExternal('https://bitbucket.org/yorick-flannagan/signithing/src/master/privacy.md');
+			{ label: 'Política de Privacidade', click: async () => {
+				shell.openExternal('https://bitbucket.org/yakoana/xapiripe/src/master/signthing/privacy.md');
 			}},
 			{ 'type': 'separator' },
-			{ label: 'About', click: () => {
+			{ label: 'Sobre', click: () => {
 				const abt = new BrowserWindow({
 					width: 400,
-					height: 260,
+					height: 300,
 					resizable: false,
 					modal: true,
 					webPreferences: { preload: path.join(__dirname, 'about.js') }
@@ -107,52 +96,84 @@ const template = [
 		]
 	}
 ];
-let main = null;			// Main window
+let mainWindow = null;		// Main window
 let cfg = null;				// Application customizations
 let tempFiles = new Map();	// Temporary files (to view contents)
+tmp.setGracefulCleanup();
 
 app.on('ready', () => {
 	try { cfg = Config.load(optionsFile); }
 	catch (err)
 	{
-		dialog.showMessageBoxSync(main, {
+		dialog.showMessageBoxSync(mainWindow, {
 			message: err.message ? err.message : err,
 			type: 'error',
-			title: 'Error on loading configuration',
-			detail: 'The application will assume its default values'
+			title: 'Erro ao carregar a configuração',
+			detail: 'A aplicação assumirá seus valores padronizados'
 		});
 		cfg = new Config();
 	}
+
 	const menu = Menu.buildFromTemplate(template);
-	main = new BrowserWindow({
-		minWidth: 600,
-		minHeight: 400,
+	mainWindow = new BrowserWindow({
+		minWidth: 800,
+		minHeight: 640,
 		icon: path.join(__dirname, 'ui', 'res', 'signature.png'),
 		webPreferences: { preload: path.join(__dirname, 'preload.js')}
 	});
-	main.setMenu(menu);
-	main.webContents.loadFile(path.join(__dirname, 'ui', 'index.html'));
-	// main.webContents.openDevTools();
+	mainWindow.setMenu(menu);
+	mainWindow.webContents.loadFile(path.join(__dirname, 'ui', 'index.html'));
+	mainWindow.webContents.on('did-finish-load', () => {
+		mainWindow.webContents.send('start-service', cfg);
+	});
+	//mainWindow.webContents.openDevTools();
+	mainWindow.once('ready-to-show', () => { mainWindow.show(); });
 });
 
-app.on('window-all-closed', () => {
+app.on('before-quit', () => {
 	try { cfg.store(optionsFile); }
 	catch (err)
 	{
-		dialog.showMessageBoxSync(main, {
+		dialog.showMessageBoxSync(mainWindow, {
 			message: err.message ? err.message : err,
 			type: 'error',
-			title: 'Error on saving configuration',
-			detail: 'Current values will be lost'
+			title: 'Erro ao salvar a configuração',
+			detail: 'Os valores correntes serão perdidos'
 		});
 	}
-	app.quit();
+	mainWindow.webContents.send('stop-service');
 });
 
 
 /** * * * * * * * * * * * * * * *
  * Services provided to renderer
  *  * * * * * * * * * * * * * * */
+
+/**
+ * Exibe diálogo para tomada de decisão
+ */
+ipcMain.on('ask-dialog', (evt, param) => {
+	dialog.showMessageBox({
+		message: param.message,
+		type: 'question',
+		buttons: [ 'Cancelar', 'OK' ],
+		defaultId: 0,
+		title : param.title,
+		checkboxLabel: 'Não perguntar novamente'
+	})
+	.then((response, checkboxChecked) => {
+		evt.returnValue = {
+			choice: response,
+			dontAsk: checkboxChecked
+		}
+	})
+	.catch(() => {
+		evt.returnValue = {
+			choice: 0,
+			dontAsk: false
+		}
+	});
+});
 
 /**
  * Application version
@@ -168,11 +189,11 @@ ipcMain.on('get-certificates', (evt) => {
 	try { certs = XPEListCertificates(); }
 	catch (err)
 	{
-		dialog.showMessageBoxSync(main, {
+		dialog.showMessageBoxSync(mainWindow, {
 			message: err.message ? err.message : err,
 			type: 'error',
-			title: 'Error on loading certificates',
-			detail: 'Cannot sign any document'
+			title: 'Erro ao carregar os certificados',
+			detail: 'Impossível assinar quaisquer documentos'
 		});
 	}
 	evt.returnValue = certs;
@@ -187,13 +208,13 @@ ipcMain.on('get-config', (evt) => { evt.returnValue = cfg; });
  * Open file dialog
  * 	options: see https://www.electronjs.org/docs/api/dialog#dialogshowopendialogsyncbrowserwindow-options
  */
-ipcMain.on('open-file', (evt, options) =>{ evt.returnValue = dialog.showOpenDialogSync(main, options); });
+ipcMain.on('open-file', (evt, options) =>{ evt.returnValue = dialog.showOpenDialogSync(mainWindow, options); });
 
 /**
  * Save file dialog
  *	options: see https://www.electronjs.org/docs/api/dialog#dialogshowsavedialogsyncbrowserwindow-options
  */
-ipcMain.on('save-file', (evt, options) => { evt.returnValue = dialog.showSaveDialogSync(main, options); });
+ipcMain.on('save-file', (evt, options) => { evt.returnValue = dialog.showSaveDialogSync(mainWindow, options); });
 
 /**
  * Update current application options
@@ -209,7 +230,7 @@ ipcMain.on('update-config', (evt, newCfg) => {
  *	options: see https://www.electronjs.org/docs/api/dialog#dialogshowmessageboxbrowserwindow-options
  */
  ipcMain.on('show-message', (evt, options) => { 
-	dialog.showMessageBox(main, options);
+	dialog.showMessageBox(mainWindow, options);
 	evt.returnValue = true;
 });
 
@@ -228,9 +249,9 @@ ipcMain.on('sign-document', (evt, options) => {
 		let contents = new Uint8Array(buff.buffer);
 		let pkcs7 = XPEBasicSign(options.signingCert, args.algorithmAsNumber(), options.attachContents ? 1 : 0, contents);
 		fs.writeFileSync(options.signedEnvelope, pkcs7);
-		ret = new OperationResult(true, 'Signature operation successful', 'Signed envelope was saved at ' + options.signedEnvelope);
+		ret = new OperationResult(true, 'Operação de assinatura digital bem sucedida', 'O envelope assinado foi salvo em ' + options.signedEnvelope);
 	}
-	catch (err) { ret = new OperationResult(false, 'Signature operation failure', err.message ? err.message : err); }
+	catch (err) { ret = new OperationResult(false, 'Falha na operação de assinatura digital', err.message ? err.message : err); }
 	evt.returnValue = ret;
 });
 
@@ -249,7 +270,7 @@ ipcMain.on('parse-signed-data', (evt, data) => {
 		if (data.contents) arg.loadContents();
 		ret = XPEParseCMSSignedData(envelopeBuff, contentsBuff);
 	}
-	catch (err) { ret = new OperationResult(false, 'Parse CMS file operation failure', err.message ? err.message : err); }
+	catch (err) { ret = new OperationResult(false, 'Falha no carregamento de documento CMS assinado', err.message ? err.message : err); }
 	evt.returnValue = ret;
 });
 
@@ -329,16 +350,16 @@ ipcMain.on('write-file', (evt, data) => {
 	let ret = false;
 	try {
 		let tf = tempFiles.get(data.handle);
-		if (!tf) throw 'Invalid temporary file handle';
+		if (!tf) throw 'Descritor de arquivo temporário inválido';
 		fs.writeFileSync(tf.tmp.fd, data.contents);
 		ret = true;
 	}
 	catch (err) {
-		dialog.showMessageBoxSync(main, {
+		dialog.showMessageBoxSync(mainWindow, {
 			message: err.message ? err.message : err,
 			type: 'error',
-			title: 'Error on writing to file',
-			detail: 'Could not write to temporary file ' + handle.name
+			title: 'Erro ao salvar o arquivo',
+			detail: 'Impossível escrever no arquivo ' + handle.name
 		});
 	}
 	evt.returnValue = ret;

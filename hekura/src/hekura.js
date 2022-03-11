@@ -653,7 +653,7 @@ class HTTPServer
 	constructor({
 		port = 9171,
 		maxAge = 1800,
-		cors = new CORSBlockade ,
+		cors = new CORSBlockade(),
 		callback = approvalCallback
 	} = {}) {
 		this.logger = Logger.getLogger('Hekura Service');
@@ -771,6 +771,7 @@ class HTTPServer
 		});
 	}
 }
+
 
 module.exports = {
 	ServiceError: ServiceError,
