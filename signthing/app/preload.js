@@ -28,7 +28,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const foreground = require('electron-process').foreground;
 
 
 /** * * * * * * * * * * * * * * *

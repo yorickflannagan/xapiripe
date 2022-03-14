@@ -28,6 +28,7 @@
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const cp = require('child_process');
 const { Config, SigningData, OperationResult, VerifyData, TempFile } = require('./module');
 const {
 	XPEListCertificates,
@@ -99,6 +100,7 @@ const template = [
 let mainWindow = null;		// Main window
 let cfg = null;				// Application customizations
 let tempFiles = new Map();	// Temporary files (to view contents)
+let service = null;			// Hekura child process
 tmp.setGracefulCleanup();
 
 app.on('ready', () => {
@@ -114,6 +116,13 @@ app.on('ready', () => {
 		cfg = new Config();
 	}
 
+	let logArg = '--log='.concat(JSON.stringify(cfg.logOptions));
+	let svrArg = '--server='.concat(JSON.stringify(cfg.serverOptions));
+	service = cp.fork(`${__dirname}/service.js`, [ logArg, svrArg ], { cwd: __dirname, detached: false });
+	service.on('message', (message) => {
+		// TODO:
+	});
+
 	const menu = Menu.buildFromTemplate(template);
 	mainWindow = new BrowserWindow({
 		minWidth: 800,
@@ -123,10 +132,7 @@ app.on('ready', () => {
 	});
 	mainWindow.setMenu(menu);
 	mainWindow.webContents.loadFile(path.join(__dirname, 'ui', 'index.html'));
-	mainWindow.webContents.on('did-finish-load', () => {
-		mainWindow.webContents.send('start-service', cfg);
-	});
-	//mainWindow.webContents.openDevTools();
+	mainWindow.webContents.openDevTools();
 	mainWindow.once('ready-to-show', () => { mainWindow.show(); });
 });
 
@@ -141,7 +147,7 @@ app.on('before-quit', () => {
 			detail: 'Os valores correntes serão perdidos'
 		});
 	}
-	mainWindow.webContents.send('stop-service');
+	if (service) service.send({ signal: 'stop-service' });
 });
 
 

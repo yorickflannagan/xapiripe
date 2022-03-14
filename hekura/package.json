@@ -6,8 +6,7 @@
 	"scripts": {
 		"test": "node ./test/test.js pki=../pki service=false",
 		"install": "node ./test/test.js pki=../pki service=true",
-		"start": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip",
-		"service": "node ./src/service.js server={\\\"port\\\":9171,\\\"maxAge\\\":1800,\\\"trustedOrigins\\\":{\\\"warning\\\":true,\\\"origins\\\":[{\\\"origin\\\":\\\"http://10.0.2.15:8080\\\",\\\"id\\\":\\\"e677f923-ac73-4aeb-94c4-66170bd6d517\\\"},{\\\"origin\\\":\\\"http://192.168.0.3:8080\\\",\\\"id\\\":\\\"4119f1f7-8ee7-4cd4-ad5e-670074cb2570\\\"}]}} log={\\\"path\\\":\\\"C:\\\\\\\\Users\\\\\\\\yoric\\\\\\\\development\\\\\\\\xapiripe\\\",\\\"fname\\\":\\\"xapiripe-n.log\\\",\\\"maxSize\\\":2048,\\\"rotate\\\":5,\\\"level\\\":0}"
+		"start": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip"
 	},
 	"repository": {
 		"type": "git",
