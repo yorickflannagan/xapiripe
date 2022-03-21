@@ -1,0 +1,26 @@
+{
+	"name": "aroari",
+	"version": "1.0.0",
+	"description": "High level module to interact with cryptographic devices",
+	"main": "src/aroari.js",
+	"scripts": {
+		"test": "node ./test/unit_test.js ../pki"
+	},
+	"author": "Marco Antonio Gutierrez",
+	"license": "LGPL-3.0-or-later",
+	"repository": {
+		"type": "git",
+		"url": "https://bitbucket.org/yakoana/xapiripe.git"
+	},
+	"bugs": {
+		"email": "yorick.flannagan@gmail.com"
+	},
+	"os": [
+		"win32"
+	],
+	"dependencies": {
+		"asn1js": "2.1.1",
+		"hamahiri": "file:.yalc/hamahiri"
+	},
+	"yalcSig": "ab1fe92d50c9e605a4f02298a25d0ac1"
+}

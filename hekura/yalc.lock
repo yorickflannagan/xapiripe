@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "packages": {
+    "aroari": {
+      "signature": "ab1fe92d50c9e605a4f02298a25d0ac1",
+      "file": true
+    },
+    "wanhamou": {
+      "signature": "2e5ff6b4cea9b2d716aeb156e4351672",
+      "file": true
+    },
+    "hamahiri": {
+      "signature": "b210245b6c7ee3595b7d2bf22b05049f",
+      "file": true
+    }
+  }
+}

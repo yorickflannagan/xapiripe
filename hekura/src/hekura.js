@@ -8,9 +8,9 @@
 const tcp = require('tcp-port-used');
 const http = require('http');
 const path = require('path');
-const Aroari = require(path.join(__dirname, '..', '..', 'aroari'));
+const Aroari = require('aroari');
 const fs = require('fs');
-const Wanhamou = require(path.join(__dirname, '..', '..', 'wanhamou'));
+const Wanhamou = require('wanhamou');
 const Logger = Wanhamou.Logger;
 const sprintf = Wanhamou.sprintf;
 
@@ -21,9 +21,10 @@ const sprintf = Wanhamou.sprintf;
  * @param { String } operationId Identificador da operação, conforme especificação OpenAPI do serviço
  * @param { String } referer Valor do header Referer da requisição HTTP recebida
  * @param { String | ArrayBuffer } value Informação apropriada à operação. Por exemplo, o conteúdo a ser assinado
- * @returns { Boolean } Valor lógico indicando a aprovação (ou não) da operação
+ * @returns { Promise<Boolean> } A promessa, quando resolvida, retorna um valor lógico indicando a aprovação (ou não) da operação
  */
- function approvalCallback(operationId, referer, value) { return true; }
+// TODO: return Promise
+ function approvalCallback(operationId, referer, value) { return Promise.resolve(true); }
 
 
 /**
@@ -150,8 +151,9 @@ class AbstractService
 	 * @param { Object } request Instância de http.IncomingMessage contendo a requisição HTTP
 	 * @param { Object } response Instância de http.ServerResponse para fornecimento da resposta HTTP
 	 * @param { Buffer } body O corpo da requisição já completamente lido, se algum tiver sido enviado.
+	 * @returns { Promise<Number> } Quando resolvida, promise retorna o código de status HTTP
 	 */
-	execute(request, response, body) {}
+	execute(request, response, body) { return Promise.resolve(200); }
 }
 
 /**
@@ -164,21 +166,25 @@ class RootService extends AbstractService
 	constructor(corsMaxAge, approvalCallback) { super('/', corsMaxAge, approvalCallback); }
 	accept(method) { return (method === 'GET'); }
 	execute(request, response) {
-		let logger = Logger.getLogger('RootService');
-		let origin = request.headers['origin'];
-		let target = path.join(__dirname, 'hekura-schema.json');
-		try {
-			let schema = fs.readFileSync(target, { encoding: 'utf-8' });
-			response.setHeader('Content-Type', 'application/json');
-			response.write(schema);
-			response.statusCode = 200;
-			logger.debug(sprintf('Espeficação REST enviada à origem %s: [\r\n%s\r\n]', origin, Wanhamou.beautify(schema)));
-		}
-		catch (err) {
-			logger.debug(sprintf('Ocorreu o seguinte erro ao obter a especificação REST a partir da requisição originada em %s: %s', origin, err.toString()));
-			response.statusCode = 500;
-		}
-		Logger.releaseLogger();
+		return new Promise((resolve) => {
+			let status;
+			let logger = Logger.getLogger('RootService');
+			try {
+				let origin = request.headers['origin'];
+				let target = path.join(__dirname, 'hekura-schema.json');
+				let schema = fs.readFileSync(target, { encoding: 'utf-8' });
+				response.setHeader('Content-Type', 'application/json');
+				response.write(schema);
+				logger.debug(sprintf('Espeficação REST enviada à origem %s: [\r\n%s\r\n]', origin, Wanhamou.beautify(schema)));
+				status = 200;
+			}
+			catch (err) {
+				logger.debug(sprintf('Ocorreu o seguinte erro ao obter a especificação REST a partir da requisição originada em %s: %s', origin, err.toString()));
+				status = 500;
+			}
+			Logger.releaseLogger();
+			return resolve(status);
+		});
 	}
 }
 
@@ -203,35 +209,53 @@ class EnrollService extends AbstractService
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
+
 	#processGet(headers, response) {
-		let logger = Logger.getLogger('EnrollService');
-		let origin = headers['origin'];
-		let referer = headers['referer'];
-		if (this.approvalCallback('enumerateDevices', referer)) {
-			try {
-				let devices = this.api.enumerateDevices();
-				response.setHeader('Content-Type', 'application/json');
-				response.write(JSON.stringify(devices));
-				response.statusCode = 200;
-				logger.debug(sprintf('O serviço enumerateDevices retornou o seguinte objeto à origem %s: %s', origin, JSON.stringify(devices, null, 2)));
-			}
-			catch (err) {
-				logger.error('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço enumerateDevices: %s', origin, err.toString());
-				response.statusCode = 500;
-			}
-		}
-		else {
-			response.statusCode = 401;
-			logger.warn(sprintf('Serviço enumerateDevices originado em %s rejeitado pelo usuário', referer));
-		}
-		Logger.releaseLogger();
+		return new Promise((resolve) => {
+			let status;
+			let logger = Logger.getLogger('EnrollService');
+			let origin = headers['origin'];
+			let referer = headers['referer'];
+			this.approvalCallback('enumerateDevices', referer).then((accept) => {
+				if (accept) {
+					try {
+						let devices = this.api.enumerateDevices();
+						response.setHeader('Content-Type', 'application/json');
+						response.write(JSON.stringify(devices));
+						logger.debug(sprintf('O serviço enumerateDevices retornou o seguinte objeto à origem %s: %s', origin, JSON.stringify(devices, null, 2)));
+						status = 200;
+					}
+					catch (err) {
+						logger.error('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço enumerateDevices: %s', origin, err.toString());
+						status = 500;
+					}
+				}
+				else {
+					logger.warn(sprintf('Serviço enumerateDevices originado em %s rejeitado pelo usuário', referer));
+					status = 401;
+				}
+			}).catch((reason) => {
+				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço enumerateDevices: %s', origin, reason.toString());
+				status = 500;
+			});
+			Logger.releaseLogger();
+			return resolve(status);
+		});
 	}
+
 	#processPost(headers, response, body) {
-		let logger = Logger.getLogger('EnrollService');
-		let origin = headers['origin'];
-		let referer = headers['referer'];
-		let ctype = headers['content-type'];
-		if (ctype && ctype === 'application/json') {
+		return new Promise((resolve) => {
+			let logger = Logger.getLogger('EnrollService');
+			let origin = headers['origin'];
+			let referer = headers['referer'];
+			let ctype = headers['content-type'];
+
+			if (ctype && ctype !== 'application/json') {
+				logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço generateCSR', ctype, origin));
+				Logger.releaseLogger();
+				return resolve(415);
+			}
+
 			let param;
 			try {
 				param = JSON.parse(body.toString(), (key, value) => {
@@ -250,40 +274,53 @@ class EnrollService extends AbstractService
 			catch (err) {
 				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da requisição originada em %s pelo serviço generateCSR: %s', origin, err.toString()))
 				Logger.releaseLogger();
-				response.statusCode = 400;
-				return;
+				return resolve(400);
 			}
-			if (this.approvalCallback('generateCSR', referer)) {
-				try {
-					let pkcs7 = this.api.generateCSR(param);
-					response.setHeader('Content-Type', 'text/plain');
-					response.write(pkcs7);
-					response.statusCode = 200;
-					logger.debug(sprintf('O serviço generateCSR respondeu à requisição originada em %s com o seguinte CSR:\r\n%s', origin, pkcs7));
+
+			this.approvalCallback('generateCSR', referer).then((accept) => {
+				let status;
+				if (accept) {
+					try {
+						let pkcs7 = this.api.generateCSR(param);
+						response.setHeader('Content-Type', 'text/plain');
+						response.write(pkcs7);
+						logger.debug(sprintf('O serviço generateCSR respondeu à requisição originada em %s com o seguinte CSR:\r\n%s', origin, pkcs7));
+						status = 200;
+					}
+					catch (err) {
+						logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço generateCSR: \r\n\t%s', origin, err.toString()));
+						if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) status = 400;
+						else status = 500;
+					}
 				}
-				catch (err) {
-					logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço generateCSR: \r\n\t%s', origin, err.toString()));
-					if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
-					else response.statusCode = 500;
+				else {
+					logger.warn(sprintf('Serviço generateCSR originado em %s rejeitado pelo usuário', referer));
+					status = 401;
 				}
-			}
-			else {
-				response.statusCode = 401;
-				logger.warn(sprintf('Serviço generateCSR originado em %s rejeitado pelo usuário', referer));
-			}
-		}
-		else {
-			response.statusCode = 415;
-			logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço generateCSR', ctype, origin));
-		}
-		Logger.releaseLogger();
+				Logger.releaseLogger();
+				return resolve(status);
+			}).catch((reason) => {
+				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço generateCSR: %s', origin, reason.toString());
+				Logger.releaseLogger();
+				return resolve(500);
+			});
+
+		});
 	}
+
 	#processPut(headers, response, body) {
-		let logger = Logger.getLogger('EnrollService');
-		let origin = headers['origin'];
-		let referer = headers['referer'];
-		let ctype = headers['content-type'];
-		if (ctype && ctype === 'application/json') {
+		return new Promise((resolve) => {
+			let logger = Logger.getLogger('EnrollService');
+			let origin = headers['origin'];
+			let referer = headers['referer'];
+			let ctype = headers['content-type'];
+
+			if (ctype && ctype !== 'application/json') {
+				logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço installCertificates', ctype, origin));
+				Logger.releaseLogger();
+				return resolve(415);
+			}
+
 			let param;
 			try {
 				let json = JSON.parse(body.toString(), (key, value) => {
@@ -301,44 +338,60 @@ class EnrollService extends AbstractService
 			}
 			catch (err) {
 				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da requisição originada em %s pelo serviço installCertificates: %s', origin, err.toString()));
-				response.statusCode = 400;
 				Logger.releaseLogger();
-				return;
+				return resolve(400);
 			}
-			if (this.approvalCallback('installCertificates', referer)) {
-				try {
-					let done = this.api.installCertificates(param);
-					if (done) response.statusCode = 201;
-					else response.statusCode = 200;
-					logger.debug(sprintf('Código HTTP %s retornado à requisição originada em %s pelo serviço installCertificates', response.statusCode.toString(), origin));
+
+			this.approvalCallback('installCertificates', referer).then((accept) => {
+				let status;
+				if (accept) {
+					try {
+						let done = this.api.installCertificates(param);
+						if (done) status = 201;
+						else status = 200;
+						logger.debug(sprintf('Código HTTP %s retornado à requisição originada em %s pelo serviço installCertificates', status.toString(), origin));
+					}
+					catch (err) {
+						logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço installCertificates: %s', origin, err.toString()));
+						if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) status = 400;
+						else if (
+							err.errorCode == Aroari.AroariError.INSTALL_SIGNER_CERT_ERROR ||
+							err.errorCode == Aroari.AroariError.CERTIFICATE_CHAIN_VERIFY_ERROR
+						)	status = 451;
+						else status = 500;
+					}
 				}
-				catch (err) {
-					logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço installCertificates: %s', origin, err.toString()));
-					if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
-					else if (
-						err.errorCode == Aroari.AroariError.INSTALL_SIGNER_CERT_ERROR ||
-						err.errorCode == Aroari.AroariError.CERTIFICATE_CHAIN_VERIFY_ERROR
-					)	response.statusCode = 451;
-					else response.statusCode = 500;
+				else {
+					logger.warn(sprintf('Serviço generateCSR originado em %s rejeitado pelo usuário', referer));
+					status = 401;
 				}
-			}
-			else {
-				response.statusCode = 401;
-				logger.warn(sprintf('Serviço installCertificates originado em %s rejeitado pelo usuário', referer));
-			}
-		}
-		else {
-			response.statusCode = 415;
-			logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço installCertificates', ctype, origin));
-		} 
-		Logger.releaseLogger();
+				Logger.releaseLogger();
+				return resolve(status);
+			}).catch((reason) => {
+				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço installCertificates: %s', origin, reason.toString());
+				Logger.releaseLogger();
+				return resolve(500);
+			});
+		});
 	}
+
 	execute(request, response, body) {
-		const { method, headers } = request;
-		if      (method === 'GET')  this.#processGet(headers, response);
-		else if (method === 'POST') this.#processPost(headers, response, body);
-		else if (method === 'PUT')  this.#processPut(headers, response, body);
-		else response.statusCode = 405;
+		return new Promise((resolve) => {
+			const { method, headers } = request;
+			try {
+				if (method === 'GET') {
+					this.#processGet(headers, response).then((value) => { return resolve(value); });
+				}
+				else if (method === 'POST') {
+					this.#processPost(headers, response, body).then((value) => { return resolve(value); });
+				}
+				else if (method === 'PUT') {
+					this.#processPut(headers, response, body).then((value) => { return resolve(value); });
+				}
+				else return resolve(405);
+			}
+			catch (e) { return resolve(500); }
+		});
 	}
 }
 
@@ -363,35 +416,53 @@ class SignService extends AbstractService
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
+
 	#processGet(headers, response) {
-		let logger = Logger.getLogger('SignService');
-		let referer = headers['referer'];
-		let origin = headers['origin'];
-		if (this.approvalCallback('enumerateCertificates', referer)) {
-			try {
-				let certs = this.api.enumerateCertificates();
-				response.setHeader('Content-Type', 'application/json');
-				response.write(JSON.stringify(certs));
-				response.statusCode = 200;
-				logger.debug(sprintf('O serviço enumerateCertificates retornou o seguinte objeto à requisição originada em %s: %s', origin, JSON.stringify(certs, null, 2)));
-			}
-			catch (err) {
-				logger.debug(sprintf('Ocorreu o seguinte erro no processamento originado em %s pelo serviço enumerateCertificates: %s', origin, err.toString()));
-				response.statusCode = 500;
-			}
-		}
-		else {
-			response.statusCode = 401;
-			logger.warn(sprintf('A requisição do serviço enumerateCertificates originada em %s foi rejeitada pelo usuário', referer));
-		}
-		Logger.releaseLogger();
+		return new Promise((resolve) => {
+			let status;
+			let logger = Logger.getLogger('SignService');
+			let referer = headers['referer'];
+			let origin = headers['origin'];
+			this.approvalCallback('enumerateCertificates', referer).then((accept) => {
+				if (accept) {
+					try {
+						let certs = this.api.enumerateCertificates();
+						response.setHeader('Content-Type', 'application/json');
+						response.write(JSON.stringify(certs));
+						logger.debug(sprintf('O serviço enumerateCertificates retornou o seguinte objeto à requisição originada em %s: %s', origin, JSON.stringify(certs, null, 2)));
+						status = 200;
+					}
+					catch (err) {
+						logger.debug(sprintf('Ocorreu o seguinte erro no processamento originado em %s pelo serviço enumerateCertificates: %s', origin, err.toString()));
+						status = 500;
+					}
+				}
+				else {
+					logger.warn(sprintf('A requisição do serviço enumerateCertificates originada em %s foi rejeitada pelo usuário', referer));
+					status = 401;
+				}
+			}).catch((reason) => {
+				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço enumerateCertificates: %s', origin, reason.toString());
+				status = 500;
+			});
+			Logger.releaseLogger();
+			return resolve(status);
+		});
 	}
+
 	#processPost(headers, response, body) {
-		let logger = Logger.getLogger('SignService');
-		let referer = headers['referer'];
-		let origin = headers['origin'];
-		let ctype = headers['content-type'];
-		if (ctype && ctype === 'application/json') {
+		return new Promise((resolve) => {
+			let logger = Logger.getLogger('SignService');
+			let referer = headers['referer'];
+			let origin = headers['origin'];
+			let ctype = headers['content-type'];
+
+			if (ctype && ctype !== 'application/json') {
+				logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço sign', ctype, origin));
+				Logger.releaseLogger();
+				return resolve(415);
+			}
+
 			let param = new Object();
 			try {
 				let json = JSON.parse(body.toString(), (key, value) => {
@@ -425,40 +496,54 @@ class SignService extends AbstractService
 			}
 			catch (err) {
 				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros recebidos na requisição originada em %s pelo serviço sign: %s', origin, err.toString()));
-				response.statusCode = 400;
 				Logger.releaseLogger();
-				return;
+				return resolve(400);
 			}
-			if (this.approvalCallback('sign', referer, param.toBeSigned)) {
-				try {
-					let pkcs7 = this.api.sign(param);
-					response.setHeader('Content-Type', 'text/plain');
-					response.write(pkcs7);
-					response.statusCode = 200;
-					logger.debug(sprintf('O serviço sign respondeu à requisição originada em %s com o documento: %s\r\n', origin, pkcs7));
+				
+			this.approvalCallback('sign', referer, param.toBeSigned).then((accept) => {
+				let status;
+				if (accept) {
+					try {
+						let pkcs7 = this.api.sign(param);
+						response.setHeader('Content-Type', 'text/plain');
+						response.write(pkcs7);
+						logger.debug(sprintf('O serviço sign respondeu à requisição originada em %s com o documento: %s\r\n', origin, pkcs7));
+						status = 200;
+					}
+					catch (err) {
+						logger.error(sprintf('Ocorreu o seguinte erro no processamento da requisição originada em %s pelo serviço sign: %s', origin,  err.toString()));
+						if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) status = 400;
+						else status = 500;
+					}
 				}
-				catch (err) {
-					logger.error(sprintf('Ocorreu o seguinte erro no processamento da requisição originada em %s pelo serviço sign: %s', origin,  err.toString()));
-					if (err.errorCode == Aroari.AroariError.ARGUMENT_ERROR) response.statusCode = 400;
-					else response.statusCode = 500;
+				else {
+					logger.warn(sprintf('A requisição do serviço sign originada em %s foi rejeitada pelo usuário', referer));
+					status = 401;
 				}
-			}
-			else {
-				response.statusCode = 401;
-				logger.warn(sprintf('A requisição do serviço sign originada em %s foi rejeitada pelo usuário', referer));
-			}
-		}
-		else {
-			response.statusCode = 415;
-			logger.warn(sprintf('Tipo de conteúdo %s originado em %s não suportado pelo serviço sign', ctype, origin));
-		}
-		Logger.releaseLogger();
+				Logger.releaseLogger();
+				return resolve(status);
+			}).catch((reason) => {
+				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço sign: %s', origin, reason.toString());
+				Logger.releaseLogger();
+				return resolve(500);
+			});
+		});
 	}
+
 	execute(request, response, body) {
-		const { method, headers } = request;
-		if      (method === 'GET')  this.#processGet(headers, response);
-		else if (method === 'POST') this.#processPost(headers, response, body);
-		else response.statusCode = 405;
+		return new Promise((resolve) => {
+			try {
+				const { method, headers } = request;
+				if (method === 'GET') {
+					this.#processGet(headers, response).then((value) => { return resolve(value); });
+				}
+				else if (method === 'POST') {
+					this.#processPost(headers, response, body).then((value) => { return resolve(value); });
+				}
+				else return resolve(405);
+			}
+			catch (e) { return resolve(500); }
+		});
 	}
 }
 
@@ -480,149 +565,160 @@ class VerifyService extends AbstractService
 		ret.set('Access-Control-Max-Age', this.maxAge);
 		return ret;
 	}
-	execute(request, response, body) {
-		const { method, headers } = request;
-		let logger = Logger.getLogger('VerifyService');
-		let origin = headers['origin'];
-		let referer = headers['referer'];
-		if (method !== 'POST') {
-			response.statusCode = 405;
-			logger.warn(sprintf('Método %s recebido da origem %s não suportado', method, origin));
-			Logger.releaseLogger();
-			return;
-		}
-		let ctype = headers['content-type'];
-		if (!ctype || ctype !== 'application/json') {
-			response.statusCode = 415;
-			logger.warn(sprintf('Tipo de conteúdo %s recebido da origem %s não suportado', ctype, origin));
-			Logger.releaseLogger();
-			return;
-		}
-		let cmsSignedData;
-		let vrfyParam = new Object();
-		let verifyTrustworthy = false;
-		let getSignerIdentifier = false;
-		let getSignedContent = false;
-		let getSigningTime = false;
-		try {
-			let json = JSON.parse(body.toString(), (key, value) => {
-				if (verifyProps.has(key)) return value;
-				throw new Error(sprintf('Propriedade não especificada %s encontrada', key));
-			});
-			if (typeof json.pkcs7 !== 'object' && typeof json.pkcs7.data !== 'string') throw new Error('Argumento pkcs7 inválido');
-			let convert = false;
-			if (typeof json.pkcs7.binary !== 'undefined') {
-				if (typeof json.pkcs7.binary !== 'boolean') throw new Error('Argumento pkcs7.binary inválido');
-				convert = json.pkcs7.binary;
-			}
-			let input;
-			if (convert) input = Aroari.Base64.atob(json.pkcs7.data).buffer;
-			else input = json.pkcs7.data;
-			cmsSignedData = new Aroari.CMSSignedData(input);
-			if (typeof json.signingCert !== 'undefined') {
-				if (typeof json.signingCert.data !== 'string') throw new Error('Argumento signingCert inválido');
-				convert = false;
-				if (typeof json.signingCert.binary !== 'undefined') {
-					if (typeof json.signingCert.binary !== 'boolean') throw new Error('Argumento signingCert.binary inválido');
-					convert = json.signingCert.binary;
-				}
-				if (convert) input = Aroari.Base64.atob(json.signingCert.data).buffer;
-				else input = json.signingCert.data;
-				vrfyParam = Object.defineProperty(vrfyParam, 'signingCert', { value: input });
-			}
-			if (typeof json.eContent !== 'undefined') {
-				if (typeof json.eContent.data !== 'string') throw new Error('Argumento eContent inválido');
-				convert = false;
-				if (typeof json.eContent.binary !== 'undefined') {
-					if (typeof json.eContent.binary !== 'boolean') throw new Error('Argumento eContent.binary inválido');
-					convert = json.eContent.binary;
-				}
-				if (convert) input = Aroari.Base64.atob(json.eContent.data).buffer;
-				else input = json.eContent.data;
-				vrfyParam = Object.defineProperty(vrfyParam, 'eContent', { value: input });
-			}
-			if (typeof json.verifyTrustworthy !== 'undefined') {
-				if (typeof json.verifyTrustworthy !== 'boolean') throw new Error('Argumento verifyTrustworthy inválido');
-				verifyTrustworthy = json.verifyTrustworthy;
-			}
-			if (typeof json.getSignerIdentifier !== 'undefined') {
-				if (typeof json.getSignerIdentifier !== 'boolean') throw new Error('Argumento getSignerIdentifier inválido');
-				getSignerIdentifier = json.getSignerIdentifier;
-			}
-			if (typeof json.getSignedContent !== 'undefined') {
-				if (typeof json.getSignedContent !== 'boolean') throw new Error('Argumento getSignedContent inválido');
-				getSignedContent = json.getSignedContent;
-			}
-			if (typeof json.getSigningTime !== 'undefined') {
-				if (typeof json.getSigningTime !== 'boolean') throw new Error('Argumento getSigningTime inválido');
-				getSigningTime = json.getSigningTime;
-			}
-		}
-		catch (err) {
-			response.statusCode = 400;
-			logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros recebidos da origem %s pelo serviço verify: %s', origin, err.toString()));
-			Logger.releaseLogger();
-			return;
-		}
 
-		let signatureVerification;
-		let messageDigestVerification;
-		let signingCertVerification;
-		let certChainVerification;
-		let sid;
-		let eContent;
-		let signingTime;
-		if (this.approvalCallback('verify', referer)) {
+	execute(request, response, body) {
+		return new Promise((resolve) => {
+			const { method, headers } = request;
+			let logger = Logger.getLogger('VerifyService');
+			let origin = headers['origin'];
+			let referer = headers['referer'];
+			
+			if (method !== 'POST') {
+				logger.warn(sprintf('Método %s recebido da origem %s não suportado', method, origin));
+				Logger.releaseLogger();
+				return resolve(405);
+			}
+
+			let ctype = headers['content-type'];
+			if (!ctype || ctype !== 'application/json') {
+				logger.warn(sprintf('Tipo de conteúdo %s recebido da origem %s não suportado', ctype, origin));
+				Logger.releaseLogger();
+				return resolve(415);
+			}
+
+			let cmsSignedData;
+			let vrfyParam = new Object();
+			let verifyTrustworthy = false;
+			let getSignerIdentifier = false;
+			let getSignedContent = false;
+			let getSigningTime = false;
 			try {
-				cmsSignedData.verify(vrfyParam);
-				signatureVerification = true;
-				messageDigestVerification = true;
-				signingCertVerification = true;
-				if (verifyTrustworthy) {
-					cmsSignedData.verifyTrustworthy(vrfyParam.signingCert);
-					certChainVerification = true
+				let json = JSON.parse(body.toString(), (key, value) => {
+					if (verifyProps.has(key)) return value;
+					throw new Error(sprintf('Propriedade não especificada %s encontrada', key));
+				});
+				if (typeof json.pkcs7 !== 'object' && typeof json.pkcs7.data !== 'string') throw new Error('Argumento pkcs7 inválido');
+				let convert = false;
+				if (typeof json.pkcs7.binary !== 'undefined') {
+					if (typeof json.pkcs7.binary !== 'boolean') throw new Error('Argumento pkcs7.binary inválido');
+					convert = json.pkcs7.binary;
 				}
-				if (getSignerIdentifier) sid = cmsSignedData.getSignerIdentifier();
-				if (getSignedContent) {
-					eContent = { data: null, binary: true };
-					eContent.data = Aroari.Base64.btoa(new Uint8Array(cmsSignedData.getSignedContent()));
+				let input;
+				if (convert) input = Aroari.Base64.atob(json.pkcs7.data).buffer;
+				else input = json.pkcs7.data;
+				cmsSignedData = new Aroari.CMSSignedData(input);
+				if (typeof json.signingCert !== 'undefined') {
+					if (typeof json.signingCert.data !== 'string') throw new Error('Argumento signingCert inválido');
+					convert = false;
+					if (typeof json.signingCert.binary !== 'undefined') {
+						if (typeof json.signingCert.binary !== 'boolean') throw new Error('Argumento signingCert.binary inválido');
+						convert = json.signingCert.binary;
+					}
+					if (convert) input = Aroari.Base64.atob(json.signingCert.data).buffer;
+					else input = json.signingCert.data;
+					vrfyParam = Object.defineProperty(vrfyParam, 'signingCert', { value: input });
 				}
-				if (getSigningTime) {
-					let time = cmsSignedData.getSigningTime();
-					if (time) signingTime = time;
+				if (typeof json.eContent !== 'undefined') {
+					if (typeof json.eContent.data !== 'string') throw new Error('Argumento eContent inválido');
+					convert = false;
+					if (typeof json.eContent.binary !== 'undefined') {
+						if (typeof json.eContent.binary !== 'boolean') throw new Error('Argumento eContent.binary inválido');
+						convert = json.eContent.binary;
+					}
+					if (convert) input = Aroari.Base64.atob(json.eContent.data).buffer;
+					else input = json.eContent.data;
+					vrfyParam = Object.defineProperty(vrfyParam, 'eContent', { value: input });
 				}
-				response.statusCode = 200;
+				if (typeof json.verifyTrustworthy !== 'undefined') {
+					if (typeof json.verifyTrustworthy !== 'boolean') throw new Error('Argumento verifyTrustworthy inválido');
+					verifyTrustworthy = json.verifyTrustworthy;
+				}
+				if (typeof json.getSignerIdentifier !== 'undefined') {
+					if (typeof json.getSignerIdentifier !== 'boolean') throw new Error('Argumento getSignerIdentifier inválido');
+					getSignerIdentifier = json.getSignerIdentifier;
+				}
+				if (typeof json.getSignedContent !== 'undefined') {
+					if (typeof json.getSignedContent !== 'boolean') throw new Error('Argumento getSignedContent inválido');
+					getSignedContent = json.getSignedContent;
+				}
+				if (typeof json.getSigningTime !== 'undefined') {
+					if (typeof json.getSigningTime !== 'boolean') throw new Error('Argumento getSigningTime inválido');
+					getSigningTime = json.getSigningTime;
+				}
 			}
-			catch (error) {
-				if      (error.errorCode == Aroari.AroariError.CMS_SIGNATURE_DOES_NOT_MATCH) signatureVerification = false;
-				else if (error.errorCode == Aroari.AroariError.CMS_MESSAGE_DIGEST_NOT_MATCH) messageDigestVerification = false;
-				else if (error.errorCode == Aroari.AroariError.CMS_SIGNING_CERTIFICATEV2_NOT_MATCH) signingCertVerification = false;
-				else if (error.errorCode == Aroari.AroariError.CMS_VRFY_NO_ISSUER_CERT_FOUND) certChainVerification = false;
+			catch (err) {
+				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros recebidos da origem %s pelo serviço verify: %s', origin, err.toString()));
+				Logger.releaseLogger();
+				return resolve(400);
+			}
+	
+			let signatureVerification;
+			let messageDigestVerification;
+			let signingCertVerification;
+			let certChainVerification;
+			let sid;
+			let eContent;
+			let signingTime;
+			this.approvalCallback('verify', referer).then((accept) => {
+				let status;
+				if (accept) {
+					try {
+						cmsSignedData.verify(vrfyParam);
+						signatureVerification = true;
+						messageDigestVerification = true;
+						signingCertVerification = true;
+						if (verifyTrustworthy) {
+							cmsSignedData.verifyTrustworthy(vrfyParam.signingCert);
+							certChainVerification = true
+						}
+						if (getSignerIdentifier) sid = cmsSignedData.getSignerIdentifier();
+						if (getSignedContent) {
+							eContent = { data: null, binary: true };
+							eContent.data = Aroari.Base64.btoa(new Uint8Array(cmsSignedData.getSignedContent()));
+						}
+						if (getSigningTime) {
+							let time = cmsSignedData.getSigningTime();
+							if (time) signingTime = time;
+						}
+						status = 200;
+					}
+					catch (error) {
+						if      (error.errorCode == Aroari.AroariError.CMS_SIGNATURE_DOES_NOT_MATCH) signatureVerification = false;
+						else if (error.errorCode == Aroari.AroariError.CMS_MESSAGE_DIGEST_NOT_MATCH) messageDigestVerification = false;
+						else if (error.errorCode == Aroari.AroariError.CMS_SIGNING_CERTIFICATEV2_NOT_MATCH) signingCertVerification = false;
+						else if (error.errorCode == Aroari.AroariError.CMS_VRFY_NO_ISSUER_CERT_FOUND) certChainVerification = false;
+						else {
+							logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da origem %s pelo serviço verify: %s', origin, error.toString()));
+							status = 400;
+						}
+					}
+					if (status != 400) {
+						let ret = new Object();
+						ret = Object.defineProperty(ret, 'signatureVerification', { value: signatureVerification });
+						ret = Object.defineProperty(ret, 'messageDigestVerification', { value: messageDigestVerification });
+						ret = Object.defineProperty(ret, 'signingCertVerification', { value: signingCertVerification });
+						if (certChainVerification) ret = Object.defineProperty(ret, 'certChainVerification', { value: certChainVerification });
+						if (sid) ret = Object.defineProperty(ret, 'signerIdentifier', { value: sid });
+						if (eContent) ret = Object.defineProperty(ret, 'eContent', { value: eContent });
+						if (signingTime) ret = Object.defineProperty(ret, 'signingTime', { value: signingTime });
+						response.setHeader('Content-Type', 'application/json');
+						let responseBody = JSON.stringify(ret, allowList);
+						response.write(responseBody);
+						logger.debug(sprintf('O serviço  verify respondeu à requisição recebida da origem %s com o seguinte objeto: [\r\n%s\r\n]', origin, JSON.stringify(ret, allowList, 2)));
+					}
+				}
 				else {
-					response.statusCode = 400;
-					logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da origem %s pelo serviço verify: %s', origin, error.toString()));
+					logger.warn(sprintf('Requisição recebida da origem %s rejeitada pelo usuário', referer));
+					status = 401;
 				}
-			}
-			if (response.statusCode != 400) {
-				let ret = new Object();
-				ret = Object.defineProperty(ret, 'signatureVerification', { value: signatureVerification });
-				ret = Object.defineProperty(ret, 'messageDigestVerification', { value: messageDigestVerification });
-				ret = Object.defineProperty(ret, 'signingCertVerification', { value: signingCertVerification });
-				if (certChainVerification) ret = Object.defineProperty(ret, 'certChainVerification', { value: certChainVerification });
-				if (sid) ret = Object.defineProperty(ret, 'signerIdentifier', { value: sid });
-				if (eContent) ret = Object.defineProperty(ret, 'eContent', { value: eContent });
-				if (signingTime) ret = Object.defineProperty(ret, 'signingTime', { value: signingTime });
-				response.setHeader('Content-Type', 'application/json');
-				let responseBody = JSON.stringify(ret, allowList);
-				response.write(responseBody);
-				logger.debug(sprintf('O serviço  verify respondeu à requisição recebida da origem %s com o seguinte objeto: [\r\n%s\r\n]', origin, JSON.stringify(ret, allowList, 2)));
-			}
-		}
-		else {
-			response.statusCode = 401;
-			logger.warn(sprintf('Requisição recebida da origem %s rejeitada pelo usuário', referer));
-		}
-		Logger.releaseLogger();
+				Logger.releaseLogger();
+				return resolve(status);
+			}).catch((reason) => {
+				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço verify: %s', origin, reason.toString());
+				Logger.releaseLogger();
+				return resolve(500);
+			});
+		});
 	}
 }
 
@@ -681,6 +777,47 @@ class HTTPServer
 		this.logger.debug(sprintf('O serviço foi instanciado com os seguintes parâmetros:\r\n\tPorta: %s\r\n\tAccess-Control-Max-Age: %s\r\n\tOrigens confiáveis: %s]', port.toString(), maxAge.toString(), origins));
 	}
 
+	#requestProcessor(request, response, body) {
+		return new Promise((resolve) => {
+			const { method, headers, url } = request;
+			let origin = headers['origin'];
+			if (!this.blockade.allowOrigin(headers)) return resolve(403);
+			response.setHeader('Access-Control-Allow-Origin', origin);
+			let svc = this.services.get(url);
+			if (!svc) return resolve(404);
+			if (!svc.accept(method)) return resolve(405);
+			if (method === 'OPTIONS') {
+				let responseHeaders = svc.preflight(headers);
+				let it = responseHeaders.keys();
+				let item = it.next();
+				let msg = 'Cabeçalhos devolvidos como resposta ao preflight: [\r\n';
+				while (!item.done) {
+					let key = item.value;
+					let value = responseHeaders.get(key);
+					response.setHeader(key, value);
+					msg = msg.concat('\t', key, ': ', value, '\r\n');
+					item = it.next();
+				}
+				msg = msg.concat('\tAccess-Control-Allow-Origin: ', origin, '\r\n]');
+				response.statusCode = 204;
+				this.logger.debug(msg);
+				return resolve(204);
+			}
+			else {
+				return svc.execute(request, response, body).then((value) => {
+					return resolve(value);
+				}).catch((reason) =>{
+					this.logger.error(sprintf(
+						'Ocorreu o seguinte erro ao processar a requisição da origem %s destinada à url %s: %s',
+						origin,
+						url,
+						reason.toString()
+					));
+					return resolve(500);
+				});
+			}
+		});
+	}
 	#listener(request, response) {
 		let chunks = [];
 		const { method, headers, url } = request;
@@ -695,45 +832,28 @@ class HTTPServer
 		.on('end', () => {
 			let body = Buffer.concat(chunks);
 			if (body.length > 0) this.logger.debug(sprintf('Corpo da requisição: [\r\n%s]', Wanhamou.beautify(body.toString().replace(/\\r?\\n|\\r|\\n/g, '\r\n'))));
-			if (this.blockade.allowOrigin(headers)) {
-				response.setHeader('Access-Control-Allow-Origin', origin);
-				let svc = this.services.get(url);
-				if (svc) {
-					if (svc.accept(method)) {
-						if (method === 'OPTIONS') {
-							let responseHeaders = svc.preflight(headers);
-							let it = responseHeaders.keys();
-							let item = it.next();
-							let msg = 'Cabeçalhos devolvidos como resposta ao preflight: [\r\n';
-							while (!item.done) {
-								let key = item.value;
-								let value = responseHeaders.get(key);
-								response.setHeader(key, value);
-								msg = msg.concat('\t', key, ': ', value, '\r\n');
-								item = it.next();
-							}
-							msg = msg.concat('\tAccess-Control-Allow-Origin: ', origin, '\r\n]');
-							response.statusCode = 204;
-							this.logger.debug(msg);
-						}
-						else svc.execute(request, response, body);
-						this.logger.info(sprintf('Atendida a requisição com o método %s originada em %s e destinada à URL %s', method, origin, url));
-					}
-					else {
-						this.logger.warn(sprintf('Método %s da requisição originada em %s rejeitado pelo processador', method, origin));
-						response.statusCode = 405;
-					}
-				}
-				else {
+			this.#requestProcessor(request, response, body).then((retCode) =>{
+				let status = retCode;
+				switch(status) {
+				case 403:
+					this.logger.warn(sprintf('Origem %s rejeitada como não confiável', origin));
+					break;
+				case 404:
 					this.logger.warn(sprintf('Destino %s da requisição originada em %s não encontrado', url, origin));
-					response.statusCode = 404;
+					break;
+				case 405:
+					this.logger.warn(sprintf('Método %s da requisição originada em %s rejeitado pelo processador', method, origin));
+					break;
+				case 500:
+					this.logger.error(sprintf('Falha ao processar a requisição originada em %s e destinada a $s', origin, url));
 				}
-			}
-			else {
-				this.logger.warn(sprintf('Origem %s rejeitada como não confiável', origin));
-				response.statusCode = 403;
-			}
-			response.end();
+				response.statusCode = status;
+				response.end();
+			}).catch((reason) => {
+				this.logger.error(sprintf('Erro inesperado ao processar a requisição originada em %s e destinada a %s: %s', origin, url, reason.toString()));
+				response.statusCode = 500;
+				response.end();
+			});
 		});
 	}
 
@@ -744,7 +864,11 @@ class HTTPServer
 	start() {
 		return new Promise((resolve, reject) => {
 			return this.checkPort.then((ready) => {
-				if (!ready) return reject(ServiceError.HTTP_PORT_ALREADY_USED);
+				if (!ready) {
+					Logger.releaseLogger();
+					this.logger = null;
+					return reject(ServiceError.HTTP_PORT_ALREADY_USED);
+				}
 				this.server.listen(this.port, () => {
 					this.logger.info(sprintf('Serviço iniciado na porta %s', this.port.toString()));
 					return resolve(true);

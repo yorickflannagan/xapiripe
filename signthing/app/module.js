@@ -29,14 +29,17 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * App configuration
+ * Signithing configuration
+ *  AppOptions: opções do aplicativo
+ * 		lastFolder: último diretório utilizado
+ * 		runService: ao iniciar a aplicação inicia também a API de serviços Web
+ * 		askOnQuit: ao sair do aplicativo, advertir para a finalização da API de serviços Web
  * 	SignatureOptions: Opções do assistente de assinatura
  * 		step: passo inicial do assistente
  * 		certificate: índice selecionado do vetor de certificados de assinatura
  * 		algorithm: algoritmo de assinatura selecionado
  * 		format: formato do envelope assinado selecionado
  * 		attach: indicador de conteúdo assinado embarcado
- * 	lastFolder: último diretório utilizado
  *	serverOptions: opções de inicialização do serviço de API
  *		port: porta de inicialização. Default 9117
  *		maxAge: tempo máximo do cache CORS. Default 1800
@@ -52,6 +55,13 @@ const path = require('path');
  * 		rotate: quantidade máxima de arquivos produzida antes de ser sobrescrito o mais antigo. Default 5
  * 		level: nível de log. Default 1 (informativo)
  */
+class AppOptions {
+	constructor() {
+		this.lastFolder = '';
+		this.runService = true;
+		this.askOnQuit = true;
+	}
+}
 class SignatureOptions {
 	constructor() {
 		this.step = 1;
@@ -87,8 +97,8 @@ class LogOptions {
 class Config
 {
 	constructor() {
+		this.appOptions = new AppOptions();
 		this.signatureOptions = new SignatureOptions();
-		this.lastFolder = '';
 		this.logOptions = new LogOptions();
 		this.serverOptions = new ServerOptions();
 	}

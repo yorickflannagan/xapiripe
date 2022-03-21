@@ -137,20 +137,23 @@ document.addEventListener('sign-wizard-open', () => {
 		srcButton.addEventListener('click', () => {
 			let choice = window.openFile({
 				title: 'Selecione um arquivo para assinar',
-				defaultPath: cfg.lastFolder,
+				defaultPath: cfg.appOptions.lastFolder,
 				properties: [ 'openFile' ]
 			});
 			if (typeof choice !== undefined) {
 				srcText.value = choice[0];
 				tgtText.value = window.changeExt(choice[0], '.p7b');
-				cfg.lastFolder = window.parentFolder(choice[0]);
+				cfg.appOptions.lastFolder = window.parentFolder(choice[0]);
 			}
 		});
 
 		// Show save file dialog
 		if (!sigWizLoaded)
 		tgtButton.addEventListener('click', () => {
-			let choice = window.saveFile( { title: 'Selecione um diretório de destino para o envelope assinado', defaultPath: cfg.lastFolder });
+			let choice = window.saveFile({
+				title: 'Selecione um diretório de destino para o envelope assinado',
+				defaultPath: cfg.appOptions.lastFolder
+			});
 			if (typeof choice !== undefined) tgtText.value = choice;
 		});
 
@@ -192,7 +195,7 @@ document.addEventListener('sign-wizard-open', () => {
 					cfg.signatureOptions.step = 2;
 					cfg.signatureOptions.attach = attach.checked;
 				}
-				cfg.lastFolder = window.parentFolder(srcText.value);
+				cfg.appOptions.lastFolder = window.parentFolder(srcText.value);
 				window.updateConfig(cfg);
 				let ret = window.sign({
 					signingCert: certList.options[certList.selectedIndex].text,

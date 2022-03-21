@@ -14,14 +14,14 @@
 	"main": "lib/hamahiri.js",
 	"gypfile": true,
 	"scripts": {
-		"test": "node --napi-modules ./test/unit_test.js ../pki"
+		"test": "node --napi-modules ./test/unit_test.js ../pki",
+		"build": "node-gyp rebuild"
 	},
 	"os": [ "win32" ],
-	"private": true,
 	"dependencies": {
-		"node-addon-api": "1.1.0"
+		"node-addon-api": "^4.3.0"
 	},
 	"devDependencies": {
-		"asn1js": "^2.1.1"
+		"asn1js": "^2.3.1"
 	}
 }

@@ -16,6 +16,5 @@
 	"bugs": {
 		"email": "yorick.flannagan@gmail.com"
 	},
-	"os": [ "win32" ],
-	"private": true
+	"os": [ "win32" ]
 }

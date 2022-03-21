@@ -78,7 +78,7 @@ document.addEventListener('verify-loaded', () => {
 		btnEnvelope.addEventListener('click', () => {
 			let choice = window.openFile({
 				title: 'Select a CMS signed-data enveloped file',
-				defaultPath: cfg.lastFolder,
+				defaultPath: cfg.appOptions.lastFolder,
 				filters: [
 					{ name: 'PKCS #7 files', extensions: ['p7b', 'pem']},
 					{ name: 'All files',     extensions: ['*']}
@@ -88,7 +88,7 @@ document.addEventListener('verify-loaded', () => {
 			if (choice !== undefined)
 			{
 				txtEnvelope.value = choice[0];
-				cfg.lastFolder = window.parentFolder(choice[0]);
+				cfg.appOptions.lastFolder = window.parentFolder(choice[0]);
 			}
 		});
 
@@ -97,14 +97,14 @@ document.addEventListener('verify-loaded', () => {
 		btnContents.addEventListener('click', () => {
 			let choice = window.openFile({
 				title: 'Select the signed file (if it is not attached to the envelope)',
-				defaultPath: cfg.lastFolder,
+				defaultPath: cfg.appOptions.lastFolder,
 				filters: [ { name: 'All files', extensions: ['*']}],
 				properties: [ 'openFile' ] 
 			});
 			if (choice !== undefined)
 			{
 				txtContents.value = choice[0];
-				cfg.lastFolder = window.parentFolder(choice[0]);
+				cfg.appOptions.lastFolder = window.parentFolder(choice[0]);
 			}
 		});
 

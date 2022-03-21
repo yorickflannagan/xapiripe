@@ -58,8 +58,8 @@ function newTrustedOriginElement(trustedOrigin) {
 				message: 'Essa operação removerá permanentemente a origem selecionada. Deseja prosseguir?',
 				title: 'Remover origem confiável'
 			});
-			doIt = answer.choice.response != 0;
-			optOrigins.warning = !answer.choice.checkboxChecked;
+			doIt = answer.response != 0;
+			optOrigins.warning = !answer.checkboxChecked;
 		}
 		if (doIt) {
 			let item = iframe.document.getElementById(trustedOrigin.id);
@@ -166,12 +166,12 @@ document.addEventListener('options-open', () => {
 		btnSource.addEventListener('click', () => {
 			let choice = window.openFile({
 				title: 'Selecionar diretório de log',
-				defaultPath: cfg.lastFolder,
+				defaultPath: cfg.appOptions.lastFolder,
 				properties: 'openDirectory'
 			});
 			if (typeof choice !== undefined) {
 				inputDir.value = choice[0];
-				cfg.lastFolder = choice[0];
+				cfg.appOptions.lastFolder = choice[0];
 			}
 		});
 

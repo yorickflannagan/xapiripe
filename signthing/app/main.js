@@ -25,10 +25,11 @@
  */
 'use strict';
 
-const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog, Tray } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const cp = require('child_process');
+const tmp = require('tmp');
 const { Config, SigningData, OperationResult, VerifyData, TempFile } = require('./module');
 const {
 	XPEListCertificates,
@@ -41,25 +42,19 @@ const {
 	XPEGetEncapContent,
 	XPEReleaseCMSSignedData
 } = require('./native');
-const tmp = require('tmp');
 
 
 /** * * * * * * * * * * * *
  * UI
  *  * *  * * * * * * * * */
-const optionsFile = path.join(app.getAppPath(), 'options.json');
-const template = [
+const mainMenu = [
 	{
 		label: 'Arquivo',
 		submenu: [
-			{ label: 'Assinar...', click: () => {
-				mainWindow.webContents.send('open-sign');
-			}},
-			{ label: 'Verificar...', click: () => {
-				mainWindow.webContents.send('open-verify');
-			}},
+			{ label: 'Assinar...', click: () => { mainWindow.webContents.send('open-sign'); }},
+			{ label: 'Verificar...', click: () => { mainWindow.webContents.send('open-verify'); }},
 			{ 'type': 'separator' },
-			{ label: 'Sair', role: 'quit'} // TODO: Emitir alerta para saída do serviço
+			{ label: 'Sair', click: () => { quitApp(); }}
 		]
 	},
 	{
@@ -68,9 +63,7 @@ const template = [
 			{ label: 'Requisitar certificado...' },
 			{ label: 'Instalar certificado...' },
 			{ 'type': 'separator' },
-			{ label: 'Opções...', click: () => {
-				mainWindow.webContents.send('open-options');
-			}}
+			{ label: 'Opções...', click: () => { mainWindow.webContents.send('open-options'); }}
 		]
 	},
 	{
@@ -97,11 +90,101 @@ const template = [
 		]
 	}
 ];
+const contextMenu = [
+	{ label: 'Abrir aplicativo...', click: () => { mainWindow.show(); }},
+	{ label: 'Fechar o serviço', click: () => { quitApp(); }}
+];
+const optionsFile = path.join(app.getAppPath(), 'options.json');
 let mainWindow = null;		// Main window
 let cfg = null;				// Application customizations
 let tempFiles = new Map();	// Temporary files (to view contents)
 let service = null;			// Hekura child process
+let isQuiting = false;
 tmp.setGracefulCleanup();
+
+async function quitApp() {
+	let doIt = true;
+	if (cfg.appOptions.runService) {
+		if (cfg.appOptions.askOnQuit) {
+			if (!mainWindow.isVisible()) mainWindow.show();
+			await dialog.showMessageBox(mainWindow, {
+				message: 'Esta ação encerrará igualmente a API serviços Web. Deseja realmente continuar?',
+				type: 'question',
+				buttons: [ 'Não', 'Sim' ],
+				defaultId: 0,
+				title : 'Sair do aplicativo',
+				checkboxLabel: 'Não perguntar novamente'
+			})
+			.then((choice) => {
+				doIt = choice.response != 0;
+				cfg.appOptions.askOnQuit = !choice.checkboxChecked;
+			})
+			.catch(() => {});
+		}
+	}
+	if (doIt) {
+		isQuiting = true;
+		app.quit();
+	}
+}
+
+function createWindow() {
+	const ico = path.join(__dirname, 'ui', 'res', 'signature-32x32.ico');
+	const menu = Menu.buildFromTemplate(mainMenu);
+	mainWindow = new BrowserWindow({
+		minWidth: 800,
+		minHeight: 640,
+		icon: ico,
+		webPreferences: { preload: path.join(__dirname, 'preload.js')},
+		show: false
+	});
+	mainWindow.setMenu(menu);
+	mainWindow.webContents.loadFile(path.join(__dirname, 'ui', 'index.html'));
+	//mainWindow.webContents.openDevTools();
+	mainWindow.on('close', (evt) => {
+		if (!isQuiting) {
+			evt.preventDefault();
+			mainWindow.hide();
+			evt.returnValue = false;
+		}
+	});
+	mainWindow.on('minimize', (evt) => {
+		evt.preventDefault();
+		mainWindow.hide();
+	});
+
+	let tray = new Tray(ico);
+	tray.setContextMenu(Menu.buildFromTemplate(contextMenu));
+	tray.setToolTip('Serviço Signthing');
+	tray.on('double-click', (evt) => {
+		mainWindow.show();
+	});
+	tray.on('click', (evt) => {
+		if (cfg.appOptions.runService) {
+			let contents = 'Atendendo às seguintes origens confiáveis:';
+			if (cfg.serverOptions.trustedOrigins.origins.length > 0) {
+				cfg.serverOptions.trustedOrigins.origins.forEach((item) => {
+					contents = contents.concat('\n\t').concat(item.origin);
+				});
+			}
+			else contents = contents.concat('\n\tNenhuma origem cadastrada');
+			tray.displayBalloon({
+				icon: ico,
+				iconType: 'custom',
+				title: 'Serviço Signthing',
+				content: contents,
+				noSound: true
+			});
+		}
+	});
+}
+
+const WARN = 'warn-user';
+async function satisfyRequest(message) {
+	if (message.signal === WARN) {
+		
+	}
+}
 
 app.on('ready', () => {
 	try { cfg = Config.load(optionsFile); }
@@ -116,27 +199,19 @@ app.on('ready', () => {
 		cfg = new Config();
 	}
 
-	let logArg = '--log='.concat(JSON.stringify(cfg.logOptions));
-	let svrArg = '--server='.concat(JSON.stringify(cfg.serverOptions));
-	service = cp.fork(`${__dirname}/service.js`, [ logArg, svrArg ], { cwd: __dirname, detached: false });
-	service.on('message', (message) => {
-		// TODO:
-	});
-
-	const menu = Menu.buildFromTemplate(template);
-	mainWindow = new BrowserWindow({
-		minWidth: 800,
-		minHeight: 640,
-		icon: path.join(__dirname, 'ui', 'res', 'signature.png'),
-		webPreferences: { preload: path.join(__dirname, 'preload.js')}
-	});
-	mainWindow.setMenu(menu);
-	mainWindow.webContents.loadFile(path.join(__dirname, 'ui', 'index.html'));
-	mainWindow.webContents.openDevTools();
-	mainWindow.once('ready-to-show', () => { mainWindow.show(); });
+	if (cfg.appOptions.runService) {
+		let logArg = '--log='.concat(JSON.stringify(cfg.logOptions));
+		let svrArg = '--server='.concat(JSON.stringify(cfg.serverOptions));
+		service = cp.fork(`${__dirname}/service.js`, [ logArg, svrArg ], { cwd: __dirname, detached: false });
+		service.on('message', (message) => {
+			satisfyRequest(message);
+		});
+	}
+	createWindow();
 });
 
 app.on('before-quit', () => {
+	isQuiting = true;
 	try { cfg.store(optionsFile); }
 	catch (err)
 	{
@@ -147,8 +222,10 @@ app.on('before-quit', () => {
 			detail: 'Os valores correntes serão perdidos'
 		});
 	}
-	if (service) service.send({ signal: 'stop-service' });
+	try { if (service) service.send({ signal: 'stop-service' }); }
+	catch (e) {}
 });
+
 
 
 /** * * * * * * * * * * * * * * *
@@ -162,21 +239,18 @@ ipcMain.on('ask-dialog', (evt, param) => {
 	dialog.showMessageBox({
 		message: param.message,
 		type: 'question',
-		buttons: [ 'Cancelar', 'OK' ],
+		buttons: [ 'Não', 'Sim' ],
 		defaultId: 0,
 		title : param.title,
 		checkboxLabel: 'Não perguntar novamente'
 	})
-	.then((response, checkboxChecked) => {
-		evt.returnValue = {
-			choice: response,
-			dontAsk: checkboxChecked
-		}
+	.then((choice) => {
+		evt.returnValue = choice;
 	})
 	.catch(() => {
 		evt.returnValue = {
-			choice: 0,
-			dontAsk: false
+			response: 0,
+			checkboxChecked: false
 		}
 	});
 });

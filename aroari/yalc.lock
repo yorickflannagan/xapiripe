@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "packages": {
+    "hamahiri": {
+      "signature": "b210245b6c7ee3595b7d2bf22b05049f",
+      "file": true
+    }
+  }
+}

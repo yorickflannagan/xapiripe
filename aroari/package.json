@@ -15,9 +15,11 @@
 	"bugs": {
 		"email": "yorick.flannagan@gmail.com"
 	},
-	"os": [ "win32" ],
-	"private": true,
+	"os": [
+		"win32"
+	],
 	"dependencies": {
-		"asn1js": "2.1.1"
+		"asn1js": "^2.3.1",
+		"hamahiri": "file:.yalc/hamahiri"
 	}
 }

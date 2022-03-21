@@ -12,9 +12,9 @@ const assert = require('assert');
 const LOG = process.stdout;
 const http = require('http');
 const fs = require('fs');
-const Aroari = require(path.join(__dirname, '..', '..', 'aroari'));
-const Wanhamou = require(path.join(__dirname, '..', '..', 'wanhamou'));
-const OpenSSLWrapper = require(path.join(__dirname, '..', '..', 'pki')).OpenSSLWrapper;
+const Aroari = require('aroari');
+const Wanhamou = require('wanhamou');
+const OpenSSLWrapper = require('../../pki').OpenSSLWrapper;
 
 let PKIDir = __dirname;
 let indexCN = 0;

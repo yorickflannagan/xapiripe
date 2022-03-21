@@ -10,6 +10,7 @@ build/
 pki/newcerts/*.pem
 pki/CNindex.txt
 pki/usr/
+runtime/
 
 # Compiled Java class files
 *.class

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron .",
-	"service": "node ./app/service.js --config=./options.json"
+    "service": "node ./app/service.js --config=./options.json"
   },
   "repository": {
     "type": "git",
@@ -31,6 +31,9 @@
     "electron-packager": "^15.4.0"
   },
   "dependencies": {
+    "asn1js": "^2.2.0",
+    "node-addon-api": "^4.3.0",
+    "tcp-port-used": "^1.0.2",
     "tmp": "^0.2.1"
   }
 }

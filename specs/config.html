@@ -49,11 +49,19 @@
 			target="_blank">npm</a>. No caso, a estação do desenvolvedor deve ter pleno acesso aos
 			repositórios públicos da ferramenta. Em princípio, utilizaremos o framework de testes
 			<a href="https://jestjs.io/" target="_blank">Jest</a> para a implementação de testes
-			automáticos. Dizemos <i>em princípio</i> porque essa seria a primeira vez que utilizamos
+			automáticos de aplicação. Dizemos <i>em princípio</i> porque essa seria a primeira vez que utilizamos
 			esse framework. Para a documentação das interfaces fornecidas será utilizado o pacote
 			<a href="https://github.com/jsdoc/jsdoc/tree/731f9b840da2bd0e9dd0fc75b11833cfac53ec7c"
 			target="_blank" >JSDoc</a>. Como se trata também de nossa primeira utilização da ferramenta,
-			eventuais alternativas devem ser consideradas de imediato.
+			eventuais alternativas devem ser consideradas de imediato. Note-se, porém, que os testes dos
+			componentes de infraestrutura desenvolvidos para o projeto não precisam se utilizar desse
+			framework, bastando apenas o próprio Node.js.
+			</p>
+			<p>
+			De modo a evitar que precisemos publicar os componentes desenvolvidos no repositório público do
+			NPM (algo desnecessário em vista da especificidade desses componentes, que não são de uso geral),
+			utilizamos o componente <a ref="https://github.com/wclr/yalc" target="_blank">Yalc</a> no
+			gerenciamento do workflow do projeto.
 			</p>
 			<p>
 			É de se notar que todos os componentes da solução terão estes softwares como base do seu
@@ -122,15 +130,7 @@
 			de hardware ou software para armazenamento de chaves (smart cards, tokens USB, repositórios de
 			software do Windows) será utilizado o módulo <a href="https://nodejs.org/api/crypto.html"
 			target="_blank">Crypto</a> fornecido pelo Node.js. Já a implementação DER utilizará a biblioteca
-			<a href="https://www.npmjs.com/package/asn1js" target="_blank">ASN1js</a>. É possível também
-			utilizar como base a biblioteca <a href="https://pkijs.org/" target="_blank">PKI.js</a>, baseada
-			naquele componente e que implementa as especificações CMS. No entanto, essa biblioteca deverá
-			ser usada com cuidado, já que sua criptografia é baseada na API W3C
-			<a href="https://www.w3.org/TR/WebCryptoAPI/" target="_blank">Web Cryptography API</a>. Esta API
-			é implementada pelos navegadores atuais. Ela, porém, <i>não</i> nos serve já que não permite acesso
-			aos dispositivos criptográficos de hardware e software mantidos no computador do usuário. Assim, o
-			eventual uso da biblioteca PKI.js deve ser tal que <i>não</i> referencie o objeto de browser
-			window.crypto, que implementa aquela especificação.
+			<a href="https://www.npmjs.com/package/asn1js" target="_blank">ASN1js</a>.
 			</p>
 		</div>
 	</div>
@@ -224,7 +224,10 @@
 			O módulo Node.js mais relevante para o desenvolvimento deste componente é, evidentemente,
 			<a href="https://nodejs.org/dist/latest-v16.x/docs/api/http.html" target="_blank">HTTP</a>.
 			Como se trata de aplicação nativa local, o framework <a href="https://www.electronjs.org/"
-			target="_blank">Electron</a> também será utilizado.
+			target="_blank">Electron</a> também será utilizado. Para a montagem do código executável onde
+			a infraestrutura Javascript (interpretador, renderizador HTML, etc.) é embarcada será utilizado
+			o componente <a href="https://electron.github.io/electron-packager/main/" target="_blank">
+			electron-packager</a>.
 			</p>
 		</div>
 	</div>

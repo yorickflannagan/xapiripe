@@ -328,3 +328,16 @@ V	270214151227Z		0146	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End
 V	270215120939Z		0147	unknown	/CN=Citizen Kane
 V	270215121714Z		0148	unknown	/CN=Orson Citizen Kane
 V	270215122453Z		0149	unknown	/CN=Citizen Welles Kane
+V	270313154410Z		014A	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 237
+V	270313154418Z		014B	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 238
+V	270313182034Z		014C	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 239
+V	270313182041Z		014D	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 240
+V	270313183304Z		014E	unknown	/CN=User CN to legacy CryptoAPI 241
+V	270313183311Z		014F	unknown	/CN=User CN to CNG API 242
+V	270317183756Z		0150	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 241
+V	270317183804Z		0151	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 242
+V	270319130817Z		0152	unknown	/CN=User CN to legacy CryptoAPI 243
+V	270319131137Z		0153	unknown	/CN=User CN to legacy CryptoAPI 243
+V	270320123111Z		0154	unknown	/CN=User CN to legacy CryptoAPI 243
+V	270320123119Z		0155	unknown	/CN=User CN to CNG API 244
+V	270320123657Z		0156	unknown	/CN=My name

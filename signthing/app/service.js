@@ -27,8 +27,8 @@
 
 const path = require('path');
 const fs = require('fs');
-const Hekura = require(path.resolve(__dirname, '..', '..', 'hekura'));
-const Wanhamou = require(path.resolve(__dirname, '..', '..', 'wanhamou'));
+const Hekura = require('hekura');
+const Wanhamou = require('wanhamou');
 const sprintf = Wanhamou.sprintf;
 const LogLevel = Wanhamou.LogLevel;
 const Logger = Wanhamou.Logger;
