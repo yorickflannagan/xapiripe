@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: Server</title>
+    <title>JSDoc: Class: HTTPServer</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: Server</h1>
+    <h1 class="page-title">Class: HTTPServer</h1>
 
     
 
@@ -29,7 +29,7 @@
 <header>
     
         <h2><span class="attribs"><span class="type-signature"></span></span>
-            <span class="ancestors"><a href="Hekura.html">Hekura</a>.</span>Server<span class="signature">(port, cors)</span><span class="type-signature"></span></h2>
+            <span class="ancestors"><a href="Hekura.html">Hekura</a>.</span>HTTPServer<span class="signature">(options)</span><span class="type-signature"></span></h2>
         
             <div class="class-description">Servidor HTTP de atendimento REST</div>
         
@@ -46,7 +46,7 @@
     
 
     
-    <h4 class="name" id="Server"><span class="type-signature"></span>new Server<span class="signature">(port, cors)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="HTTPServer"><span class="type-signature"></span>new HTTPServer<span class="signature">(options)</span><span class="type-signature"></span></h4>
     
 
     
@@ -90,30 +90,7 @@
 
         <tr>
             
-                <td class="name"><code>port</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Porta de atendimento</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>cors</code></td>
+                <td class="name"><code>options</code></td>
             
 
             <td class="type">
@@ -129,7 +106,7 @@
 
             
 
-            <td class="description last">Implementação de bloqueio de origens não confiáveis. Se definido deve implementar a mesma interfacede <a href="Hekura.CORSBlockade.html">Hekura.CORSBlockade</a>. Caso o parâmetro não seja informado ou não implemente a interface, a impementação CORSBlockade é utilizada silenciosamene</td>
+            <td class="description last">Opções de inicialização. Ver <a href="Hekura.ServerOptions.html">Hekura.ServerOptions</a></td>
         </tr>
 
     
@@ -170,7 +147,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line190">line 190</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line743">line 743</a>
     </li></ul></dd>
     
 
@@ -278,7 +255,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line241">line 241</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line864">line 864</a>
     </li></ul></dd>
     
 
@@ -395,7 +372,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line253">line 253</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line883">line 883</a>
     </li></ul></dd>
     
 
@@ -441,13 +418,13 @@
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hekura.html">Hekura</a></li></ul><h3>Classes</h3><ul><li><a href="Hekura.AbstractService.html">AbstractService</a></li><li><a href="Hekura.CORSBlockade.html">CORSBlockade</a></li><li><a href="Hekura.EnrollService.html">EnrollService</a></li><li><a href="Hekura.RootService.html">RootService</a></li><li><a href="Hekura.Server.html">Server</a></li><li><a href="Hekura.ServiceError.html">ServiceError</a></li><li><a href="Hekura.SignService.html">SignService</a></li><li><a href="Hekura.VerifyService.html">VerifyService</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hekura.html">Hekura</a></li><li><a href="Wanhamou.html">Wanhamou</a></li></ul><h3>Classes</h3><ul><li><a href="Hekura.AbstractService.html">AbstractService</a></li><li><a href="Hekura.CORSBlockade.html">CORSBlockade</a></li><li><a href="Hekura.EnrollService.html">EnrollService</a></li><li><a href="Hekura.HTTPServer.html">HTTPServer</a></li><li><a href="Hekura.RootService.html">RootService</a></li><li><a href="Hekura.ServerOptions.html">ServerOptions</a></li><li><a href="Hekura.ServiceError.html">ServiceError</a></li><li><a href="Hekura.SignService.html">SignService</a></li><li><a href="Hekura.VerifyService.html">VerifyService</a></li><li><a href="Wanhamou.LogOptions.html">LogOptions</a></li></ul><h3><a href="global.html">Global</a></h3>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu Jan 13 2022 11:45:17 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Mon Mar 21 2022 11:14:45 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

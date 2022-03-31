@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+
+<!--
+/**
+ * Xapiripë Project
+ * Software components for CAdES signatures
+ * See https://datatracker.ietf.org/doc/html/rfc5126
+ *
+ * Copyleft (C) 2020-2022 The Crypthing Initiative
+ * Authors:
+ * 		yorick.flannagan@gmail.com
+ *
+ * Xapiripe - Standalone Hekura servic
+ * See https://bitbucket.org/yakoana/xapiripe/src/master/appservice
+ * sign.html - User approval window
+ * 
+ * This application is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 3.0 of
+ * the License, or (at your option) any later version.
+ *
+ * This application is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * See https://opensource.org/licenses/LGPL-3.0
+ *
+ */
+-->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta http-equiv="Content-Security-Policy" content="script-src *" />
+	<link rel="stylesheet" href="w3pro.css"  type="text/css" />
+	<style>
+	body {
+		font-family: 'Calibri', 'Trebuchet MS', sans-serif;
+		background-color: #f1f1f1;
+	}
+	div {
+		padding: 1rem 0 0 2rem;
+	}
+	p {
+		overflow-wrap: break-word;
+		word-wrap: break-word;
+		max-width: 40rem;
+	}
+	p.legend {
+		font-size: 110%;
+	}
+	p.contents {
+		height: 15rem;
+		max-height: 15rem;
+		border: solid 2px #ccc;
+		padding: 1rem;
+		overflow-y: scroll;
+	}
+	input[type=button] {
+		min-width: 100px;
+	}
+	input[type=checkbox] {
+		transform: scale(1.3);
+	}
+	label {
+		font-size: 110%;
+		padding-left: 0.4rem;
+	}
+	span.min {
+		padding-left: 10px;
+	}
+	span.plus {
+		padding-left: 40px;
+	}
+	</style>
+</head>
+<body>
+
+	<div>
+		<p id="pLegend" class="legend"></p>
+		<p id="pContents" class="contents" hidden></p>
+	</div>
+
+	<div>
+		<input class="w3-round" type="button" value="Aceitar" id="btnAccept"><span class = "min"></span>
+		<input class="w3-round" type="button" value="Recusar" id="btnRefuse"><span class = "plus"></span>
+		<input id="chkDontAsk" type="checkbox" name="chkDontAsk" >
+		<label for="chkDontAsk">Não perguntar novamente</label><span class = "plus"></span>
+		<input class="w3-round" type="button" value="Download" id="btnDownload" hidden>
+	</div>
+</body>
+</html>

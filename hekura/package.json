@@ -1,6 +1,6 @@
 {
 	"name": "hekura",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Listener HTTP do expose cryptographic functions to web applications",
 	"main": "src/hekura.js",
 	"scripts": {

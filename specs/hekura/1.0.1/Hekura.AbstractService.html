@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: EnrollService</title>
+    <title>JSDoc: Class: AbstractService</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: EnrollService</h1>
+    <h1 class="page-title">Class: AbstractService</h1>
 
     
 
@@ -29,9 +29,9 @@
 <header>
     
         <h2><span class="attribs"><span class="type-signature"></span></span>
-            <span class="ancestors"><a href="Hekura.html">Hekura</a>.</span>EnrollService<span class="signature">()</span><span class="type-signature"></span></h2>
+            <span class="ancestors"><a href="Hekura.html">Hekura</a>.</span>AbstractService<span class="signature">(url, corsMaxAge, callback)</span><span class="type-signature"></span></h2>
         
-            <div class="class-description">Serviço de atendimento às operações de emissão de certificado</div>
+            <div class="class-description">Define a interface de um serviço de atendimento</div>
         
     
 </header>
@@ -46,19 +46,118 @@
     
 
     
-    <h4 class="name" id="EnrollService"><span class="type-signature"></span>new EnrollService<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="AbstractService"><span class="type-signature"></span>new AbstractService<span class="signature">(url, corsMaxAge, callback)</span><span class="type-signature"></span></h4>
     
 
     
 
 
 
+<div class="description">
+    Cria uma nova instância do serviço de atendimento
+</div>
 
 
 
 
 
 
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>url</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Path REST atendido</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>corsMaxAge</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">O valor em segundos que os preflight requests do protocolo CORS podem ser cacheados.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>callback</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="global.html#approvalCallback">approvalCallback</a></span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Função a ser chamada visando obter a aprovação do usuário para a operação criptográfica</td>
+        </tr>
+
+    
+    </tbody>
+</table>
 
 
 
@@ -94,7 +193,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line192">line 192</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line119">line 119</a>
     </li></ul></dd>
     
 
@@ -126,17 +225,6 @@
 
     
     </div>
-
-    
-        <h3 class="subsection-title">Extends</h3>
-
-        
-
-
-    <ul>
-        <li><a href="Hekura.AbstractService.html">Hekura.AbstractService</a></li>
-    </ul>
-
 
     
 
@@ -242,11 +330,6 @@
     
 
     
-    <dt class="tag-overrides">Overrides:</dt>
-    <dd class="tag-overrides"><ul class="dummy"><li>
-        <a href="Hekura.AbstractService.html#accept">Hekura.AbstractService#accept</a>
-    </li></ul></dd>
-    
 
     
 
@@ -267,7 +350,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line137">line 137</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line138">line 138</a>
     </li></ul></dd>
     
 
@@ -313,7 +396,7 @@
     
 
     
-    <h4 class="name" id="execute"><span class="type-signature"></span>execute<span class="signature">(request, response, body)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="execute"><span class="type-signature"></span>execute<span class="signature">(request, response, body)</span><span class="type-signature"> &rarr; {Promise.&lt;Number>}</span></h4>
     
 
     
@@ -440,11 +523,6 @@
     
 
     
-    <dt class="tag-overrides">Overrides:</dt>
-    <dd class="tag-overrides"><ul class="dummy"><li>
-        <a href="Hekura.AbstractService.html#execute">Hekura.AbstractService#execute</a>
-    </li></ul></dd>
-    
 
     
 
@@ -465,7 +543,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line154">line 154</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line156">line 156</a>
     </li></ul></dd>
     
 
@@ -490,6 +568,28 @@
 
 
 
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    Quando resolvida, promise retorna o código de status HTTP
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Number></span>
+
+
+    </dd>
+</dl>
+
+    
 
 
 
@@ -582,11 +682,6 @@
     
 
     
-    <dt class="tag-overrides">Overrides:</dt>
-    <dd class="tag-overrides"><ul class="dummy"><li>
-        <a href="Hekura.AbstractService.html#preflight">Hekura.AbstractService#preflight</a>
-    </li></ul></dd>
-    
 
     
 
@@ -607,7 +702,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line146">line 146</a>
+        <a href="hekura.js.html">hekura.js</a>, <a href="hekura.js.html#line147">line 147</a>
     </li></ul></dd>
     
 
@@ -681,7 +776,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Feb 15 2022 17:35:39 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Mon Mar 21 2022 11:14:45 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>
