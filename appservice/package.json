@@ -22,9 +22,7 @@
 		"email": "yorick.flannagan@gmail.com"
 	},
 	"homepage": "https://bitbucket.org/yakoana/xapiripe#readme",
-	"os": [
-		"win32"
-	],
+	"os": [ "win32" ],
 	"devDependencies": {
 		"electron": "^17.1.2",
 		"electron-packager": "^15.4.0"

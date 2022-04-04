@@ -10,7 +10,6 @@ pki/newcerts/*.pem
 pki/CNindex.txt
 pki/usr/
 runtime/
-resources/
 
 *.log
 *.exe
@@ -18,4 +17,3 @@ Thumbs.db
 
 *.*~
 .vscode/
-.yalc/

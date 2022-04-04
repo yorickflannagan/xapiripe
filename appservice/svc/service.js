@@ -186,9 +186,7 @@ function processCmdLine() {
 }
 
 async function main() {
-	let args = processCmdLine();
-	let logOpt;
-	let svrOpt;
+	let args = processCmdLine(), logOpt,  svrOpt;
 	if (args.has('config')) {
 		let cfg = args.get('config');
 		logOpt = cfg.logOptions;

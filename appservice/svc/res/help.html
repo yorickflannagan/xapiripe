@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="pt">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>Serviço Hekura &ndash; Ajuda</title>
+	<style>
+	body {
+		font-family: "Verdana, Arial, Helvetica, sans-serif";
+		font-size: 12pt;
+		margin-right: 2em;
+		margin-left: 2em;
+	}
+	h1 {
+		font-size: 150%;
+	}
+	h2 {
+		font-size: 130%;
+	}
+	div {
+		margin: 2em;
+	}
+	ul {
+		list-style-type: square;
+		margin-left: 2em;
+	}
+	td {
+		vertical-align: bottom;
+	}
+	figcaption {
+		font-style: italic;
+		font-size: 90%;
+	}
+	</style>
+</head>
+<body>
+	<h1>Serviço Hekura &ndash; Ajuda</h1>
+	<div>
+		<p>
+		O serviço Hekura fornece uma interface de programação para funções criptográficas destinadas a aplicações
+		web. Com ele, uma aplicação web de sua confiança pode emitir transações e documentos para que você
+		os assine com seu certificado digital. O serviço se aplica igualmente bem para que aplicações de
+		Autoridades Certificadoras possam realizar a atividade de emitir certificados digitais para
+		seus clientes, após a execução de todos os processos operacionais de identificação e controle
+		requeridos.
+		</p>
+		<p>Os seguintes serviços são fornecidos no contexto (eventual) da emissão de certificados digitais:</p>
+		<ul>
+			<li>Enumerar dispositivos criptográficos presentes;</li>
+			<li>Assinar requisição de certificado digital;</li>
+			<li>Instalar certificado assinado.</li>
+		</ul>
+		<p>No contexto (comum) de assinaturas digitais, os seguintes serviços são fornecidos:</p>
+		<ul>
+			<li>Enumerar certificados de assinatura instalados;</li>
+			<li>Assinar digitalmente um documento;</li>
+			<li>Verificar um documento assinado qualquer.</li>
+		</ul>
+		<p>
+		Como dissemos, tais serviços só são oferecidos para aplicações residentes em endereços Internet
+		da sua confiança. E por <i>confiança</i> queremos dizer apenas <i>endereços com aplicações
+		nas quais você confia para fazer o trabalho que você espera que façam (e mais nada).</i>
+		Por exemplo, você confia que o aplicativo fornecido pelo seu banco se limite a executar
+		funções inerentes ao negócio bancário naquela instituição. Ou que o aplicativo da Autoridade
+		Certificadora que você contratou para emitir o seu certificado digital se limite ao necessário
+		para realizar com segurança e fidelidade essa atividade.
+		</p>
+		<p>
+		Essa confiança é expressa por você no Serviço Hekura através de declaração explícita e inequívoca
+		feita na aba <i>Origens confiáveis</i> da janela aberta quando você seleciona a opção
+		<i>Opções do serviço</i> no menu de contexto do aplicativo. Simplesmente, clique com o botão direito
+		do mouse sobre o ícone do aplicativo na bandeja do sistema  para exibir o menu de contexto, como
+		visto nas figuras abaixo:
+		</p>
+		<div>
+			<table>
+			<tr>
+				<td>
+				<figure>
+					<img src="signature-32x32.ico" alt="Ícone do Serviço Hekura" />
+					<figcaption>Figura 1: Ícone do Serviço Hekura</figcaption>
+				</figure>
+				</td>
+				<td>
+				<figure>
+					<img src="system-tray.png" alt="Ícone do Serviço Hekura na bandeja do sistema" />
+					<figcaption>Figura 2: Ícone do Serviço Hekura na bandeja do sistema</figcaption>
+				</figure>
+				</td>
+			</tr>
+			</table>
+		</div>
+		<p>
+		A origem é declarada no formato <i>[protocolo]://[dominio]:[porta]</i>, onde [protocolo] é o
+		protocolo de comunicação utilizado na requisição, no caso exclusivamente <i>http</i> ou <i>https</i>.
+		Por [domínio] definimos um nome que caracteriza um domínio de autonomia administrativa, autoridade
+		ou controle dentro da Internet. Em geral, esse nome identifica um domínio de rede ou representa um
+		recurso de Protocolo de Internet (IP), como um computador servidor que hospeda um site, ou o próprio
+		site ou qualquer outro serviço comunicado pela Internet. Geralmente, exprimimos os domínios por nomes
+		fáceis de lembrar, como google.com, conectividade.caixa.gov.br, www.gov.br, etc. Como tais
+		nomes são tranduzidos em <i>endereços de IP</i> para que o navegador possa localizar efetivamente o
+		recurso procurado, você pode exprimir o domínio também por esse endereço. Tais endereços, atualmente
+		formados por quatro números com intervalos entre 0 e 255 cada um, são obtidos pelo navegador através
+		da consulta a servidores de nomes de domínios. Por exemplo, esses servidores traduzem o nome
+		<i>google.com</i> pela representação numérica <i>142.251.129.78</i>. Por fim, a declaração requer a
+		[porta] do endereço de IP onde a comunicação deve ser estabelecida. Essa porta é simplesmente
+		um número inteiro entre 0 e 65535. Essa convenção de endereçamento permite que um mesmo domínio
+		forneça serviços através de mais de um protocolo.
+		</p>
+		<p>
+		Como você talvez tenha notado, essa origem corresponde, pelo menos em parte, ao que digitamos na
+		barra de endereços do navegador. Por exemplo, o buscador do Google é declarado como http://google.com:80,
+		que quer dizer que o serviço de busca está disponível através do protocolo HTTP (<i>Hipertext Transfer
+		Protocol</i>), na porta 80 do domínio google.com (ou 142.251.129.78). Como cada protocolo de comunicação
+		é implementado numa porta padrão bem conhecida, a declaração do seu número é opcional, caso o servidor
+		responda na porta padrão. Por exemplo, a declaração http://google.com é suficiente para acessar o buscador,
+		já que ele está sendo <i>servido</i> na porta padrão do protocolo. Note também que a porta padrão do
+		protocolo HTTS é 443. Naturalmente, um servidor não precisa responder na porta padrão. Por exemplo, o
+		serviço Hekura serve às aplicações na origem http://127.0.0.1:9171.
+		</p>
+
+		<h2>Adicionar uma origem</h2>
+		<div>
+			<p>
+			Adicionar uma origem é uma operação bastante simples. Ao abrir a janela Opções do serviço, a aba
+			apropriada já está selecionada, como pode ser visto na Figura 3. Na caixa de texto digite o endereço
+			da origem desejada, utilizando a sintaxe disticutida no parágrafo anterior (por exemplo:
+			https://conectividade.caixa.gov.br) e clique no botão de adição. Quando terminar, clique no botão
+			Salvar. Para que esta alteração seja considerada pelo serviço, ele deve ser reiniciado. Portanto,
+			você deve aceitar a opção oferecida pelo aplicativo.
+			</p>
+			<div>
+				<figure>
+					<img src="origens.png" alt="A aba Origens confiáveis da janela de Opções do serviço" />
+					<figcaption>Figura 3: A aba Origens confiáveis da janela de Opções do serviço</figcaption>
+				</figure>
+			</div>
+		</div>
+
+		<h3>Alterar parâmetros do log</h3>
+		<div>
+			<p>
+			Todas as operações realizadas são registradas em arquivo pelo serviço. O objetivo disso é principalmente
+			auxiliar na resolução de problemas eventualmente ocorridos durante o uso do produto. Por razões de
+			segurança, a interface de programação fornecida pelo serviço não retorna detalhes ao aplicativo em
+			caso erro ocorrido durante a interação entre a aplicação web e o serviço Hekura. Evidentemente, isso
+			dificulta bastante a resolução de problemas. Assim, para que todas os detalhes estejam sempre
+			disponíveis, Hekura registra em detalhes cada uma das suas interações em arquivo em disco no seu
+			computador. Registros das seguintes características são efetuados:
+			</p>
+			<ul>
+				<li>Nível de erro, quando são registradas somente ocorrências de erro;</li>
+				<li>Nível de advertência, quando, além daquelas, são registradas também ocorrências de problemas;</li>
+				<li>Nível informativo, quando também são registradas informações gerais;</li>
+				<li>Nível de depuração, quando todos as ações tomadas são registradas.</li>
+			</ul>
+			<p>
+			Por padrão, esses registros são feitos somente no nível informativo (incluindo advertências e erros),
+			em no máximo 5 arquivos que podem alcançar até 2.048 KB cada um deles. Quando um arquivo chega a seu
+			limite de tamanho, o aplicativo passa a registrar no seguinte, até que o útimo seja alcançado. A partir
+			de então, ele trunca o mais antigo e o utiliza para o registro e assim por diante.
+			</p>
+			<p>
+			Esse comportamento pode ser ajustado por você na aba <i>Opções de log</i>. Você pode aumentar ou reduzir
+			os detalhes do registro efetuado alterando o log para o nível de depuração ou para advertênecia ou
+			erro. Pode tamber aumentar o reduzir o tamanho e quantidade dos arquivos de log, bem como mudar
+			sua localização no sistema de arquivos.
+			</p>
+		</div>
+	</div>
+</div>
+</body>
+</html>

@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					restart = answer.response != 0;
 				}
 				ipcRenderer.sendSync('update-config', cfg);
-				ipcRenderer.send('relaunch-app');
+				if (restart) ipcRenderer.send('relaunch-app');
 			}
 			window.close();
 		});

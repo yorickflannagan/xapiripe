@@ -24,25 +24,19 @@
  */
 'use strict';
 
-const { app, BrowserWindow, Menu, Tray, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, Tray, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const cp = require('child_process');
 
 const { Config, Message, WarnResponse, UserQuestion, DelayedPromise } = require('./module');
 const { sprintf } = require('wanhamou');
-const { strict } = require('assert');
 
 
-const contextMenu = [
-	{ label: 'Opções do serviço...', click: () => { optionsWindow.show(); }},
-	{ label: 'Sair', click: () => { app.quit(); }}
-];
-const optionsMenu = [
-	{ label: 'Fechar', click: () => { optionsWindow.close(); }}
-];
 const OPTIONS = path.join(__dirname, 'runtime', 'options.json');
 const ICO = path.join(__dirname, 'res', 'signature-32x32.ico');
 const IFACE = path.join(__dirname, 'res', 'options.html');
+const LICENCE = 'https://opensource.org/licenses/LGPL-3.0';
+const HELP = 'file:///' + path.join(__dirname, 'res', 'help.html');
 const APP_TITLE = 'Serviço Hekura';
 const OPERATIONS = [ 'enumerateDevices', 'generateCSR', 'installCertificates', 'enumerateCertificates', 'sign', 'verify' ];
 const ACTIONS = [
@@ -52,6 +46,29 @@ const ACTIONS = [
 	'enumerar certificados de assinatura instalados',
 	'assinar o documento a seguir',
 	'verificar documento assinado'
+];
+const contextMenu = [
+	{ label: 'Opções do serviço...', click: () => { optionsWindow.show(); }},
+	{ 'type': 'separator' },
+	{ label: 'Ajuda', click: () => { shell.openExternal(HELP)}},
+	{ label: 'Licença', click: () => { shell.openExternal(LICENCE)}},
+	{ label: 'Sobre...', click: () => {
+		let contents = 'Versão: '.concat(app.getVersion()).concat('\n')
+			.concat('Electron: ').concat(process.versions.electron).concat('\n')
+			.concat('Chrome: ').concat(process.versions.chrome).concat('\n')
+			.concat('Node.js: ').concat(process.versions.node).concat('\n');
+		tray.displayBalloon({
+			iconType: 'info',
+			title: 'Sobre o ' + APP_TITLE,
+			content: contents,
+			noSound: true
+		});
+	}},
+	{ 'type': 'separator' },
+	{ label: 'Sair', click: () => { app.quit(); }}
+];
+const optionsMenu = [
+	{ label: 'Fechar', click: () => { optionsWindow.close(); }}
 ];
 
 /**
@@ -165,7 +182,6 @@ ipcMain.on('user-answer', (evt, answer) => {
 	}
 	else {
 		tray.displayBalloon({
-			icon: ICO,
 			iconType: 'error',
 			title: APP_TITLE,
 			content: 'Não foi possível processar a resposta fornecida pelo usuário por falha na comunicação interna do aplicativo.',
@@ -182,7 +198,6 @@ ipcMain.on('user-answer', (evt, answer) => {
  */
 ipcMain.on('report-error', (evt, message) => {
 	tray.displayBalloon({
-		icon: ICO,
 		iconType: 'error',
 		title: APP_TITLE,
 		content: message,
@@ -280,7 +295,6 @@ app.on('ready', () => {
 				service.send(response);
 			}).catch((reason) => {
 				tray.displayBalloon({
-					icon: ICO,
 					iconType: 'error',
 					title: APP_TITLE,
 					content: sprintf('Ocorreu o seguinte erro ao solicitar a aprovação do usuário: %s', reason.toString()),
@@ -333,10 +347,10 @@ app.on('ready', () => {
 	 * Exibe a lista de origens confiáveis sendo atendida pelo serviço
 	 */
 	tray.on('click', () => {
-		let contents = 'Atendendo às seguintes origens confiáveis:';
+		let contents = 'Atendendo às seguintes origens confiáveis: ';
 		if (config.serverOptions.trustedOrigins.origins.length > 0) {
 			config.serverOptions.trustedOrigins.origins.forEach((item) => {
-				contents = contents.concat('\n\t').concat(item.origin);
+				contents = contents.concat(', ').concat(item.origin);
 			});
 		}
 		else contents = contents.concat('\n\tNenhuma origem cadastrada');
