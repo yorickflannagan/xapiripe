@@ -347,13 +347,13 @@ app.on('ready', () => {
 	 * Exibe a lista de origens confiáveis sendo atendida pelo serviço
 	 */
 	tray.on('click', () => {
-		let contents = 'Atendendo às seguintes origens confiáveis: ';
+		let contents = 'Atendendo às seguintes origens confiáveis:';
 		if (config.serverOptions.trustedOrigins.origins.length > 0) {
 			config.serverOptions.trustedOrigins.origins.forEach((item) => {
-				contents = contents.concat(', ').concat(item.origin);
+				contents = contents.concat(' ').concat(item.origin);
 			});
 		}
-		else contents = contents.concat('\n\tNenhuma origem cadastrada');
+		else contents = contents.concat(' nenhuma origem cadastrada');
 		tray.displayBalloon({
 			icon: ICO,
 			iconType: 'custom',

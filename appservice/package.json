@@ -4,7 +4,8 @@
 	"description": "Hekura service standalone application",
 	"main": "svc/main.js",
 	"scripts": {
-		"start": "chcp 65001>nul & electron ."
+		"start": "chcp 65001>nul & electron .",
+		"build": "npx electron-packager . xapiripe --platform=win32 --arch=x64 --icon=./svc/res/signature-32x32.ico --out=./dist --overwrite=true --ignore=\".yalc|yalc.lock|.vscode|options.json|.log\" --appCopyright=\"Copyleft (C) 2020-2022 The Crypthing Initiative. All rights reversed.\""
 	},
 	"repository": {
 		"type": "git",

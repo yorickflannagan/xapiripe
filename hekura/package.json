@@ -6,7 +6,8 @@
 	"scripts": {
 		"test": "node ./test/test.js pki=../pki service=false",
 		"service": "node ./test/test.js pki=../pki service=true",
-		"start": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip"
+		"start": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip",
+		"start-forbidden": "http-server ./test -a 10.0.2.15 -p 8090 -o --log-ip"
 	},
 	"repository": {
 		"type": "git",
