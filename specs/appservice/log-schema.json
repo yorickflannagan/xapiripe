@@ -1,0 +1,49 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"$id": "https://bitbucket.org/yakoana/xapiripe/src/master/specs/appservice/log-schema.json",
+	"type": "object",
+	"title": "Opções de log",
+	"description": "Opções utiilizadas para inicializar o log do aplicativo",
+	"required": [ "logOptions" ],
+	"properties": {
+		"logOptions": {
+			"type": "object",
+			"title": "Elemento raiz",
+			"description": "Opções de nicializiação do log.",
+			"properties": {
+				"path": {
+					"type": "string",
+					"title": "Diretório de log",
+					"description": "Caminho completo para o diretório onde os arquivos de log serão criados.",
+					"default": "O subdiretório runtime localizado junto aos scripts da aplicação."
+				},
+				"fname": {
+					"type": "string",
+					"title": "Modelo do nome do arquivo",
+					"description": "Nome do arquivo de log. Deve conter a string -n",
+					"default": "xapiripe-n.log"
+				},
+				"maxSize": {
+					"type": "integer",
+					"title": "Tamanho máximo do arquivo",
+					"description": "Tamanho máximo (em KB) que o arquivo de log pode alcançar antes de rotacionar.",
+					"default": 2048
+				},
+				"rotate": {
+					"type": "integer",
+					"title": "Quantidade de arquivos",
+					"description": "Quantidade máxima de arquivos de log a serem criados antes de sobrescrever o mais antigo.",
+					"default": 5
+				},
+				"level": {
+					"type": "integer",
+					"title": "Nível de log",
+					"description": "Nível de log a ser adotado pela aplicação.",
+					"default": 1
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": true
+}

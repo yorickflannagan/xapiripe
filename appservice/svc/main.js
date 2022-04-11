@@ -32,6 +32,7 @@ const { Config, Message, WarnResponse, UserQuestion, DelayedPromise } = require(
 const { sprintf } = require('wanhamou');
 
 
+
 const OPTIONS = path.join(__dirname, 'runtime', 'options.json');
 const ICO = path.join(__dirname, 'res', 'signature-32x32.ico');
 const IFACE = path.join(__dirname, 'res', 'options.html');

@@ -23,10 +23,14 @@
 		"email": "yorick.flannagan@gmail.com"
 	},
 	"homepage": "https://bitbucket.org/yakoana/xapiripe#readme",
-	"os": [ "win32" ],
+	"os": [
+		"win32"
+	],
 	"devDependencies": {
 		"electron": "^17.1.2",
-		"electron-packager": "^15.4.0"
+		"electron-packager": "^15.4.0",
+		"electron-squirrel-startup": "^1.0.0",
+		"electron-winstaller": "^5.0.0"
 	},
 	"dependencies": {
 		"aroari": "file:.yalc/aroari",

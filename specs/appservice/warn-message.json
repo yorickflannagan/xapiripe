@@ -1,0 +1,36 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"$id": "https://bitbucket.org/yakoana/xapiripe/src/master/specs/appservice/warn-message.json",
+	"type": "object",
+	"title": "Mensagem de alerta",
+	"description": "Enviada pelo serviço Hekura e destinada ao processo principal, para alerta ao usuário.",
+	"properties": {
+		"signal": {
+			"type": "string",
+			"title": "Tipo de mensagem",
+			"description": "Mensagens de alerta são sempre do tipo warn-user."
+		},
+		"msgId": {
+			"type": "string",
+			"title": "Identificador da mensagem",
+			"description": "Um UUID de identificação da mensagem e correlação com sua resposta."
+		},
+		"operationId": {
+			"type": "string",
+			"title": "Tipo de operação",
+			"description": "Um dos identificadores dos diferentes serviços REST fornecidos pelo serviço."
+		},
+		"referer": {
+			"type": "string",
+			"title": "Origem da requisição",
+			"description": "O valor do campo Referer do cabeçalho HTTP da requisição"
+		},
+		"value": {
+			"type": "string",
+			"title": "Conteúdo da requisição",
+			"description": "Caso se trate de operação de assinatura, o conteúdo enviado na requisição"
+		}
+	},
+	"required": [ "signal", "msgId", "operationId", "referer" ],
+	"additionalProperties": false
+}

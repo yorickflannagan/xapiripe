@@ -106,7 +106,7 @@
 			qualquer proteção. Caso o usuário tenha utilizado os componentes Xapiripë para gerar essas chaves,
 			esse ataque é facilmente detido antes que mesmo de começar pela seguinte contramedida simples:
 			</p>
-			<p class="countermeasure">
+			<p class="countermeasure" id="pwd-protection">
 			(i) Ao gerar chaves criptográficas por software, os componentes Xapiripë devem solicitar ao
 			sistema operacional o melhor nível de proteção disponível, independente da anuência do usuário.
 			</p>
@@ -133,7 +133,7 @@
 			aceite o uso do produto na sua emissão. Assim, a interação com um site malicioso pode ser detida
 			pela seguinte contramedida:
 			</p>
-			<p class="countermeasure">
+			<p class="countermeasure" id="trusted-origin">
 			(ii) As interações dos componentes Xapiripë só serão realizadas com origens que tenham sido
 			previamente autorizadas pelo usuário.
 			</p>
@@ -198,7 +198,7 @@
 			pelo computador do usuário sobre um conteúdo binário na memória da máquina. O que está sendo
 			assinado? A resposta a esse raciocínio nos sugere uma contramedida para aquela ameaça:
 			</p>
-			<p class="countermeasure">
+			<p class="countermeasure" id="validate-request">
 			(iii) Os conteúdos a serem assinados devem estar disponíveis para inspeção visual pelo usuário,
 			que deve ser instado a validar sua autenticidade.
 			</p>
@@ -264,7 +264,7 @@
 			foi conduzido a um site malicioso acreditando estar num outro, legítimo. Assim, é importante
 			implementar a seguinte contramedida:
 			</p>
-			<p class="countermeasure">
+			<p class="countermeasure" id="install-trusted-cert">
 			(iv) Xapiripë somente instalará certificados de ACs diretamente associados ao certificado
 			do assinante cujas chaves foram geradas pelo componente, verificando previamente sua
 			autenticidade.

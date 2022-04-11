@@ -1,0 +1,26 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"$id": "https://bitbucket.org/yakoana/xapiripe/src/master/specs/appservice/war-response.json",
+	"type": "object",
+	"title": "Responsta à mensagem de alerta",
+	"description": "Enviada pelo processo principal e destinada ao serviço, com a resposta a uma mensagem de alerta.",
+	"properties": {
+		"signal": {
+			"type": "string",
+			"title": "Tipo de mensagem",
+			"description": "Mensagens com resposta a um alerta são sempre do tipo warn-user."
+		},
+		"msgId": {
+			"type": "string",
+			"title": "Identificador da mensagem de alerta",
+			"description": "O UUID enviado originalmente na mensagem de alerta."
+		},
+		"response": {
+			"type": "boolean",
+			"title": "Responsta",
+			"description": "Indicador da resposta ao alerta fornecido pelo usuário."
+		}
+	},
+	"required": [ "signal", "msgId", "response" ],
+	"additionalProperties": false
+}

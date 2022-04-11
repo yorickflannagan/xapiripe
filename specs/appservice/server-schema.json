@@ -1,0 +1,73 @@
+	{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"$id": "https://bitbucket.org/yakoana/xapiripe/src/master/specs/appservice/server-schema.json",
+	"type": "object",
+	"title": "Opções do serviço",
+	"description": "Opções de inicialização do serviço.",
+	"properties": {
+		"serverOptions": {
+			"type": "object",
+			"title": "Elemento raiz",
+			"description": "Opções de inicialização do serviço",
+			"properties": {
+				"trustedOrigins": {
+					"type": "object",
+					"title": "Origens confiáveis",
+					"description": "Origens aceitas para fornecimento dos serviços",
+					"required": [ "warning", "origins" ],
+					"properties": {
+						"warning": {
+							"type": "boolean",
+							"title": "Indicador de alerta",
+							"description": "Indicador da necessidade de alertar o usuário sempre que, na interface gráfica, tentar remover uma origem.",
+							"default": true
+						},
+						"origins": {
+							"type": "array",
+							"title": "Origens confiáveis",
+							"description": "Lista de origens",
+							"additionalItems": false,
+							"items": {
+								"anyOf": [
+									{
+										"type": "object",
+										"title": "Origem CORS",
+										"properties": {
+											"origin": {
+												"type": "string",
+												"title": "Origem",
+												"description": "origem na forma [protocolo]://[dominio]:[porta]"
+											},
+											"id": {
+												"type": "string",
+												"title": "identificador",
+												"description": "Identificador da origem (um UUID)."
+											}
+										},
+										"required": [ "origin", "id" ],
+										"additionalProperties": false
+									}
+								]
+							}
+						}
+					},
+					"additionalProperties": false
+				},
+				"port": {
+					"type": "integer",
+					"title": "Porta de serviço",
+					"description": "Porta de comunicação utilizada para atendimento",
+					"default": 9171
+				},
+				"maxAge": {
+					"type": "integer",
+					"title": "Tempo máximo de cache",
+					"description": "Valor (em segundos) a ser fornecido no header CORS Access-Control-Max-Age.",
+					"default": 1800
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

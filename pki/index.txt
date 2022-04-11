@@ -345,3 +345,4 @@ V	270320221008Z		0157	unknown	/CN=User CN to legacy CryptoAPI 243
 V	270320221014Z		0158	unknown	/CN=User CN to CNG API 244
 V	270320221439Z		0159	unknown	/CN=Another My Name
 V	270404144651Z		015A	unknown	/CN=Fulano de Tal
+V	270404192159Z		015B	unknown	/CN=Fulano de Tal
