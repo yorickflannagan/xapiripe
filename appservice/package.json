@@ -29,7 +29,6 @@
 	"devDependencies": {
 		"electron": "^17.1.2",
 		"electron-packager": "^15.4.0",
-		"electron-squirrel-startup": "^1.0.0",
 		"electron-winstaller": "^5.0.0"
 	},
 	"dependencies": {
