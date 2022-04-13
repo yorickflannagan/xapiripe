@@ -1,6 +1,6 @@
 # 
 # The Xapiripë Project
-# Copyleft (c) 2021 by The Crypthing Initiative
+# Copyleft (c) 2021-2022 by The Crypthing Initiative
 # ---------------------------------------------
 # Hamahiri build facility
 # Exclusively for Windows

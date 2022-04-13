@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="pt">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" href="res/style.css" type="text/css" />
+	<title>Xapiripë &ndash; Diretrizes de Configuração</title>
+</head>
+<body>
+<div>
+	<h1>Xapiripë &ndash; Diretrizes de Configuração</h1>
+	<div>
+		<p>
+		Este documento descreve os requisitos de conhecimento e software de suporte (de terceiros) necessários
+		ao desenvolvimento e manutenção de cada componente da solução. Além disso, estabelece diretrizes para
+		que os colaboradores do projeto possam compartilhar facilmente suas contribuições.
+		</p>
+	</div>
+
+	<div>
+		<h2><img src="res/dot.png" />Diretrizes globais</h2>
+		<div>
+			<p>
+			Um esclarecimento inicial e abrangente. A solução requer interação com o subsistema criptográfico
+			utilizado pelos navegadores para operações que impliquem acesso a dispositivos de armazenamento
+			criptográfico por hardware e software. Sendo assim, a parte crítica do código (estimada, porém, em
+			apenas de 5% do conjunto) é dependente do sistema operacional e do compilador nativo utilizado.
+			Todo o restante deverá ser implementado em Javascript, sendo, portanto, independente de plataforma.
+			</p>
+			<p>
+			A gestão deste projeto está sendo feita no Bitbucket, no repositório privado
+			git+https://bitbucket.org/yakoana/xapiripe.git. Como na diretriz de desenvolvimento da 
+			Kriptonita, o software, ao ser publicado, será disgtribuído sobe licença
+			<a href="https://spdx.org/licenses/LGPL-3.0-or-later.html" target="_blank">GNU Lesser General Public
+			License v3.0 or later</a>. Porém, o repositório será tornado público para leitura somente quando
+			uma primeira versão distribuível estiver disponível.
+			</p>
+			<p>
+			O projeto requer conhecimentos conceituais (não nececssariamente matemáticos) sobre criptografia, em
+			particular a criptografia de chaves públicas. Todos os conceitos utilizados nos diferentes produtos
+			estão publicamente disponíveis na Internet. Em particular, recomenda-se a leitura dos livros
+			<a href="https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.99.2838&rep=rep1&type=pdf"
+			target="_blank">Handbook of Applied Cryptography</a>, clássico de A. J. Menezes, P. C. van Oorschot
+			e S. A. Vanstone.
+			</p>
+			<p>
+			Os principais softwares de suporte requeridos para o projeto são o <a href="https://nodejs.org/"
+			target="_blank">Node.js</a> e seu gerenciador de pacotes, o <a href="https://www.npmjs.com/" 
+			target="_blank">npm</a>. No caso, a estação do desenvolvedor deve ter pleno acesso aos
+			repositórios públicos da ferramenta. Em princípio, utilizaremos o framework de testes
+			<a href="https://jestjs.io/" target="_blank">Jest</a> para a implementação de testes
+			automáticos de aplicação. Dizemos <i>em princípio</i> porque essa seria a primeira vez que utilizamos
+			esse framework. Para a documentação das interfaces fornecidas será utilizado o pacote
+			<a href="https://github.com/jsdoc/jsdoc/tree/731f9b840da2bd0e9dd0fc75b11833cfac53ec7c"
+			target="_blank" >JSDoc</a>. Como se trata também de nossa primeira utilização da ferramenta,
+			eventuais alternativas devem ser consideradas de imediato. Note-se, porém, que os testes dos
+			componentes de infraestrutura desenvolvidos para o projeto não precisam se utilizar desse
+			framework, bastando apenas o próprio Node.js.
+			</p>
+			<p>
+			De modo a evitar que precisemos publicar os componentes desenvolvidos no repositório público do
+			NPM (algo desnecessário em vista da especificidade desses componentes, que não são de uso geral),
+			utilizamos o componente <a ref="https://github.com/wclr/yalc" target="_blank">Yalc</a> no
+			gerenciamento do workflow do projeto.
+			</p>
+			<p>
+			É de se notar que todos os componentes da solução terão estes softwares como base do seu
+			desenvolvimento. Assim, apenas por comodidade não serão citados daqui por diante, sendo
+			implícita a sua utilização. Note-se também que o projeto é indiferente à IDE eventualmente
+			utilizada pelos desenvolvedores, muito embora nós mesmos utilizemos o
+			<a href="https://code.visualstudio.com/" target="_blank">Microsoft Visual Studio Code</a>.
+			Qualquer outro, porém, pode ser utilizado. Porém, para assegurar a independência da IDE,
+			é uma definição crítica que <i>nenhum arquivo ou diretório gerado ou relacionado à
+			IDE deverá ser mantido no repositório do projeto</i>. 
+			</p>
+			<p>
+			Igualmente relevante, é a utilização obrigatória de UTF-8 (e <i>não</i> ISO 8859-1) para
+			codificar os arquivos armazenados, seja de documentação, seja o código fonte. Isto é
+			indispensável para manter a interoperabilidade e independência das plataformas. 
+			</p>
+		</div>
+	</div>
+
+	<div>
+		<h2><img src="res/dot.png" />Yakoana: extensão para navagador Chrome</h2>
+		<div>
+			<p>
+			O desenvolvimento deste componente requer o conhecimento especializado documentado na
+			página <a href="https://developer.chrome.com/docs/extensions/mv3/" target="_blank">
+			<i>Learn about developing extensions for Chrome</i></a>. Trata-se de diretrizes gerais e
+			padrões para o desenvolvimento de extensões para Google Chrome, incluindo especificações
+			de APIs fornecidas, diretrizes que devem ser atendidas para hospedagem na Chrome Web Store,
+			tutorial e conceitos detalhados. Como o navegador se baseia no projeto Open Source
+			<a href="https://www.chromium.org/Home" target="_blank">Chromium</a>, é esperado que
+			os conceitos e APIs ali abordados sejam comuns a todos os navegadores nele baseados,
+			em particular  o <a href="https://www.opera.com/" target="_blank">Opera</a>
+			e o <a href="https://www.microsoft.com/en-us/edge" target="_blank">Microsoft Edge</a>,
+			ambos definidos como alvo de longo prazo do projeto da extensão. 
+			</p>
+			<p>
+			Um software de suporte será particularmente aplicável ao desenvolvimento deste componente.
+			Como se trata de Javascript a ser hospedado no navegador, seu empacotamento completo
+			(<i>bundler</i>) é requerido. Para isso, como no projeto Kriptonita, utilizaremos o
+			empacotador <a href="https://webpack.js.org/" target="_blank">Webpack</a>.
+			</p>
+		</div>
+	</div>
+	
+	<div>
+		<h2><img src="res/dot.png" />Aroari: API criptográfica de alto nível</h2>
+		<div>
+			<p>
+			Como essa API é a responsável por fornecer serviços criptográficos às aplicações, os conhecimentos
+			gerais mencionados logo no início do documento são relevantes. Além disso, os produtos fornecidos
+			pelo componente devem estar em estrito acordo com as especificações do IETF documentadas na
+			<a href="https://datatracker.ietf.org/doc/html/rfc3852" target="_blank">RFC 3852</a> &ndash;
+			Cryptographic Message Syntax (CMS), extendida pela <a href="https://datatracker.ietf.org/doc/html/rfc5126"
+			target="_blank">RFC 5126</a> &ndash; CMS Advanced Electronic Signatures (CAdES).
+			</p>
+			<p>
+			Deve-se notar que a compreensão completa dos <i>Request For Comments</i> (RFC) do IETF requerem
+			conhecimentos prévios de ASN.1 (<i>Abstract Sintax Notation One</i>), padronizada na norma
+			<a href="https://www.itu.int/ITU-T/studygroups/com17/languages/X.680-0207.pdf" target="_blank">
+			ITU-T X.680</a>. Por outro lado, sua codificação em arquivos obedece às <i>Distinguished
+			Encoding Rules</i>, (DER) padronizadas na norma <a href="https://www.itu.int/rec/T-REC-X.690-202102-I/en"
+			target="_blank">ITU-T X.690</a>. Ambas devem ser conhecidas.
+			</p>
+			<p>
+			Para a implementação das primitivas criptográficas que não envolvam a interação com os dispositivos
+			de hardware ou software para armazenamento de chaves (smart cards, tokens USB, repositórios de
+			software do Windows) será utilizado o módulo <a href="https://nodejs.org/api/crypto.html"
+			target="_blank">Crypto</a> fornecido pelo Node.js. Já a implementação DER utilizará a biblioteca
+			<a href="https://www.npmjs.com/package/asn1js" target="_blank">ASN1js</a>.
+			</p>
+		</div>
+	</div>
+
+	<div>
+		<h2><img src="res/dot.png" />Haxoriwe: aplicação nativa para interface com o navegador</h2>
+		<div>
+			<p>
+			Em vista dos padrões suportados pelos fabricantes de browsers, a comunicação entre uma extensão
+			e um componente nativo de qualquer tipo só pode ser feito através da tecnologia conhecida
+			como <a href="https://developer.chrome.com/docs/apps/nativeMessaging/" target="_blank">Native
+			Messaging</a>. Esta tecnologia requer que a comunicação seja conduzida através dos dispositivos
+			de E/S padrão (stdin e stdout) entre o navegador e uma aplicação nativa, instalada no
+			computador do usuário e permissionada junto ao navegador. Assim, a documentação fornecida pelo
+			Chrome é essencial ao desenvolvimento deste componente. Note-se apenas que tal documentação
+			foi originalmente elaborada para as aplicações Chrome, hoje obsoletas. No entanto, ela permanece
+			válida, pelo menos em grande medida, para as extensões de navegador. 
+			</p>
+			<p>
+			Para a implementação da aplicação utilizaremos o framework <a href="https://www.electronjs.org/"
+			target="_blank">Electron</a>, destinado a permitir o desenvolvimento de aplicações desktop
+			em Javascript. O acesso aos dispositivos stdin e stdout serão feitos pelos componentes Node.js
+			apropriados.
+			</p>
+		</div>
+	</div>
+
+	<div>
+		<h2><img src="res/dot.png" />Hamahiri: componente de acesso aos dispositivos criptográficos</h2>
+		<div>
+			<p>
+			Além dos conhecimentos gerais em criptografia, mencionados no início do documento, a
+			implementação deste componente requer alguns conhecimentos práticos adicionais. Primeiramente,
+			a programação nativa para Windows, em especial o desenvolvimento de aplicações criptográficas.
+			Assim, a documentação fornecida na página
+			<a href="https://docs.microsoft.com/en-us/windows/win32/seccrypto/cryptography-portal"
+			target="_blank">Cryptography</a> da Microsoft são relevantes. Em vista de novos padrões
+			implementados no Windows por aquele fornecedor a nova API
+			<a href="https://docs.microsoft.com/en-us/windows/win32/seccng/cng-portal" target="_blank">
+			Cryptography API: Next Generation</a> é também relevante. Naturalmente, apenas uma pequena
+			parte da referência contida nessa documentação é relevante para o projeto.
+			</p>
+			<p>
+			Para o desenvolvimento é requerido também o conhecimento necessário ao desenvolvimento de
+			componentes C/C++ para Node.js. Aqui é relevante tanto a referência
+			<a href="https://nodejs.org/api/addons.html" target="_blank">C++ addons</a> fornecida na
+			documentação do Node.js quanto o módulo <a href="https://nodejs.org/api/n-api.html" 
+			target="_blank">C/C++ addons with Node-API</a>. A leitura do interessante tutorial
+			<a href="https://medium.com/jspoint/a-simple-guide-to-load-c-c-code-into-node-js-javascript-applications-3fcccf54fd32" target="_blank">A simple guide to load C/C++ code into Node.js JavaScript
+			Applications</a> é também recomendada.
+			</p>
+			<p>
+			Para o desenvolvimento deste componente, é requerida a instalação do pacote para Node.js
+			<a href="https://github.com/nodejs/node-gyp" target="_blank">node-gyp</a> (<i>Node.js native
+			addon build tool</i>) e suas dependências para Windows: o
+			<a href="https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community&channel=Release&source=VSLandingPage&cid=2011"
+			target="_blank">Microsoft Visual Studio Community</a> e a versão corrente do Python do
+			<a href="https://docs.python.org/3/using/windows.html#the-microsoft-store-package" target="_blank" >
+			Microsoft Store package</a>. Note-se que apenas os componentes para desenvolvimento C/C++ do
+			Visual Studio são requeridos.
+			</p>
+			<p>
+			Adicionalmente, é necessário instalar o <a href="https://www.microsoft.com/en-us/download/details.aspx?id=30688"
+			target="_blank">Microsoft Cryptographic Provider Development Kit</a>, que contem os headers e
+			bibliotecas compartilhadas necessárias à nova geração de aplicativos criptográficos para Windows.
+			
+			</p>
+		</div>
+	</div>
+
+	<div>
+		<h2><img src="res/dot.png" />Hekura: listener HTTP local</h2>
+		<div>
+			<p>
+			Trata-se de solução alternativa ao uso de uma extensão. A ideia é um servidor HTTP local, 
+			respondendo aos requests oriundos da web no endereço de loopback, tornando a solução
+			independente de browser. Nesse sentido, o conhecimento básico requerido refere-se ao
+			protocolo HTTP. Como a versão 1.1 do protocolo é bastante extensa, somente as especificações
+			<a href="https://www.rfc-editor.org/info/rfc7230" target="_blank">RFC 7230</a> &ndash;
+			<i>Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing</i> e
+			<a href="https://www.rfc-editor.org/info/rfc7231" target="_blank">RFC 7231</a> &ndash;
+			<i>Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content</i> são indispensáveis.
+			</p>
+			<p>
+			Em vista da natureza do problema, a especificação W3C para o protocolo CORS (<i>Cross-Origin
+			Resource Sharing</i>), definida na sessão 3.2 da especificação da função Javascript
+			<a href="https://fetch.spec.whatwg.org/#http-cors-protocol" target="_blank">Fetch</a> é
+			também conhecimento requerido para o desenvolvimento deste componente.
+			</p>
+			<p>
+			O módulo Node.js mais relevante para o desenvolvimento deste componente é, evidentemente,
+			<a href="https://nodejs.org/dist/latest-v16.x/docs/api/http.html" target="_blank">HTTP</a>.
+			Como se trata de aplicação nativa local, o framework <a href="https://www.electronjs.org/"
+			target="_blank">Electron</a> também será utilizado. Para a montagem do código executável onde
+			a infraestrutura Javascript (interpretador, renderizador HTML, etc.) é embarcada será utilizado
+			o componente <a href="https://electron.github.io/electron-packager/main/" target="_blank">
+			electron-packager</a>.
+			</p>
+		</div>
+	</div>
+
+	<div>
+		<h2><img src="res/dot.png" />API Web e adaptadores de comunicação</h2>
+		<div>
+			<p>
+			Como se trata de desenvolver dois produtos distintos com a mesma finalidade, os <i>sabores</i>
+			do Xapiripë, adaptadores para diferentes meios de comunicação entre os diferentes
+			componentes deverão ser implementados, obedecendo a uma mesma interface de programação. Assim
+			é que os componentes <i>Katamou</i> e <i>Wanhamou</i> foram projetados para suprir a
+			comunicação entre a API <i>Xabo</i> e o listener Hekura e a extensão Yakoana, e entre
+			a API Aroari e o módulo Hamahiri e a aplicação Haxoriwe, respectivamente. Consulte o documento
+			de projeto para maiores detalhes. 
+			</p>
+			<p>
+			Como alguns desses componentes serão embarcados em pacotes externos, como a aplicação web e a
+			extensão Yakoana, o empacotador <a href="https://webpack.js.org/" target="_blank">Webpack</a>
+			deverá ser utilizado.
+			</p>
+		</div>
+	</div>
+
+	<div>
+		<h2>Advertência</h2>
+		<div>
+			<p>
+			Este documento é uma diretriz e não uma camisa de força. Ele sinaliza o nosso conhecimento
+			atual sobre como deveria ser a implementação dos diferentes componentes. Mudanças nas definições
+			ou adições ao longo do projeto são esperadas. 
+			</p>
+			<p>
+			A convenção adotada pela maioria das ferramentas de suporte ao Node.js, a começar pelo próprio npm,
+			é indicar o suporte à versão corrente ou mais recente do componente requerido. O desenvolvimento
+			da Kriptonita nos ensinou que isso é uma temeridade. Aparentemente, a comunidade de desenvolvedores
+			de componentes para Node.js não tem a maturidade do desenvolvimento das comunidades Open Source,
+			que tradicionalmente se esforçam para assegurar retrocompatibilidade quando disponibilizam uma nova
+			versão do seu software. Aliás, isso é mesmo apregoado como uma ação deliberada para facilitar a
+			manutenção. Constatamos isso no projeto Kriptonita, longo o suficiente para que acabássemos por
+			atualizar os diferentes softwares, com efeitos desastrosos: atualizar o nosso próprio software por
+			conta da preguiça alheia.
+			</p>
+			<p>
+			Como essa falta de compromisso com os usuários incautos de seus componentes não parece ter mudado ao
+			longo dos anos, recomendamos enfaticamente que a versão de cada componente de terceiros utilizada
+			seja fixada no arquivo package.json. Neste caso, sendo desejável a atualização, ela deverá ser
+			conduzida explicitamente.
+			</p>
+		</div>
+	</div>
+
+	<div><p class="date">Rio de Janeiro, 1 de novembro de 2021</p></div>
+
+</div>
+</body>
+</html>

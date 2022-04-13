@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="pt">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" href=res/style.css" type="text/css" />
+	<title>Xapiripë &ndash; Modelo de Ameaças</title>
+</head>
+<body>
+<div>
+	<h1>Xapiripë &ndash; Modelo de Ameaças</h1>
+	<div>
+		<p>
+		Este documento descreve o modelo de ameaças que julgamos passível de ser enfrentado pelo projeto Xapiripë.
+		Ele discute as principais ameaças às atividades do software, definindo contramedidas específicas para
+		cada caso. Para sua elaboração procuramos seguir as recomendações OWASP para a modelagem de ameaças,
+		conforme descrito no documento <a href="https://owasp.org/www-community/Threat_Modeling_Process" 
+		target="_blank">Threat Modeling Process</a>.
+		</p>
+	</div>
+	
+	<div>
+		<h2>Premissas do modelo</h2>
+		<div>
+			<p>
+			O conjunto de aplicativos que pretendemos desenvolver durante o projeto Xapiripë terá as seguintes
+			funções principais: 
+			</p>
+			<ol>
+			<li>Fornecer serviço de assinaturas digitais para aplicações web, envelopadas no padrão CAdES-BES,
+			definido na <a href="https://datatracker.ietf.org/doc/html/rfc5126" target="_blank">RFC 5126</a> 
+			(<i>CMS Advanced Electronic Signatures</i>);</li>
+			<li>Eventualmente gerar chaves criptográficas e assinar requisições para a emissão de novos
+			certificados originadas em aplicações web, tal como definidas na
+			<a href="https://datatracker.ietf.org/doc/html/rfc2986" target="_blank" >RFC 2986</a>
+			(<i>PKCS #10: Certification Request Syntax Specification</i>);</li>
+			<li>Instalar no computador do usuário tanto seu certificado pessoal quanto a cadeia de
+			autoridades certificadoras envolvidas na sua emissão, para que o navegador as considerem
+			como confiáveis para emissão de certificados de qualquer tipo.</li>
+			</ol>
+			<p>
+			Ainda que fornecendo serviços para uma aplicação web qualquer, a solução reside no computador do
+			usuário, tendo sido instalada ali a seu convite. Como ela reside fora do perímetro da aplicação,
+			não é possível ser considerada parte segura dela. Portanto, a primeira premissa do modelo que
+			estamos definindo é essa: não lidaremos com quaisquer tipos de ameaças ao negócio ou à
+			implementação da aplicação web que faz uso da API Xapiripë. Isto não faz parte do nosso escopo.
+			</p>
+			<p>
+			Como Xapiripë reside dentro do perímetro definido pelo computador do usuário, é este usuário que
+			precisa ser protegido de eventuais ameaças, é ele o rei nesse tabuleiro de xadrez. No entanto,
+			nosso escopo não é o de um firewall nem de um anti vírus, mas simplesmente de um modesto serviço
+			de fornecimento de assinaturas digitais e emissão de certificados para uma aplicação web. Portanto,
+			nosso modelo de ameaças deve estar restrito ao que pode ocorrer na interação entre seus
+			componentes e uma aplicação web que supostamente quer utilizar esses serviços.
+			</p>
+			<p>
+			Isso implica que não lidaremos também com a miríade de ameças ao computador e sistemas do
+			usuário originadas na Internet através de interações não relacionadas ao serviço do aplicativo,
+			tais como: clique em links maliciosos fornecidos por páginas ou e-mails, download de arquivos
+			potencialmente nocivos, contaminação por vírus etc. Em outras palavras, nosso modelo terá como
+			premissa que o computador do usuário é seguro. Isso, evidentemente, pode não ocorrer. No entanto,
+			a proteção de perímetro que podemos fornecer está restrita à interação do Xapiripë com as
+			requisições de uma aplicação web qualquer. E somente aquelas endereçadas aos nossos componentes.
+			 Se algum outro ponto do perímetro for vulnerável e permitir a invasão do atacante não haverá
+			 nada que possamos fazer, nem mesmo correr para salvar a vida.
+			</p>
+			<p>
+			Há uma terceira premissa a considerar, antes de prosseguirmos. As interações com aplicações web
+			chegam até os componentes Xapiripë através do browser, do navegador Internet. Novamente,
+			precisamos considerar que esta plataforma é igualmente segura e está disposta a colaborar com
+			as nossas medidas de proteção, desde que elaboradas com base nas tecnologias suportadas pelos
+			browsers com essa finalidade. O navegador é um aliado fundamental na proteção do perímetro onde
+			residimos. Se ele falhar, novamente não haverá nada que possamos fazer.
+			</p>
+		</div>
+	</div>
+	
+	<div>
+		<h2>Ameaças e contramedidas</h2>
+		<div>
+			<p>
+			Definidos nossos limites e a origem dos ataques com os quais vamos lidar, passemos a considerar os
+			abusos que pode pretender cometer um atacante. Como lidamos com certificados digitais e infraestruturas
+			de chaves públicas (uma tecnologia de identificação), o objetivo mais óbvio para um atacante é se
+			fazer passar pelo usuário (<i>impersonate</i>), assumindo sua identidade <i>na emissão de um documento
+			ou transação</i>. Note-se que a personificação do usuário só pode ocorrer no nosso contexto através
+			das assinaturas digitais: o objetivo do atacante no nosso caso só pode ser exibir um documento ou
+			transação como se o usuário tivesse concordado com o seu conteúdo. Isto é, o que se forja é o
+			documento assinado e não a própria assinatura. Xapiripë não participa de modo algum dos processos
+			de <i>autenticação</i> de conexões TLS/SSL. Assim, um atacante não pode utilizá-lo para forjar a
+			própria identidade do usuário, se fazendo passar por ele perante aplicações que utilizem esses
+			protocolos.
+			</p>
+			<p>
+			Penso em pelo menos dois meios que um atacante pode utilizar para alcançar esse objetivo. O primeiro
+			deles é fornecer ao usuário um conteúdo para que ele o assine silenciosamente, isto é, sem sequer
+			saber que algo está sendo assinado. Isso é possível no Windows caso sejam geradas chaves criptográficas
+			de assinatura em dispositivo de software mantido pelo sistema operacional sem proteção por senha.
+			Num caso desses, o sistema operacional não exige a autenticação do usuário para uma assinatura.
+			Note-se que isso não ocorre em chaves geradas em smart cards, seja o usuário leniente ou não, já que
+			eles sempre exigem autenticação de sessão e isso nada tem a ver com o software de assinatura.
+			</p>
+			<p>
+			Há diversos meios de viabilizar este ataque. Porém, todos dependem de que as chaves criptográficas
+			associadas ao certificado do usuário tenham sido geradas por software (e não hardware) e sem
+			qualquer proteção. Caso o usuário tenha utilizado os componentes Xapiripë para gerar essas chaves,
+			esse ataque é facilmente detido antes que mesmo de começar pela seguinte contramedida simples:
+			</p>
+			<p class="countermeasure" id="pwd-protection">
+			(i) Ao gerar chaves criptográficas por software, os componentes Xapiripë devem solicitar ao
+			sistema operacional o melhor nível de proteção disponível, independente da anuência do usuário.
+			</p>
+			<p>
+			Neste caso, mesmo que o usuário crie a senha mais fácil possível de se advinhar o ataque não
+			passará desapercebido porque o sistema operacional sempre exigirá autenticação. Porém, o usuário
+			não é obrigado a usar nossos componentes para gerar suas chaves de assinatura. Portanto, precisamos
+			considerar que esse ataque seja possível mesmo adotando aquela contramedida. 
+			</p>
+			<p>
+			Um meio de viabilizar esse ataque é fazer com que o usuário navegue num site malicioso, utilizando
+			potes de mel ou outro recurso de engenharia social. Como a interface de Xapiripë é em Javascript,
+			presença universal e obrigatória em qualquer site, o atacante pode então fornecer o conteúdo malicioso
+			junto com o conteúdo "agradável" sem que o usuário note, tão encantado está com o pote de mel
+			encontrado. E se o uso das chaves não exigir autenticação a assinatura é realizada silenciosamente.
+			</p>
+			<p>
+			Se o usuário pode ser incapaz de reconhecer um site malicioso (e a eventual perseguição a potes de ouro no
+			fim do arco íris do ciberespaço é uma evidência disso), ele, porém, é inteiramente capaz de reconhecer
+			um site para o qual o uso dos componentes Xapiripë é legítimo. Isto porque ele precisa utilizar
+			um determinado serviço no atendimento ao qual o Xapiripë é indispensável. Por exemplo, uma Autoridade
+			Certificadora que faça uso do produto para gerar a requisição do certificado a ser assinado ou
+			uma aplicação cujos documentos e transações requerem assinatura digital para serem válidos e que
+			aceite o uso do produto na sua emissão. Assim, a interação com um site malicioso pode ser detida
+			pela seguinte contramedida:
+			</p>
+			<p class="countermeasure" id="trusted-origin">
+			(ii) As interações dos componentes Xapiripë só serão realizadas com origens que tenham sido
+			previamente autorizadas pelo usuário.
+			</p>
+			<p>
+			Dizemos que duas requisições têm a mesma origem se o protocolo, a porta e o servidor forem os
+			mesmos para ambas. Por exemplo, as URLs https://sicns.caixa.gov.br/enviar e
+			https://sicns.caixa.gov.br/download têm a mesma origem. Por outro lado https://sicns.caixa.gov.br/enviar
+			e http://sicns.caixa.gov.br/enviar, não, já que os protocolos (e, consequentemente, as portas)
+			são diferentes.
+			</p>
+			<p>
+			Note-se também que o advérbio <i>previamente</i> é relevante na descrição da contramedida. Autorizar
+			uma determinada origem deve ser uma ação que ocorra antes do início na navegação no site pretendido.
+			Isto porque diálogos pedindo confirmação de ações específicas na web não costumam ser lidos pelos
+			usuários, que tendem a simplesmente clicar no botão OK sem analisar o conteúdo da mensagem recebida.
+			Assim, a implementação da contramedida requer o fornecimento de uma interface local com o usuário
+			para lhe permitir declarar as origens autorizadas.
+			</p>
+			<p>
+			Embora possa parecer contraintuitivo, a implementação desta regra não é complexa. Isso se deve ao
+			fato de a segurança do navegador já bloquear a execução de scripts cuja origem é distinta
+			da requisição corrente. Como o nosso serviço local responde no endereço de loopback (digamos
+			http://127.0.0.1:9171), o navegador não permite por padrão a execução de qualquer resposta a uma
+			requisição originada na web e endereçada àquele domínio, exceto aquele tipo de resposta associado
+			a um POST de formulário HTML sem retorno de conteúdo.
+			</p>
+			<p>
+ 			Em outras palavras, o navegador tende a bloquear a comunicação entre domínios para além de um
+			conjunto muito restrito de opções. Assim, para que a comunicação entre uma aplicação web (originada,
+			por exemplo, em https://sicns.caixa.gov.br) e o serviço local (originado em outro domínio, no
+			endereço de loopback) seja realizável, o serviço local deve implementar o protocolo
+			<a href="https://fetch.spec.whatwg.org/#http-cors-protocol" target="_blank">CORS</a> (<i>Cross-Origin
+			Resource Sharing</i>, isto é, o compartilhamento de recursos por origens cruzadas). Dentro desse
+			protocolo e para atender à contramedida <i>(ii)</i>, o serviço local só pode responder afirmativamente
+			aos pedidos de comprovação do protocolo para as origens autorizadas previamente pelo usuário. Além
+			disso, qualquer requisição só é aceitável se o header <i>Origin</i> se referir a uma origem
+			previamente autorizada.
+			</p>
+			<p>
+			Note-se que a garantia da origem da requisição é uma das medidas de proteção fornecida pelos
+			navegadores no caso das extensões como a Kriptonita. A única diferença é que, no caso da
+			extensão, cabe ao desenvolvedor declarar (no manifesto do produto) quais as origens aceitas.
+			Ao instalar a extensão, o usuário implicitamente concorda com essa declaração. No nosso
+			caso, o usuário é o responsável direto por essa autorização. Assim, Xapiripë assegura pelo menos o
+			mesmo nível de proteção fornecida pelo navegador às suas extensões.
+			</p>
+			<p>
+			Já lidamos como sites hostis e o fizemos designando sites confiáveis para o uso dos componentes
+			Xapiripë. Do nosso ponto de vista (parte do domínio do usuário e não da aplicação web), porém,
+			tais sites são apenas <i>origens</i> confiáveis e não <i>domínios</i> confiáveis. Precisamos
+			lidar com a hipótese da traição. O atacante pode, por exemplo, explorar alguma vulnerabilidade
+			na aplicação web e, através dela, ser capaz de criar uma requisição falsa para os componentes
+			Xapiripë. Desse modo, o usuário poderia ser levado a assinar um conteúdo malicioso acreditando
+			estar assinando um conteúdo legítimo.
+			</p>
+			<p>
+			Acreditar que uma assinatura digital é o equivalente computacional de uma assinatura de próprio
+			punho, exprimindo a vontade do assinante (salvo quando feita sob ameaça), pode ser uma crença
+			perigosa. Ao assinar um documento em papel uma pessoa cautelosa não tem dúvida do que está
+			assinando, simplesmente porque o conteúdo está inteiramente à vista, mesmo as letras miúdas.
+			Isso não ocorre nas assinaturas digitais: elas são apenas um cálculo matemático realizado
+			pelo computador do usuário sobre um conteúdo binário na memória da máquina. O que está sendo
+			assinado? A resposta a esse raciocínio nos sugere uma contramedida para aquela ameaça:
+			</p>
+			<p class="countermeasure" id="validate-request">
+			(iii) Os conteúdos a serem assinados devem estar disponíveis para inspeção visual pelo usuário,
+			que deve ser instado a validar sua autenticidade.
+			</p>
+			<p>
+			Como Xapiripë faz parte do domínio do usuário e não da aplicação web, ele não tem interesse na
+			operação de assinatura, isto é, a realização de tal operação não nos beneficia ou prejudica 
+			diretamente. Ao contrário, é do interesse da reputação de Xapiripë que seus componentes
+			favoreçam a autenticidade da operação que ajudam a realizar. Em outras palavras, a
+			contramedida se baseia no fato de a solução se comportar como uma <i>terceira parte confiável</i>
+			mediando a transação. Assim, jamais devemos admitir uma assinatura silenciosa, salvo por
+			decisão expressa do usuário. Ao exibir o conteúdo a ser assinado (ou permitir sua inspeção),
+			Xapiripë parte da premissa de que o usuário é capaz de distinguir um conteúdo legítimo de um
+			falso. Como ele é capaz de saber o que deveria assinar, um eventual ataque à aplicação web não
+			será bem sucedido no intento de que o usuário assine um conteúdo falso.
+			</p>
+			<p>
+			Passemos agora a tratar de uma ameaça a Xapiripë que não envolve diretamente o processo de 
+			assinatura, mas as suas precondições. Trata-se de um ataque à terceira funcionalidade do produto,
+			a saber: a instalação do certificado do assinante e sua cadeia de Autoridades Certificadoras.
+			Antes, porém, precisamos esclarecer o motivo de incorporarmos essa funcionalidade ao produto.
+			</p>
+			<p>
+			Os certificados digitais com os quais lidamos têm um propósito adicional à assinatura digital:
+			eles servem igualmente para <i>identificar o usuário</i> (e o servidor) no processo de
+			autenticação de sessões TLS/SSL (<i>Transport Layer Security/Secure Sockets Layer</i>, isto é,
+			camada de segurança do transporte e camada de conexões seguras). Trata-se de protocolos
+			desenvolvidos para assegurar comunicação segura na Internet, tanto identificando as partes
+			comunicantes quanto encriptando o conteúdo comunicado. TLS é o sucessor do protocolo SSL, hoje
+			descontinuado.
+			</p>
+			<p>
+			Não vamos descrever o protocolo. Basta assinalar que ele depende das partes (cliente e servidor)
+			confiarem na(s) Autoridade(s) Certificadora(s) emitente(s) dos certificados envolvidos. O usuário
+			precisa confiar na AC emissora do certificado do servidor e este precisa confiar no emissor do
+			certificado do usuário. Naturalmente, esta premissa (de que o usuário verifica a confiabilidade
+			do certificado do servidor ao qual se conecta) é uma das principais fragilidades do protocolo. 
+			Isso se aplica igualmente à outra premissa: que o usuário verifica que o endereço Internet do
+			servidor, que está contido no certificado do servidor, é igual àquele que pretendia se conectar.
+			Como ninguém faz essas verificações, o navegador assume o papel do usuário e faz por você essas
+			verificações.  
+			</p>
+			<p>
+			Assim, os navegadores já embarcam os certificados de autoridades nas quais confiam (e nas quais o
+			leitor também confia implicitamente, embora não saiba disso). No caso do Windows, o próprio sistema
+			operacional embarca e faz a guarda desse repositório. Naturalmente, o usuário pode acrescentar e
+			remover itens nesses repositórios. Portanto, somente certificados em cujas Autoridades Certificadoras
+			o navegador confia podem ser usados nas conexões TLS. Para permitir que ACs nas quais o navegador
+			não confia previamente possam emitir certificados úteis para autenticação para nossos usuários,
+			Xapiripë, ao instalar um novo certificado de usuário, instala igualmente sua cadeia de ACs.
+			</p>
+			<p>
+			O certificado emitido pelo usuário e os certificados da cadeia de ACs emissoras são distribuídos
+			num campo específico dos arquivos CMS Signed Data (também conhecidos como PKCS#7). Este campo
+			não é objeto de qualquer trato para assegurar sua integridade, isto é, para garantir que seu
+			conteúdo é o mesmo criado pela AC emissora. Assim, podemos imaginar um ataque do tipo
+			<i>man-in-the-middle</i> (homem no meio), quando o atacante intercepta uma mensagem e inspeciona
+			e/ou altera seu conteúdo, entregando-a a seu destinatário. Neste caso, o atacante encontraria
+			um meio de interceptar o arquivo PKCS #7 enviado pela aplicação web aos componentes Xapiripë,
+			substituindo a cadeia de certificados de ACs, em especial o da AC Raiz, por uma cadeia falsa.
+			Isso permitiria, por exemplo, que o atacante criasse um site falso cujo certificado é
+			assinado por essa AC maliciosa, entregando-a ao usuário para autenticação. Como o navegador
+			passou confiar no emissor daquele certificado, ele autentica a conexão. E eis que o usuário
+			foi conduzido a um site malicioso acreditando estar num outro, legítimo. Assim, é importante
+			implementar a seguinte contramedida:
+			</p>
+			<p class="countermeasure" id="install-trusted-cert">
+			(iv) Xapiripë somente instalará certificados de ACs diretamente associados ao certificado
+			do assinante cujas chaves foram geradas pelo componente, verificando previamente sua
+			autenticidade.
+			</p>
+			<p>
+			Isso significa que a instalação da cadeia de certificados deve ser precedida das verificações
+			a seguir. Em primeiro lugar, Xapiripë deve verificar se o certificado do emissor contido no
+			arquivo PKCS #7 corresponde a um par de chaves criptográficas geradas sob seu comando. A
+			seguir, deve efetuar a verificação criptográfica desse certificado e de todos os participantes
+			daquela cadeia.
+			</p>
+			<p>
+			Na verificação criptográfica checamos se a chave pública de um determinado certificado foi
+			assinada pela chave privada correspondente a de um outro certificado, supostamente confiável.
+			No nosso caso, essa verificação visa autenticar não o certificado emitido, mas o seu emissor.
+			Isso só pode ocorrer se as chaves tiverem sido geradas pelo comando de Xapiripë. Isto porque,
+			neste caso, antes de assinar a requisição, Xapiripë verificou que o usuário confia na origem
+			do comando, isto é, nós estamos certos de ter entregue a requisição a uma AC no qual o
+			usuário confia e que, portanto, o arquivo correspondente à requisição assinada foi criado
+			pela própria AC. 
+			</p>
+			<p>
+			Neste caso, se o atacante for capaz de interceptar o arquivo PKCS #7 enviado pela AC e
+			substituir a cadeia de ACs, a verificação criptográfica do certificado do assinante falhará e
+			a tentativa de ataque será descoberta e detida.
+			</p>
+		</div>
+	</div>
+	
+	<div>
+		<h2>À guisa de conclusão</h2>
+		<div>
+			<p>
+			Este documento termina aqui; a busca por ameaças à atividade de Xapiripë, não. A medida que o
+			desenvolvimento dos componentes avançar devemos retornar a esse tipo de análise, visando
+			identificar novas ameaças e elaborar contramedidas apropriadas. Assim, pretendemos revisar
+			este documento periodicamente, buscando aperfeiçoar o modelo de ameaças.
+			</p>
+		</div>
+	</div>
+
+	<div><p class="date">Rio de Janeiro, 26 de outubro de 2021</p></div>
+
+</div>
+</body>
+</html>

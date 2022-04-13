@@ -1,0 +1,51 @@
+{
+	"name": "xapiripe",
+	"version": "1.0.0",
+	"description": "Digital signatures for web applications solution",
+	"scripts": {
+		"sign-request": "node ./pki/pki.js --issue ./pki/usr/request.req",
+		"start-hekura": "node ./test/hekura-test.js pki=./pki service=true",
+		"start-server": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip",
+		"start-forbidden": "http-server ./test -a 10.0.2.15 -p 8090 -o --log-ip",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"hamahiri-build": "cd hamahiri & node-gyp rebuild",
+		"hamahiri-test": "node --napi-modules ./test/hamahiri-test.js ./pki",
+		"aroari-test": "node ./test/aroari-test.js ./pki",
+		"wanhamou-test": "node ./test/wanhamou-test.js",
+		"hekura-test": "node ./test/hekura-test.js pki=./pki service=false",
+		"app-test": "chcp 65001>nul & electron ./appservice/main.js",
+		"app-build": "node build-app.js",
+		"aroari-docs": "node make-docs.js aroari",
+		"hamahiri-docs": "node make-docs.js hamahiri",
+		"hekura-docs": "node make-docs.js hekura",
+		"wanhamou-docs": "node make-docs.js wanhamou",
+		"options-docs": "node make-docs.js options"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://bitbucket.org/yakoana/xapiripe.git"
+	},
+	"author": "Marco Antonio Gutierrez",
+	"license": "LGPL-3.0-or-later",
+	"bugs": {
+		"email": "yorick.flannagan@gmail.com"
+	},
+	"keywords": [
+		"CAdES",
+		"Crypto",
+		"PKI"
+	],
+	"os": [
+		"win32"
+	],
+	"gypfile": true,
+	"dependencies": {
+		"asn1js": "^2.3.2",
+		"node-addon-api": "^4.3.0",
+		"tcp-port-used": "^1.0.2"
+	},
+	"devDependencies": {
+		"electron": "^18.0.3",
+		"electron-packager": "^15.4.0"
+	}
+}

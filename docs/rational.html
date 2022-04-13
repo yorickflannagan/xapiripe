@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="pt">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" href="res/style.css" type="text/css" />
+	<title>Xapiripë &ndash; Racional do Projeto</title>
+</head>
+<body>
+<div>
+	<h1>Xapiripë &ndash; Racional do Projeto</h1>
+	<div>
+		<p>
+		Este documento justifica a necessidade de uma completa revisão do assinador web
+		Kryptonite e descreve, em linhas gerais, uma nova solução. Ele documenta igualmente
+		algumas macro atividades a serem realizadas.
+	</p>
+	</div>
+	
+	<div>
+		<h2>Motivações do novo projeto</h2>
+		<div>
+			<p>
+			Com certeza, uma das principais motivações para uma completa revisão do produto
+			consiste na ameaça de o navegador Google Chrome eventualmente deixar de suportar
+			a versão 2 do manifesto das extensões nele instaladas e hospedadas na Chrome Web
+			Store. Algumas das características técnicas que incorporamos à versão original
+			do produto não são suportadas na versão 3 do manifesto. Assim, a simples migração
+			de uma versão para outra do manifesto exige manutenção significativa nas extensões,
+			o que pode se tornar um risco para projeto, se precisar ser feita com brevidade.
+			</p>
+			<p>
+			Uma segunda motivação é a elevada complexidade que precisamos introduzir nas
+			características de comunicação entre os componentes das extensões por conta do
+			objetivo de assegurar suporte também ao Mozilla Firefox. Como o avaliador da loja
+			Add-ons for Firefox não aprovou o design das extensões, ainda que sem fundamentos
+			nas políticas de desenvolvimento documentadas para o navegador, recusando-se a
+			hospedá-las, esta complexidade tornou-se apenas uma fonte potencial de bugs, sem
+			o benefício de vantagens claras para o produto.
+			</p>
+			<p>
+			Esse obstáculo colocou a necessidade de fornecer alguma alternativa para os (poucos)
+			usuários daquele navegador no Brasil. Na verdade, se quiséssemos atender à exigência
+			do avaliador do Firefox deveríamos reconstruir as extensões criptográficas,
+			condensando-as numa única &ndash; a razão do seu desagrado.
+			</p>
+			<p>
+			Uma outra questão que precisa ser considerada refere-se às frequentes alterações,
+			ocorridas recentemente, nas políticas de hospedagem da Chrome Web Store. Essa frequência,
+			se mantida, pode tornar mais frequente também a necessidade de manutenção da Kriptonita,
+			um risco evidente para um produto sustentado por um único desenvolvedor. Isso exige
+			que repensemos a decisão de hospedar a solução de assinatura digital pela web em
+			extensão de browser. Pelo menos há que se considerar a mitigação de tais riscos.
+			</p>
+			<p>
+			Uma decisão de design com elevado impacto nessa frequência de manutenções foi,
+			certamente, a grande concentração de responsabilidades na aplicação nativa host.exe,
+			desenvolvida em C e compilada hoje exclusivamente para o sistema operacional da
+			Microsoft. A existência de um componente deste tipo é uma exigência	incontornável do
+			problema de interagir com smart cards e dispositivos criptográficos de software ainda hoje.
+			A concentração de responsabilidades neste componente é de tal ordem que as extensões de
+			navegador podem ser vistas apenas como um meio de transporte das requisições originadas
+			na aplicação web. Ora, em vista da escassez de profissionais qualificados na linguagem de
+			programação adotada no mercado brasileiro é um risco de longo prazo para a organização
+			que adotar o projeto, risco que requer mitigação. Se em 2017 a comunidade Javascript não
+			estava madura o suficiente para fornecer soluções criptográficas que atendessem às
+			necessidades, isso não é mais realidade hoje, permitindo reduzir as responsabilidades
+			da aplicação nativa ao mínimo necessário para interagir com os dispositivos criptográficos.
+			</p>
+			<p>
+			Um último obstáculo recente cuja remoção implica na revisão do projeto da Kriptonita é a
+			impossibilidade atual de distribuir novas versões do aplicativo nativo utilizando a Chrome
+			Web Store. Como mencionamos em outra oportunidade, na época da concepção do produto não
+			havia qualquer obstáculo a que componentes binários, codificados em Base64, fossem
+			incorporados à distribuição das extensões. Isso não é mais verdade, por conta de recente
+			alteração nas políticas de hospedagem da Chrome Web Store. Assim, é indispensável o
+			fornecimento de uma solução para esse problema, em particular tendo em vista o que
+			assinalamos no parágrafo anterior.
+			</p>
+		</div>
+	</div>
+	
+	<div>
+		<h2>Revisão arquitetural</h2>
+		<div>
+			<p>
+			Uma abordagem inicial para o problema é proceder a uma simplificação geral da arquitura de
+			implementação da Kriptonita, contando com os novos cenários tecnológicos e as novas políticas
+			de hospedagem da Chrome Web Store, além de incorporar ao projeto nossa experiência com a
+			tentativa de suporte ao Mozilla Firefox. Um diagrama ilustrativo dessa abordagem pode ser
+			visto na Figura 1, a seguir: 
+			</p>
+			<figure>
+				<img src="res/extension-deployment.png" alt="Nova arquitetura para a(s) extensão(ões) Chrome" />
+				<figcaption>Figura 1: Nova arquitetura para a(s) extensão(ões) Chrome</figcaption>
+			</figure>
+			<p>
+			A primeira simplificação é a condensação das três extensões criptográficas hoje existentes
+			numa única, rebatizada na ilustração. A escolha por dividir a funcionalidade criptográfica
+			em três extensões deveu-se, em primeiro lugar, à nossa interpretação das políticas de
+			hospedagem da Chrome Web Store à época, que parecia favorecer um único propósito o mais
+			atômico possível para a extensão. Além disso, essa escolha permitiria que os usuários pudessem
+			optar por diferentes funcionalidades, de acordo com o seu uso. Essa escolha revelou-se
+			problemática.
+			</p>
+			Logo de saída, observamos, através das estatísticas da loja, que os usuários não optavam por
+			reduzir o escopo da sua instalação, preferindo simplificar o processo de instalar o produto.
+			O fato de distribuir quatro extensões numa única instalação implicou também em problemas de
+			instalação. Em inúmeros casos, o navegador parava de solicitar a aprovação das extensões
+			antes de todas terem sido exibidas, com impacto direto no atendimento ao usuário.
+			A distribuição funcional também não favoreceu à manutenção: na maioria das vezes, as
+			mudanças requeridas no produto foram aplicadas a todas as extensões, em vista de afetarem
+			o código comum que caracteriza uma extensão de navegador. Por fim, as políticas de hospedagem
+			da Chrome Web Store não se revelaram hostis a uma única extensão criptográfica.
+			</p>
+			<p>
+			A segunda simplificação, de pequeno mas relevante impacto,  é a remoção da extensão de Zip do
+			navegador. Isso se deve ao fato de ela não requerer privilégios típicos de extensões, podendo
+			residir inteiramente na camada web, como um componente distribuído à parte e incorporado ao
+			acervo da aplicação.
+			</p>
+			<p>
+			A terceira simplificação arquitetural é possível por conta do amadurecimento das tecnologias
+			e produtos baseados no Javascript. Trata-se da redução das responsabilidades do componente
+			nativo e sua transferência para a extensão, incoporadas a um novo componente, implementado
+			em Javascript. Ao novo componente nativo, provisoriamente batizado <i>Hamahiri</i> e
+			desenvolvido em C como um <a href="https://nodejs.org/api/addons.html" target="_blank" >
+			<i>add-on</i> para Node.js</a>, caberia exclusivamente o acesso aos dispositivos
+			criptográficos de software e hardware mantidos pelo sistema operacional, a saber:
+			</p>
+			<ul>
+				<li>Enumeração dos provedores e dispositivos criptográficos presentes;</li>
+				<li>Geração de chaves RSA;</li>
+				<li>Instalação de certificados e cadeias confiáveis;</li>
+				<li>Enumeração dos certificados instalados que sejam associados a chaves privadas;</li>
+				<li>Assinatura digital do hash dos documentos.</li>
+			</ul>
+			<p>
+			As demais funções criptográficas hoje atribuídas ao componente nativo seriam transferidas para
+			um componente Javascript, provisoriamente batizado <i>Aroari</i>. Logo de saída, passaria para
+			esse novo domínio o cálculo do hash dos documentos, que pode requerer a leitura de arquivos muito
+			grandes. Aroari basearia sua implementação no módulo
+			<a href="https://nodejs.org/api/crypto.html" target="_blank">Crypto</a> do Node.js. Por outro
+			lado, a implementação dos envelopes CMS (<i>Cryptographic Message Syntax</i>), tal como
+			definida na <a href="https://www.rfc-editor.org/rfc/rfc5652.html" target="_blank">RFC 5652</a>,
+			seria baseada na biblioteca <a href="https://www.npmjs.com/package/asn1js" target="_blank">asn1js</a>,
+			também para Node.js.
+			</p>
+			<p>
+			A arquitetura dos navegadores exige que o componente nativo seja hospedado numa aplicação nativa,
+			cujo processo é iniciado pelo navegador e que responde às extensões através de mensagens JSON
+			enviadas através do dispositivo padrão de entrada e saída (<i>native messaging</i>.
+			A simplificação proposta seria implementar esse aplicativo em Javascript, provisoriamente
+			batizado <i>Haxoriwe</i>, baseando seu desenvolvimento no <i>framework</i>
+			<a href="https://www.electronjs.org/" target="_blank">Electron</a>.
+			</p>
+			<p>
+			Essa abordagem tem as seguintes caracteríticas vantajosas:
+			</p>
+			<ul>
+				<li>
+				Resolve o problema recente de assinar arquivos muito grandes, reduzindo o tempo de espera
+				do usuário em relação à correção adotada;
+				</li>
+				<li>
+				Atende implicitamente as novas características exigidas das extensões Chrome, em vista da
+				reengenharia completa implicada;
+				</li>
+				<li>
+				Favorece a manutenção no curto prazo, ao simplificar a solução, redistribuindo suas
+				responsabilidades entre diferentes componentes;
+				</li>
+				<li>
+				Favorece a sustentação da aplicação a longo prazo, ao baseá-la quase que integralmente em
+				Javascript, reduzindo a necessidade de manutenção no componente em C.
+				</li>
+			</ul>
+		</div>
+	</div>
+	
+	<div>
+		<h2>Uma nova solução</h2>
+		<div>
+			<p>
+			A solução apresentada resolve inúmeros problemas, mas não todos. Permanece sem solução o problema
+			de fornecer suporte a outros navegadores não baseados no
+			<a href="https://www.chromium.org/Home" target="_blank">Chromium</a>. Igualmente relevante é a
+			permanência dos riscos associados à hospedagem da solução por terceiros, em particular a
+			necessidade de manutenção ocasionadas por decisões do hospedeiro, como ocorreu diversas vezes
+			no projeto. Além disso, ainda não abordamos uma proposta para solucionar o problema da atualização
+			dos componentes nativos. A Figura 2, a seguir, ilustra uma proposta para mitigar também esse risco
+			remanescente:
+			</p>
+			<figure>
+				<img src="res/listener-deployment.png" alt="Roteamento utilizando um servidor HTTP local" />
+				<figcaption>Figura 2: Roteamento utilizando um servidor HTTP local</figcaption>
+			</figure>
+			<p>
+			Neste modelo, a aplicação web se utiliza de uma API cuja camada de comunicação está implementada
+			sob tecnologia AJAX (<i> Asynchronous JavaScript And XML</i>) (digamos, utilizando o objeto de
+			browser XMLHttpRequest). Esta API, ao invés de enviar a requisição a uma extensão através de
+			mensagens DOM (da implementação HTML), envia comandos HTTP a um servidor localmente instalado,
+			provisoriamente batizado <i>Hekura</i>, que atende no endereço de <i>loopback</i> (o IP 127.0.0.1,
+			que não requer conexão física a uma rede).
+			</p>
+			<p>
+			Este servidor, a ser desenvolvido em Javascript sob o framework <i>Electron</i>, embarca a API
+			Aroari e o componente nativo Hamahiri. É, portanto, inteiramente capaz de atender a todas as
+			requisições criptográficas das aplicações sem recorrer ao navegador. Isto significa que a
+			solução é, pelo menos teoricamente, independente do fabricante do navegador, exigindo apenas
+			um sistema operacional específico (o Microsoft Windows).
+			</p>
+			<p>
+			Como este servidor precisa estar ativo permanentemente, de modo a ser capaz de responder a qualquer
+			requisição originada no browser local, cabe a ele verificar periodicamente a existência de novas
+			versões de um dos componentes da solução. E como ele próprio pode ser sujeito a atualização, a
+			arquitetura de implementação precia prever um outro aplicativo para realizar a atualização e a
+			execução do serviço.
+			</p>
+			<p>
+			Esta solução viola a chamada <i>política da mesma origem</i>, implementada pelos navegadores.
+			Trata-se de um mecanismo de segurança que restringe a obtenção e execução de documentos e scripts
+			somente ao servidor de origem da requisição. O objetivo aqui é isolar documentos potencialmente
+			maliciosos, reduzindo possíveis vetores de ataque. Isso implica que, por padrão, o navegador não
+			permitirá que um script obtido da origem https://sicns.caixa.gov.br acesse recursos de um serviço
+			residente em http://127.0.0.1:9171. Assim, o serviço precisa implementar o mecanismo CORS
+			(<i>Cross-Origin Resource Sharing</i>). Este mecanismo permite a um servidor indicar outras origens
+			das quais o navegador pode obter recursos para ele próprio.
+			</p>
+			<p>
+			Além de permitir que o serviço local funcione associado a uma aplicação web remota, esse mecanismo
+			igualmente ajuda a proteger o usuário de ataques maliciosos: o serviço local precisa declarar que origens
+			são confiáveis. No nosso caso, as origens que utilizarem a solução precisarão ser cadastradas junto
+			ao servidor local. Com a anuência do usuário, naturalmente! Isso sugere que a solução requer um
+			outro aplicativo, este com interface com o usuário (batizado de <i>Signthing</i>), que permita a ele
+			autorizar explicitamente as origens confiáveis, podendo a qualquer tempo cadastrar novas.
+			</p>
+			<p>
+			Esta solução pode substituir inteiramente a solução baseada em extensões do browser, resolvendo todos
+			os problemas que assinalamos. Assim, entendemos que seu desenvolvimento deve ser priorizado. No
+			entanto, prudência (e a continuidade) sugere que se mantenha a solução baseada em extensão de
+			browser no radar do desenvolvimento.
+			</p>
+		</div>
+	</div>
+	
+	<div>
+		<h2>Mais detalhes da solução</h2>
+		<div>
+			<p>
+			Se mantivermos a estratégia de dois sabores para a solução &ndash; o sabor Hekura e o sabor Yakoana
+			&ndash; então mais alguns componentes são necessários. Em vista das diferentes estratégias
+			precisamos de diferentes tipos de comunicação entre a API web e os componentes que recebem as
+			requisições. O mesmo é válido para a comunicação entre esses componentes e a API nativa Hamahiri.
+			A Figura 3, a seguir, inclui esses componentes, além de dar uma visão global da distribuição da
+			solução.
+			</p>
+			<figure>
+				<img src="res/deployment.png" alt="A solução Xapiripë" />
+				<figcaption>Figura 3: A solução Xapiripë</figcaption>
+			</figure>
+		</div>
+	</div>
+	
+	<div>
+		<h2>Sumário do projeto de especificação e implementação do sabor Hekura</h2>
+		<div>
+		<p>
+		Nosso planejamento inicial abrange tão somente a implementação do sabor Hekura por uma simples
+		razão: ainda que com os defeitos apontados, o sabor de extensão de browser está operacional e
+		não requer, pelo menos imediatamente, manutenção alguma.
+		</p>
+		<table>
+		<tr>
+			<th></th>
+			<th>Atividade</th>
+			<th>Artefato de entrega</th>
+		</tr>
+		<tr>
+			<td>1</td>
+			<td>Modelagem de ameaças ao sabor</td>
+			<td>Documento de definição das ameaças e projeto de contramedidas</td>
+		</tr>
+		<tr>
+			<td>2</td>
+			<td>Projeto do componente Hamahiri</td>
+			<td>Documento de especificação de interface</td>
+		</tr>
+		<tr>
+			<td>3</td>
+			<td>Implementação do componente Hamahiri</td>
+			<td>Aplicação de teste de unidade</td>
+		</tr>
+		<tr>
+			<td>4</td>
+			<td>Projeto do componente Aroari</td>
+			<td>Documento de especificação de interface</td>
+		</tr>
+		<tr>
+			<td>5</td>
+			<td>Implementação do componente Aroari</td>
+			<td>Aplicação de teste de uidade</td>
+		</tr>
+		<tr>
+			<td>6</td>
+			<td>Projeto do componente Wanhamou</td>
+			<td>Documento de especificação de interface</td>
+		</tr>
+		<tr>
+			<td>7</td>
+			<td>Implementação do componente Wanhamou</td>
+			<td>Aplicação de teste de unidade</td>
+		</tr>
+		<tr>
+			<td>8</td>
+			<td>Projeto do serviço Hekura</td>
+			<td>Documento de descrição dos componentes a implementar</td>
+		</tr>
+		<tr>
+			<td>9</td>
+			<td>Implementação do serviço Hekura</td>
+			<td>Aplicação teste de unidade	</td>
+		</tr>
+		<tr>
+			<td>10</td>
+			<td>Projeto do componente Xabo</td>
+			<td>Documento de especificação de interface</td>
+		</tr>
+		<tr>
+			<td>11</td>
+			<td>Projeto do adaptador Katamou</td>
+			<td>Documento de especificação de interface</td>
+		</tr>
+		<tr>
+			<td>12</td>
+			<td>Implementação do componente Xabo</td>
+			<td>Apicação de teste de unidade</td>
+		</tr>
+		<tr>
+			<td>13</td>
+			<td>Implementação do adaptador Katamou</td>
+			<td>aplicação de teste de unidade</td>
+		</tr>
+		<tr>
+			<td>14</td>
+			<td>Integração dos componentes</td>
+			<td>Aplicação web de teste de regressão</td>
+		</tr>
+		<tr>
+			<td>15</td>
+			<td>Projeto da aplicação Signthing</td>
+			<td>Aplicativo de protótipo</td>
+		</tr>
+		<tr>
+			<td>16</td>
+			<td>Implementação da aplicação</td>
+			<td>Aplicação para teste integrado</td>
+		</tr>
+		<tr>
+			<td>17</td>
+			<td>Projeto do componente Kaimou</td>
+			<td>Documento de descrição dos componentes a implementar</td>
+		</tr>
+		<tr>
+			<td>18</td>
+			<td>Implementação do componente Kaimou</td>
+			<td>Aplicação para teste integrado</td>
+		</tr>
+		<tr>
+			<td>19</td>
+			<td>Projeto do instalador</td>
+			<td>Documento de descrição dos procedimentos de instalação</td>
+		</tr>
+		<tr>
+			<td>20</td>
+			<td>Implementação do instalador</td>
+			<td>Aplicativo do Microsoft Installer (MSI)</td>
+		</tr>
+		</table>
+		</div>
+	</div>
+	
+	<div>
+		<h2>Glossário Yanomami</h2>
+		<ul>
+			<li>Aroari: pó mágico encantador</li>
+			<li>Hama-hiri: mundo subterrâneo, para onde vão os decaídos</li>
+			<li>Haxoriwe: espírito do macaco branco</li>
+			<li>Hekura: espírito do mundo religioso</li>
+			<li>Kaimou: consultas noturnas entre membros de uma aldeia</li>
+			<li>Kat-Amou: ritual noturno de trocas</li>
+			<li>Wanhamou: ritual como jornal falado e cantado noturno, para trocas</li>
+			<li>Xabo: pó mágico encantador</li>
+			<li>Xapiripë: espírito ancestral animal que auxilia os xamãs (xapiri thëpë) a impedir que os céus desabem sobre nossas cabeças</li>
+			<li>Yakoana: pó mágico utilizado nas cerimônias de evocação dos xapiripës</li>
+		</ul>
+	</div>
+
+	<div><p class="date">Rio de Janeiro, 19 de outubro de 2021</p></div>
+
+</div>
+</body>
+</html>
