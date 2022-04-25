@@ -3,22 +3,26 @@
 	"version": "1.0.0",
 	"description": "Digital signatures for web applications solution",
 	"scripts": {
-		"sign-request": "node ./pki/pki.js --issue ./pki/usr/request.req",
-		"start-hekura": "node ./test/hekura-test.js pki=./pki service=true",
+
 		"start-server": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip",
 		"start-forbidden": "http-server ./test -a 10.0.2.15 -p 8090 -o --log-ip",
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"hamahiri-build": "cd hamahiri & node-gyp rebuild",
-		"hamahiri-test": "node --napi-modules ./test/hamahiri-test.js ./pki",
-		"aroari-test": "node ./test/aroari-test.js ./pki",
-		"wanhamou-test": "node ./test/wanhamou-test.js",
-		"hekura-test": "node ./test/hekura-test.js pki=./pki service=false",
-		"app-test": "chcp 65001>nul & electron ./appservice/main.js",
-		"app-build": "node build-app.js",
-		"aroari-docs": "node make-docs.js aroari",
+		"sign-request": "node ./pki/pki.js --issue ./pki/usr/request.req",
+		"start-hekura": "node ./test/hekura-test.js --pki=./pki --service=true",
+
+		"hamahiri-build": "cd hamahiri & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
+		"hamahiri-test": "node --napi-modules ./test/hamahiri-test.js --pki=./pki --check",
+		"aroari-test": "node ./test/aroari-test.js --pki=./pki --check",
+		"wanhamou-test": "node ./test/wanhamou-test.js --check",
+		"hekura-test": "node ./test/hekura-test.js --pki=./pki --service=false --check",
+		"test": "CD test & node all-components.js --pki=../pki --service=false",
+
+		"service-test": "CHCP 65001>nul & electron ./appservice/main.js",
+		"service-build": "node build.js --build=service --distributorId=br.gov.caixa --updateURL=http://192.168.0.3:8080 --arch=x64",
+
 		"hamahiri-docs": "node make-docs.js hamahiri",
-		"hekura-docs": "node make-docs.js hekura",
+		"aroari-docs": "node make-docs.js aroari",
 		"wanhamou-docs": "node make-docs.js wanhamou",
+		"hekura-docs": "node make-docs.js hekura",
 		"options-docs": "node make-docs.js options"
 	},
 	"repository": {
@@ -35,17 +39,18 @@
 		"Crypto",
 		"PKI"
 	],
-	"os": [
-		"win32"
-	],
+	"os": [ "win32" ],
 	"gypfile": true,
+	"devDependencies": {
+		"electron": "^18.0.3",
+		"electron-packager": "^15.4.0",
+		"electron-winstaller": "^5.0.0",
+		"yargs": "^17.4.1"
+	},
 	"dependencies": {
 		"asn1js": "^2.3.2",
 		"node-addon-api": "^4.3.0",
 		"tcp-port-used": "^1.0.2"
-	},
-	"devDependencies": {
-		"electron": "^18.0.3",
-		"electron-packager": "^15.4.0"
 	}
-}
+  }
+  

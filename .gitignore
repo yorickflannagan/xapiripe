@@ -6,4 +6,7 @@ pki/newcerts/*.pem
 pki/*.old
 pki/usr/*
 *.log
+*.node
+appservice/*.json
 options.json
+distribution.json

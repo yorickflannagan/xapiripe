@@ -6,7 +6,7 @@
  */
 
 'use strict';
-const addon = require('../hamahiri/build/Release/hamahiri-native');
+const addon = require('./hamahiri-native');
 
 /**
  * Global objects

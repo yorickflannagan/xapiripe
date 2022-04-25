@@ -25,6 +25,12 @@ class Message {
 	 */
 	static WARN = 'warn-user';
 	/**
+	 * Indica a ocorrência de erro fatal no serviço Hekura
+	 * @member { String }
+	 * @default error-on-service
+	 */
+	static ERROR = 'error-on-service';
+	/**
 	 * Cria uma nova instância do objeto
 	 * @param { String } signal: identificador do tipo da mensagem
 	 */
@@ -43,12 +49,34 @@ class Message {
  * @property { String | ArrayBuffer } value: conteúdo a ser assinado, caso a operação seja de assinatura.
  */
  class WarnMessage extends Message {
+	 /**
+	  * Cria uma nova mensagem de alerta
+	  * @param { String } operationId: identificador da operação sob alerta
+	  * @param { String } referer: valor do header HTTP correspondente à origem da requisição
+	  * @param { String } value: conteúdo da operação, se for o caso
+	  */
 	constructor(operationId, referer, value) {
 		super(Message.WARN);
 		this.msgId = crypto.randomUUID();
 		this.operationId = operationId;
 		this.referer = referer;
 		this.value = value;
+	}
+}
+
+/**
+ * Mensagem indicando um erro fatal ocorrido no serviço Hekura
+ * @property { String } signal: identificador da mensagem
+ * @property { String } error: mensagem de erro
+ */
+class ErrorMessage extends Message {
+	/**
+	 * Cria uma nova mensagem de erro
+	 * @param { String } msg: mensagem de erro
+	 */
+	constructor(msg) {
+		super(Message.ERROR);
+		this.error = msg;
 	}
 }
 
@@ -135,4 +163,4 @@ class DelayedPromise
 	}
 }
 
-module.exports = { Message, WarnMessage, WarnResponse, UserQuestion, UserAnswer, DelayedPromise };
+module.exports = { Message, WarnMessage, ErrorMessage, WarnResponse, UserQuestion, UserAnswer, DelayedPromise };

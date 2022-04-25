@@ -112,7 +112,7 @@ function hashObject(ob) {
 	return hash.digest();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
 	try {
 
 		// Elementos de UI

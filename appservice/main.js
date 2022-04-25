@@ -9,6 +9,7 @@
  * Xapiripe - Standalone Hekura service
  * See https://bitbucket.org/yakoana/xapiripe/src/master/appservice
  * main.js - Electron main process
+ * @version: 1.0.0
  * 
  * This application is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -27,18 +28,26 @@
 const { app, BrowserWindow, Menu, Tray, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const cp = require('child_process');
-const { Config } = require('../components/options');
+const { Config } = require('./config');
 const { sprintf } = require('../components/wanhamou');
 const { Message, WarnResponse, UserQuestion, DelayedPromise } = require('./module');
+const { Distribution } = require('../components/options');
+const { UpdateManager } = require('../components/update');
 
 
-
-const OPTIONS = path.join(__dirname, '..', 'options.json');
-const ICO = path.join(__dirname, 'res', 'signature-32x32.ico');
-const IFACE = path.join(__dirname, 'res', 'options.html');
+const DISTRIBUTION_FILE = path.resolve(__dirname, './distribution.json');
+const OPTIONS_FILE = path.resolve(process.env.USERPROFILE, '.hekura', 'options.json');
+const ICON_FILE = path.resolve(__dirname, './res', 'signature-32x32.ico');
+const OPTIONS_HTML = path.resolve(__dirname, './res', 'options.html');
+const ASK_HTML = path.resolve(__dirname, './res', 'ask.html');
+const ASK_JS = path.resolve(__dirname, './ask.js')
 const LICENCE = 'https://opensource.org/licenses/LGPL-3.0';
-const HELP = 'file:///' + path.join(__dirname, 'res', 'help.html');
+const HELP_URL = 'file:///' + path.resolve(__dirname, './res', 'help.html');
+
+const APP_UPDATE = 'Atualização do aplicativo';
+const APP_EXIT = 'Finalização do aplicativo';
 const APP_TITLE = 'Serviço Hekura';
+const APP_FAILURE = 'Falha no Serviço Hekura';
 const OPERATIONS = [ 'enumerateDevices', 'generateCSR', 'installCertificates', 'enumerateCertificates', 'sign', 'verify' ];
 const ACTIONS = [
 	'enumerar dispositivos criptográficos presentes',
@@ -48,16 +57,17 @@ const ACTIONS = [
 	'assinar o documento a seguir',
 	'verificar documento assinado'
 ];
-const contextMenu = [
+const CHOICE_BUTTONS = [ 'Sim', 'Não' ];
+const CTX_MENU = [
 	{ label: 'Opções do serviço...', click: () => { optionsWindow.show(); }},
 	{ 'type': 'separator' },
-	{ label: 'Ajuda', click: () => { shell.openExternal(HELP)}},
+	{ label: 'Ajuda', click: () => { shell.openExternal(HELP_URL)}},
 	{ label: 'Licença', click: () => { shell.openExternal(LICENCE)}},
 	{ label: 'Sobre...', click: () => {
-		let contents = 'Versão: '.concat(app.getVersion()).concat('\n')
-			.concat('Electron: ').concat(process.versions.electron).concat('\n')
-			.concat('Chrome: ').concat(process.versions.chrome).concat('\n')
-			.concat('Node.js: ').concat(process.versions.node).concat('\n');
+		let contents = distribution.productName
+			.concat('\n  ').concat(distribution.productDescription)
+			.concat('\n  ').concat(distribution.company)
+			.concat('\n  Distribuído por: ').concat(distribution.distributorId);
 		tray.displayBalloon({
 			iconType: 'info',
 			title: 'Sobre o ' + APP_TITLE,
@@ -68,10 +78,28 @@ const contextMenu = [
 	{ 'type': 'separator' },
 	{ label: 'Sair', click: () => { app.quit(); }}
 ];
-const optionsMenu = [
-	{ label: 'Fechar', click: () => { optionsWindow.close(); }}
-];
+const OPTION_SMENU = [{ label: 'Fechar', click: () => { optionsWindow.close(); }}];
 
+const UNKNOWN_PROPERTY = 'Valor da propriedade operationId do objeto de mensagem não conhecido';
+const ASK_MESSAGE = 'Você recebeu uma solicitação para %s do serviço web residente em %s. Deseja prosseguir?';
+const ASK_FAILURE = 'Ocorreu o seguinte erro ao solicitar a aprovação do usuário: %s';
+const IPC_FAILURE = 'Não foi possível processar a resposta fornecida pelo usuário por falha na comunicação interna do aplicativo.';
+const DONT_ASK = 'Não perguntar novamente';
+const DISTRIBUTION_FAILURE = 'Ocorreu o seguinte erro ao carregar o arquivo de identificação da distribuição: %s. A aplicação não está funcionando apropriadamente e será fechada.';
+const CONFIG_FAILURE = 'Ocorreu o seguinte erro ao processar o arquivo de configuração: %s. Assumindo os valores padrão.';
+const ORIGINS_INFO = 'Atendendo às seguintes origens confiáveis:';
+const ORIGINS_NO_INFO = ' nenhuma origem cadastrada';
+const QUIT_FAILURE = 'Ocorreu o seguinte erro ao salvar o arquivo de configuração: %s. Todas as alterações eventualmente feitas serão perdidas.';
+
+
+/**
+ * Informações sobre a distribuição do produto
+ */
+let distribution = null;
+/**
+ * Slot para guarda de erros ocorridos durante o processamento Squirrel.
+ */
+let lastEventError = null;
 /**
  * Interface com o usuário para escolha das opções de inicialização da aplicação. Em particular, permite que a contramedida (ii), 
  * definida no documento Modelo de Ameaças, seja implementada pelo processador REST. Ela permite que o usuário declare as
@@ -103,19 +131,21 @@ let service = null;
  * A chave do mapa é um UUID de identificação da mensagem e o valor, uma instância de RenderParams,
  * objeto capaz de resolver a Promise retornada ao processador Hekura de requisições REST
  */
- let params = new Map();
+let params = new Map();
 
- /**
-  * Valor do mapa de mensagens enviadas
-  * @property { DelayedPromise } promise: promise retornada por askUser(), resolvida quando da recepção do evento user-answer
-  * @property { UserQuestion } question: objeto contendo as informações necessárias à decisão do usuário
-  */
+
+/**
+ * Valor do mapa de mensagens enviadas
+ * @property { DelayedPromise } promise: promise retornada por askUser(), resolvida quando da recepção do evento user-answer
+ * @property { UserQuestion } question: objeto contendo as informações necessárias à decisão do usuário
+ */
 class RenderParams {
 	constructor(promise, question) {
 		this.promise = promise;
 		this.question = question;
 	}
 }
+
 /**
  * Exibe janela de alerta ao usuário, informando que uma operação está sendo requerida por uma origem confiável,
  * para sua aprovação. Permite que a contramedida (iii) definida no documento Modelo de Ameaças seja implementada.
@@ -125,10 +155,10 @@ class RenderParams {
 function askUser(message) {
 	return new Promise((resolve, reject) => {
 		let idx = OPERATIONS.findIndex((value) => { return message.operationId === value; });
-		if (idx < 0) return reject(new Error('Valor da propriedade operationId do objeto de mensagem não conhecido'));
+		if (idx < 0) return reject(new Error(UNKNOWN_PROPERTY));
 		if (config.everBeenDisturbed(message.referer, message.operationId)) return resolve(true);
 
-		let msg = sprintf('Você recebeu uma solicitação para %s do serviço web residente em %s. Deseja prosseguir?', ACTIONS[idx], message.referer);
+		let msg = sprintf(ASK_MESSAGE, ACTIONS[idx], message.referer);
 		let question = new UserQuestion(message, msg);
 		params.set(question.msgId, new RenderParams(new DelayedPromise(resolve, reject), question));
 		let askWindow = new BrowserWindow({
@@ -136,22 +166,52 @@ function askUser(message) {
 			height: 500,
 			minWidth: 800,
 			minHeight: 400,
-			icon: ICO,
+			icon: ICON_FILE,
 			minimizable: false,
 			alwaysOnTop: true,
 			skipTaskbar: true,
 			title: APP_TITLE,
 			webPreferences: {
-				preload: path.join(__dirname, 'ask.js'),
+				preload: ASK_JS,
 				additionalArguments: [ "--id=" + question.msgId ]
 			},
 			show: false
 		});
 		askWindow.setMenu(null);
-		askWindow.loadFile(path.join(__dirname, 'res', 'ask.html'));
+		askWindow.loadFile(ASK_HTML);
 		askWindow.once('ready-to-show', () => { askWindow.show(); });
 	});
 }
+
+/**
+ * Função chamada pelo dispositivo de atualização, para feedback ao usuário
+ * @param { Number } type: tipo de mensagem a ser exibida
+ * @param { String } msg: mensagem a ser exibida
+ * @returns um indicador para a escolha do usuário, se necessária
+ */
+function updateCallback(type, msg) {
+	switch(type) {
+	case UpdateManager.ERROR_MESSAGE:
+		tray.displayBalloon({
+			iconType: 'error',
+			title: APP_UPDATE,
+			content: msg,
+			noSound: false
+		});
+		return true;
+		break;
+	case UpdateManager.UPDATE_MESSAGE:
+		let choice = dialog.showMessageBoxSync({
+			message: msg,
+			type: 'question',
+			buttons: CHOICE_BUTTONS,
+			defaultId: 0,
+			title: APP_UPDATE
+		});
+		return choice == 0;
+	}
+}
+
 
 /**
  * Evento emitido pelo processo de renderização dos diálogos de alerta, durante o seu processo de carga,
@@ -185,7 +245,7 @@ ipcMain.on('user-answer', (evt, answer) => {
 		tray.displayBalloon({
 			iconType: 'error',
 			title: APP_TITLE,
-			content: 'Não foi possível processar a resposta fornecida pelo usuário por falha na comunicação interna do aplicativo.',
+			content: IPC_FAILURE,
 			noSound: false
 		});
 		evt.returnValue = false;
@@ -214,10 +274,10 @@ ipcMain.on('report-error', (evt, message) => {
 	dialog.showMessageBox(optionsWindow, {
 		message: param.message,
 		type: 'question',
-		buttons: [ 'Não', 'Sim' ],
-		defaultId: 0,
+		buttons: CHOICE_BUTTONS,
+		defaultId: 1,
 		title : param.title,
-		checkboxLabel: 'Não perguntar novamente'
+		checkboxLabel: DONT_ASK
 	})
 	.then((choice) => {
 		evt.returnValue = choice;
@@ -271,26 +331,59 @@ ipcMain.on('relaunch-app', (evt) => {
 
 /**
  * Inicialização da aplicação, onde as seguintes tarefas são executadas:
- * (i) carga do arquivo de opções do aplicativo
- * (ii) lançamento do processo de execução do serviço Hekura
- * (iii) criação da janela de Opções do serviço (invisível)
- * (iv) inicialização do aplicativo junto Windows System Tray
+ * (i)		carga do arquivo de distribuição da aplicação
+ * (ii)		processamento dos eventos de atualização
+ * (iii)	carga do arquivo de opções do aplicativo
+ * (iv)		lançamento do processo de execução do serviço Hekura
+ * (v)		criação da janela de Opções do serviço (invisível)
+ * (vi)		inicialização do aplicativo junto Windows System Tray
+ * (vii)	inicialização da atualizaçao
  */
 app.on('ready', () => {
-	try { config = Config.load(OPTIONS); }
+	try { distribution = Distribution.load(DISTRIBUTION_FILE); }
 	catch (e) {
-		console.error('Ocorreu o seguinte erro ao carregar o arquivo de configuração:');
-		console.error(e.toString());
-		console.error(JSON.stringify(e, null, 2));
-		console.error('Assumindo o valor padrão...');
+		setInterval(() => { app.quit(); }, 5000);
+		dialog.showMessageBoxSync({
+			title: APP_FAILURE,
+			type: 'error',
+			message: sprintf(DISTRIBUTION_FAILURE, e.toString())
+		});
+		return;
+	}
+
+	let manager = new UpdateManager(process, distribution, updateCallback);
+	let ret = manager.handleUpdateEvents();
+	if (!ret.success) {
+		if (ret.restart) {
+			if (!lastEventError) lastEventError = ret.stderror;
+		}
+		else {
+			dialog.showMessageBoxSync({
+				message: ret.stderror,
+				type: 'error',
+				title: APP_UPDATE
+			});
+		}
+	}
+	if (ret.restart) {
+		app.quit();
+		return;
+	}
+
+	let launchError = null;
+	try { config = Config.load(OPTIONS_FILE); }
+	catch (e) {
+		launchError = sprintf(CONFIG_FAILURE, e.toString());
 		config = new Config();
 	}
+	config.logOptions.path = manager.appDir;
 
 	let logArg = '--log='.concat(JSON.stringify(config.logOptions));
 	let svrArg = '--server='.concat(JSON.stringify(config.serverOptions));
 	service = cp.fork(`${__dirname}/service.js`, [ logArg, svrArg ], { cwd: __dirname, detached: false });
 	service.on('message', (message) => {
-		if (message.signal === Message.WARN) {
+		switch(message.signal) {
+		case Message.WARN:
 			askUser(message).then((accept) => {
 				let response = new WarnResponse(message.msgId, accept);
 				service.send(response);
@@ -298,10 +391,21 @@ app.on('ready', () => {
 				tray.displayBalloon({
 					iconType: 'error',
 					title: APP_TITLE,
-					content: sprintf('Ocorreu o seguinte erro ao solicitar a aprovação do usuário: %s', reason.toString()),
+					content: sprintf(ASK_FAILURE, reason.toString()),
 					noSound: false
 				});
 			});
+			break;
+		case Message.ERROR:
+			dialog.showMessageBoxSync({
+				title: APP_TITLE,
+				type: 'error',
+				message: message.error
+			});
+			service = null;
+			app.quit();
+			break;
+		default:
 		}
 	});
 
@@ -310,14 +414,14 @@ app.on('ready', () => {
 		height: 500,
 		minWidth: 800,
 		minHeight: 500,
-		icon: ICO,
+		icon: ICON_FILE,
 		webPreferences: {
 			preload: path.join(__dirname, 'options.js')
 		},
 		show: false
 	});
-	optionsWindow.setMenu(Menu.buildFromTemplate(optionsMenu));
-	optionsWindow.webContents.loadFile(IFACE);
+	optionsWindow.setMenu(Menu.buildFromTemplate(OPTION_SMENU));
+	optionsWindow.webContents.loadFile(OPTIONS_HTML);
 	//optionsWindow.webContents.openDevTools();
 
 	/**
@@ -340,23 +444,45 @@ app.on('ready', () => {
 		optionsWindow.hide();
 	});
 
-	tray = new Tray(ICO);
-	tray.setContextMenu(Menu.buildFromTemplate(contextMenu));
+	tray = new Tray(ICON_FILE);
+	tray.setContextMenu(Menu.buildFromTemplate(CTX_MENU));
 	tray.setToolTip(APP_TITLE);
+
+	if (lastEventError) {
+		tray.displayBalloon({
+			iconType: 'error',
+			title: APP_UPDATE,
+			content: lastEventError,
+			noSound: false
+		});
+		lastEventError = null;
+	}
+	if (launchError) {
+		setInterval(() => {
+			tray.displayBalloon({
+				iconType: 'error',
+				title: 'Lançamento do aplicativo',
+				content: launchError,
+				noSound: false
+			});
+		}, 5000);
+	}
+	manager.startAutoUpdater();
+
 	/**
 	 * Clique do mouse no ícone do System Tray.
 	 * Exibe a lista de origens confiáveis sendo atendida pelo serviço
 	 */
 	tray.on('click', () => {
-		let contents = 'Atendendo às seguintes origens confiáveis:';
+		let contents = ORIGINS_INFO;
 		if (config.serverOptions.trustedOrigins.origins.length > 0) {
 			config.serverOptions.trustedOrigins.origins.forEach((item) => {
-				contents = contents.concat(' ').concat(item.origin);
+				contents = contents.concat(', ').concat(item.origin);
 			});
 		}
-		else contents = contents.concat(' nenhuma origem cadastrada');
+		else contents = contents.concat(ORIGINS_NO_INFO);
 		tray.displayBalloon({
-			icon: ICO,
+			icon: ICON_FILE,
 			iconType: 'custom',
 			title: APP_TITLE,
 			content: contents,
@@ -372,17 +498,16 @@ app.on('ready', () => {
  */
 app.on('before-quit', () => {
 	isQuiting = true;
-	try { config.store(OPTIONS); }
+	try { if(config) config.store(OPTIONS_FILE); }
 	catch (e)
 	{
-		console.error('Ocorreu o seguinte erro ao salvar o arquivo de configuração:');
-		console.error(e.toString());
-		console.error('Todas as alterações eventualmente feitas serão perdidas.');
+		dialog.showMessageBoxSync({
+			title: APP_EXIT,
+			type: 'error',
+			message: sprintf(QUIT_FAILURE, e.toString())
+		});
 	}
 
 	try { if (service) service.send(new Message(Message.STOP)); }
-	catch (e) {
-		console.error('Ocorreu o seguinte erro ao tentar parar o serviço Hekura:');
-		console.error(e.toString());
-	}
+	catch (e) {}
 });

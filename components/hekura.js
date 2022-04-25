@@ -22,8 +22,7 @@ const { Logger, sprintf, beautify } = require('./wanhamou');
  * @param { String | ArrayBuffer } value Informação apropriada à operação. Por exemplo, o conteúdo a ser assinado
  * @returns { Promise<Boolean> } A promessa, quando resolvida, retorna um valor lógico indicando a aprovação (ou não) da operação
  */
-// TODO: return Promise
- function approvalCallback(operationId, referer, value) { return Promise.resolve(true); }
+function approvalCallback(operationId, referer, value) { return Promise.resolve(true); }
 
 
 /**

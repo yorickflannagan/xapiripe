@@ -9,6 +9,8 @@
 const path = require('path');
 const fs = require('fs');
 const LOG = process.stdout;
+const yargs = require('yargs');
+const argv = yargs(process.argv).argv;
 const Wanhamou = require('../components/wanhamou');
 
 class LogTest
@@ -116,7 +118,7 @@ class LogTest
 	}
 }
 
-function main() {
+function testWanhamou() {
 
 	console.log('Log device test battery');
 	let test = new LogTest();
@@ -135,4 +137,8 @@ function main() {
 	file = path.join(__dirname, '..', 'components', Wanhamou.Logger.cfgLogPattern.replace('-n', '-2'));
 	fs.unlinkSync(file);
 
-}	main();
+}
+
+if (argv.check) testWanhamou();
+
+module.exports = { testWanhamou };

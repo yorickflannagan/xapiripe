@@ -11,6 +11,9 @@ const assert = require('assert');
 const LOG = process.stdout;
 const http = require('http');
 const fs = require('fs');
+const yargs = require('yargs');
+const argv = yargs(process.argv).argv;
+
 const Aroari = require('../components/aroari');
 const Wanhamou = require('../components/wanhamou');
 const OpenSSLWrapper = require('../pki/pki').OpenSSLWrapper;
@@ -567,28 +570,27 @@ async function unit_test() {
 	fs.unlinkSync(path.join(current, 'xapiripe-0.log'));
 }
 
-//TODO: Clean-up request files after service test
-let i = 2;
-let args = new Map();
-while (i < process.argv.length) {
-	let arg = process.argv[i].split('=');
-	if (arg.length === 2) args.set(arg[0], arg[1]);
-	i++;
+function testHekura() {
+	//TODO: Clean-up request files after service test
+	let runService = false
+	if (argv.pki) {
+		PKIDir = path.resolve(argv.pki);
+		if (!fs.existsSync(PKIDir)) throw new Error('Argument pki must be an existing directory');
+	}
+	if (typeof argv.service !== 'undefined') {
+		runService = argv.service === 'true' ? true: false;
+	}
+	if (runService) {
+		Wanhamou.Logger.logConfig({ path: path.resolve(__dirname), level: Wanhamou.LogLevel.DEBUG });
+		let service = new Hekura.HTTPServer({ cors: new Hekura.CORSBlockade(ORIGINS) });
+		service.start();
+		console.log('Running Hekura service at http://127.0.0.1:9171');
+		console.log('Logging at debug level to ' + path.resolve(__dirname));
+		console.log('Hit CTRL-C to stop the server')
+	}
+	else unit_test();
 }
-let runService = false;
-if (args.has('pki')) {
-	PKIDir = path.resolve(args.get('pki'));
-	if (!fs.existsSync(PKIDir)) throw new Error('Argument pki must be an existing directory');
-}
-if (args.has('service')) {
-	runService = args.get('service') === 'true' ? true: false;
-}
-if (runService) {
-	Wanhamou.Logger.logConfig({ path: path.resolve(__dirname), level: Wanhamou.LogLevel.DEBUG });
-	let service = new Hekura.HTTPServer({ cors: new Hekura.CORSBlockade(ORIGINS) });
-	service.start();
-	console.log('Running Hekura service at http://127.0.0.1:9171');
-	console.log('Logging at debug level to ' + path.resolve(__dirname));
-	console.log('Hit CTRL-C to stop the server')
-}
-else unit_test();
+
+if (argv.check) testHekura();
+
+module.exports = { testHekura };

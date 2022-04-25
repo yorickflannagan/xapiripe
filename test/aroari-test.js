@@ -4,6 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const LOG = process.stdout;
+const yargs = require('yargs');
+const argv = yargs(process.argv).argv;
+
 const Aroari = require('../components/aroari');
 const OpenSSLWrapper = require('../pki/pki').OpenSSLWrapper;
 
@@ -226,9 +229,9 @@ class SignTest
 	}
 }
 
-function main() {
+function testAroari() {
 	// Initialization
-	if (process.argv.length > 2) PKIDir = path.resolve(process.argv[2]);
+	if (argv.pki) PKIDir = path.resolve(argv.pki);
 	let indexFile = path.join(PKIDir, 'CNindex.txt');
 	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
 	else fs.writeFileSync(indexFile, indexCN.toString());
@@ -323,4 +326,8 @@ function main() {
 	LOG.write(tests.toString());
 	LOG.write(' test cases performed.\n')
 	fs.writeFileSync(indexFile, indexCN.toString());
-}	main();
+}
+
+if (argv.check) testAroari();
+
+module.exports = { testAroari };

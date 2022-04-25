@@ -1,8 +1,8 @@
 
 'use strict';
 
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 const cp = require('child_process');
 
 function getVersion(jsfile) {

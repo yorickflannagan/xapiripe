@@ -6,6 +6,8 @@ const process = require('process');
 const crypto = require('crypto');
 const asn1js = require('asn1js');
 const fs = require('fs');
+const yargs = require('yargs');
+const argv = yargs(process.argv).argv;
 
 const Hamahiri = require('../components/hamahiri');
 const OpenSSLWrapper = require('../pki/pki').OpenSSLWrapper;
@@ -504,8 +506,8 @@ class SignTest
 	}
 }
 
-function main() {
-	if (process.argv.length == 3) PKIDir = path.resolve(process.argv[2]);
+function testHamahiri() {
+	if (argv.pki) PKIDir = path.resolve(argv.pki);
 	let indexFile = path.join(PKIDir, 'CNindex.txt');
 	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
 	else fs.writeFileSync(indexFile, indexCN.toString());
@@ -573,4 +575,8 @@ function main() {
 	LOG.write(tests.toString());
 	LOG.write(' test cases performed.\n')
 	fs.writeFileSync(indexFile, indexCN.toString());
-}   main();
+}  //testHamahiri();
+
+if (argv.check) testHamahiri();
+
+module.exports = { testHamahiri };
