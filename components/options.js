@@ -82,5 +82,21 @@ const DISTRIBUTION_TEMPLATE = new Map()
 	}
 }
 
+/**
+ * Representa uma Promise retornada num contexto e resolvida em outro.
+ */
+ class DelayedPromise
+ {
+	 /**
+	  * Cria uma nova instância de uma DelayedPromise
+	  * @param { Function } resolve: callback evocada na resolução da Promise
+	  * @param { Function } reject: callback evocada na rejeição da Promise
+	  */
+	 constructor(resolve, reject)
+	 {
+		 this.resolve = resolve;
+		 this.reject = reject;
+	 }
+ } 
  
-module.exports = { uriPattern, jsonValidator, Distribution };
+module.exports = { uriPattern, jsonValidator, Distribution, DelayedPromise };

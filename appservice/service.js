@@ -51,7 +51,8 @@
 		const { Config } = require('./config');
 		const { Logger, LogLevel, sprintf } = require('../components/wanhamou');
 		const { CORSBlockade, HTTPServer } = require('../components/hekura');
-		const { Message, WarnMessage, DelayedPromise } = require('./module');
+		const { Message, WarnMessage } = require('./module');
+		const { DelayedPromise } = require('../components/options');
 
 
 		/**

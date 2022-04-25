@@ -79,7 +79,7 @@ function newTrustedOriginElement(trustedOrigin) {
 				message: 'Essa operação removerá permanentemente a origem selecionada. Deseja prosseguir?',
 				title: 'Remover origem confiável'
 			});
-			doIt = answer.response != 0;
+			doIt = answer.response == 0;
 			optOrigins.warning = !answer.checkboxChecked;
 		}
 		if (doIt) {
@@ -271,7 +271,7 @@ window.addEventListener('DOMContentLoaded', () => {
 					});
 					cfg.app.askToRestart = !answer.checkboxChecked;
 					if (!cfg.app.askToRestart) cfg.app.restartOnChange = answer.response != 0;
-					restart = answer.response != 0;
+					restart = answer.response == 0;
 				}
 				ipcRenderer.sendSync('update-config', cfg);
 				if (restart) ipcRenderer.send('relaunch-app');

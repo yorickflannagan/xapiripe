@@ -6,10 +6,10 @@
  */
 
 'use strict';
-const tcp = require('tcp-port-used');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const net = require('net');
 const Aroari = require('./aroari');
 const { Logger, sprintf, beautify } = require('./wanhamou');
 
@@ -737,6 +737,60 @@ class VerifyService extends AbstractService
  */
 
 /**
+ * Verifica a disponibilidade da porta TCP.
+ * Thanks to Edmond Meinfelder and his https://github.com/stdarg/tcp-port-used
+ */
+class PortChecker {
+	/**
+	 * Cria uma nova instância do verificador
+	 * @param { Number } port: porta a ser verificada
+	 */
+	constructor(port) {
+		this.deferred = this.#getDeferred();
+		this.port = port;
+		this.client = new net.Socket();
+		this.client.once('connect', this.#onConnect.bind(this));
+		this.client.once('error', this.#onError.bind(this));
+	}
+	/**
+	 * Verifica a disponibilidade da porta
+	 * @returns Promise que indicará a disponibilidade da porta, onde true indica que a porta já está em uso.
+	 */
+	check() {
+		this.client.connect({ port: this.port, host: '127.0.0.1' });
+		return this.deferred.promise;
+	}
+	#getDeferred() {
+		let resolve, reject, promise = new Promise(function(res, rej) {
+			resolve = res;
+			reject = rej;
+		});
+		return {
+			resolve: resolve,
+			reject: reject,
+			promise: promise
+		};	
+	}
+	#onConnect() {
+		this.deferred.resolve(true);
+		this.#cleanUp();
+	}
+	#onError(reason) {
+		if (reason.code !== 'ECONNREFUSED') this.deferred.reject(reason);
+		else this.deferred.resolve(true);
+		this.#cleanUp();
+	}
+	#cleanUp() {
+		this.client.removeAllListeners('connect');
+		this.client.removeAllListeners('error');
+		this.client.end();
+		this.client.destroy();
+		this.client.unref();
+	}
+}
+
+
+/**
  * Servidor HTTP de atendimento REST
  * @memberof Hekura
  */
@@ -760,13 +814,7 @@ class HTTPServer
 		this.services.set('/sign', new SignService(maxAge, callback));
 		this.services.set('/verify', new VerifyService(maxAge, callback));
 		this.server = http.createServer(this.#listener.bind(this));
-		this.checkPort = new Promise((resolve) => {
-			tcp.check(port, '127.0.0.1').
-			then((ready) => {
-				this.port = port;
-				return resolve(!ready);
-			});
-		});
+		this.checkPort = new PortChecker((this.port = port));
 		let origins = '[\r\n';
 		let it = this.blockade.trustedOrigins.values();
 		let item = it.next();
@@ -858,7 +906,7 @@ class HTTPServer
 	 */
 	start() {
 		return new Promise((resolve, reject) => {
-			return this.checkPort.then((ready) => {
+			return this.checkPort.check().then((ready) => {
 				if (!ready) {
 					Logger.releaseLogger();
 					this.logger = null;
@@ -868,6 +916,10 @@ class HTTPServer
 					this.logger.info(sprintf('Serviço iniciado na porta %s', this.port.toString()));
 					return resolve(true);
 				});
+			}).catch((reason) => {
+				Logger.releaseLogger();
+				this.logger = null;
+				return reject(reason);
 			});
 		});
 	}

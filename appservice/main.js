@@ -30,8 +30,8 @@ const path = require('path');
 const cp = require('child_process');
 const { Config } = require('./config');
 const { sprintf } = require('../components/wanhamou');
-const { Message, WarnResponse, UserQuestion, DelayedPromise } = require('./module');
-const { Distribution } = require('../components/options');
+const { Message, WarnResponse, UserQuestion } = require('./module');
+const { Distribution, DelayedPromise } = require('../components/options');
 const { UpdateManager } = require('../components/update');
 
 
@@ -161,11 +161,13 @@ function askUser(message) {
 		let msg = sprintf(ASK_MESSAGE, ACTIONS[idx], message.referer);
 		let question = new UserQuestion(message, msg);
 		params.set(question.msgId, new RenderParams(new DelayedPromise(resolve, reject), question));
+		let width = message.value ? 800 : 600;
+		let height = message.value ? 500 : 250;
 		let askWindow = new BrowserWindow({
-			width: 800,
-			height: 500,
-			minWidth: 800,
-			minHeight: 400,
+			width: width,
+			height: height,
+			minWidth: width,
+			minHeight: height,
 			icon: ICON_FILE,
 			minimizable: false,
 			alwaysOnTop: true,
@@ -275,7 +277,7 @@ ipcMain.on('report-error', (evt, message) => {
 		message: param.message,
 		type: 'question',
 		buttons: CHOICE_BUTTONS,
-		defaultId: 1,
+		defaultId: 0,
 		title : param.title,
 		checkboxLabel: DONT_ASK
 	})
