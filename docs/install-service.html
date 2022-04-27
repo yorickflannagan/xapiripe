@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="pt">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" href="res/style.css" type="text/css" />
+	<title>O instalador do serviço Hekura</title>
+</head>
+<body>
+<div>
+
+	<h1>O instalador do serviço Hekura</h1>
+	<div>
+		<p>
+		A conversão da aplicação Electron em aplicativo nativo capaz de distribuição independente é
+		bastante simples e requer os seguintes componentes:
+		</p>
+		<ul>
+			<li>
+			O <a href="https://electron.github.io/electron-packager/main/" target="_blank">electron-packager</a>,
+			utilitário que simplesmente embarca toda a infraestrutura requerida para a interpretração dos
+			scripts e renderização da interface HTML, tornando-se responsável pela execução da aplcação
+			Electron;
+			</li>
+			<li>
+			O <a href="https://github.com/electron/windows-installer" target="_blank">electron-winstaller</a>,
+			o utilitário que cria um instalador para a aplicação e fornece a infraestrutura básica para a
+			sua atualização automática;
+			</li>
+			<li>
+			O módulo <a href="https://www.electronjs.org/docs/latest/api/auto-updater" target="_blank">autoUpdater</a>
+			fornecido pelo próprio Electron, que permite gerenciar as atualizações automáticas, incluindo a
+			realização de tarefas pós instalação/desinstalação.
+			</li>
+		</ul>
+		<p>
+		Naturalmente, para que a solução funcione adequadamente é necessário que o distribuidor do aplicativo
+		&ndash; a organização responsável pela instalação do produto nas estações dos usuários &ndash;
+		disponibilize uma URL com a finalidade de publicar e distribuir as atualizações. O servidor HTTP de
+		atendimento deve ser capaz apenas de fornecer páginas estáticas, no caso os arquivos da distribuição, a
+		saber:
+		</p>
+		<ul>
+			<li>
+			Os arquivos de extensão *.nupkg, parte da solução de atualização, baseada no componente
+			<a href="https://github.com/Squirrel/Squirrel.Windows" target="_blank">Squirrel</a>;
+			</li>
+			<li>O arquivo RELEASES, que contém a lista de versões já distribuídas;</li>
+			<li>
+			O instalador <i>install-hekura.exe</i>, baixado pelo usuário na sua sua primeira
+			utilização e, nas atualizações, baixados automaticamente na versão mais recente.
+			</li>
+		</ul>
+	</div>
+
+	<div>
+		<h2>Informações para o desenvolvedor</h2>
+		<div>
+			<p>
+			A criação do pacote executável e do instalador é inteiramente gerenciada pelo script
+			build.js, uma aplicação Node.js de linha de comando, que requer os seguintes argumentos:
+			</p>
+			<ul>
+				<li>
+				<i>--build=service</i>: como o script é de uso geral (e outras aplicações serão
+				construídas com ele), é  necessário indicar qual o produto criado;
+				</li>
+				<li>
+				<i>--distributorId=[id]</i>: a identificação da organização distribuidora do produto;
+				por exemplo br.gov.caixa;
+				</li>
+				<li><i>--updateURL=[url]</i>: a URL fornecida pelo distribuidor para atualização;</li>
+				<li>
+				<i>--arch=[x64 | ia32]</i>: a arquitetura de distribuição (64 ou 32 bits). O parâmetro
+				é opcional, tendo como valor default x64.
+				</li>
+			</ul>
+			<p>
+			A partir da implementação da atualização, a execução da aplicação requer a disponibilidade
+			de um arquivo ./appservice/distribution.json, mesmo que ainda sob o Electron (desenvolvimento).
+			A informação mais crítica contida neste arquivo é a URL de atualização, que deve ser
+			sintaticamente válida, ainda que não necessariamente acessível durante a execução da aplicação.
+			Como este arquivo é ignorado pelo Git, deve ser manualmente construído pelo desenvolvedor antes
+			de qualquer teste. A sintaxe deste sinete de identificação pode ser vista no schema
+			<a href="update/distribution-schema.json" target="_blank">distribution-schema.json</a>.
+			</p>
+			<p>
+			Uma outra característica relacionada ao fato de um mesmo projeto incluir mais de uma aplicação
+			Electron é a criação dinâmica do arquivo package.json necessário, feita pelo próprio script, a partir
+			do arquivo destinado a todo o projeto. Como diferentes aplicações podem ter diferentes números
+			de versão, a versão corrente e o nome do aplicativo sob criação não são aqueles declarados no
+			arquivo package.json do projeto. Em especial a versão do serviço Hekura é mantida no arquivo
+			./appservice/main.js, na forma de uma tag customizada @version x.y.z, onde x é a versão maior,
+			y é a versão menor e z é a release corrente. Esta tag deve aparecer numa única linha de 
+			comentário em qualquer ponto do arquivo.
+			</p>
+			<p>
+			Note-se igualmente que a versão do componente não corresponde às tags do repositório, que se
+			referem a todo o projeto e não cada componente em particular. Isso é igualmente válido para
+			a versão dos diferentes componentes criados, localizados no diretório ./components, que são
+			mantidas da mesma forma nos scripts de cada um. Assim, qualquer manutenção realizada com
+			impacto na distribuição e documentação do produto deve implicar alteração da tag apropriada.
+			</p>
+			<p>
+			Todo o necessário à atualização automática foi modelado numa classe reutilizável
+			<a href="update/1.0.0/index.html" target="_blank">UpdateManager</a>, que pode ser utilizada
+			por outros aplicativos Electron do pacote. Em vista das características da ferramenta
+			subjacente (o citado Squirrel), a construção da classe e execução do seu método handleUpdateEvents()
+			deve ser realizada o mais cedo possível. É que, durante a instalação, a atualização e a
+			desinstalação, o Squirrel fecha o aplicativo corrente 15 segundos após o seu processamento e o
+			reexecuta a seguir.
+			</p>
+		</div>
+	</div>
+
+</div>
+</body>
+</html>

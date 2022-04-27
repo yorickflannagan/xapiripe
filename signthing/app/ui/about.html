@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+
+<!--
+/**
+ * Xapiripë Project
+ * Software components for CAdES signatures
+ * See https://datatracker.ietf.org/doc/html/rfc5126
+ *
+ * Copyleft (C) 2020 The Crypthing Initiative
+ * Authors:
+ * 		yorick.flannagan@gmail.com
+ * 		diego.sohsten@gmail.com
+ *
+ * Signithing - desktop application UI
+ * See https://bitbucket.org/yakoana/xapiripe/src/master/signthing
+ * about.html - about dialog UI
+ * 
+ * This application is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 3.0 of
+ * the License, or (at your option) any later version.
+ *
+ * This application is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * See https://opensource.org/licenses/LGPL-3.0
+ *
+ */
+-->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pt" lang="pt">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta http-equiv="Content-Security-Policy" content="script-src 'self';" />
+	<link rel="stylesheet" href="css/w3pro.css"  type="text/css" />
+	<link rel="stylesheet" href="css/global.css" type="text/css" />
+	<link rel="stylesheet" href="css/about.css"  type="text/css" />
+	<title>Sobre o Signthing</title>
+</head>
+
+<body>
+	<div class="title w3-container">
+		<img src="res/signature-48x48.png" alt="Signthings" class="w3-display-topleft" />
+		<p class="app">Signthing</p>
+		<p>
+			Versão: <span id="version"></span><br>
+			Electron: <span id="electron"></span><br>
+			Chrome: <span id="chrome"></span><br>
+			Node.js: <span id="node"></span><br>
+			V8: <span id="v8"></span><br>
+			OS: <span id="os"></span><br>
+		</p>
+		<button class="w3-display-bottomright w3-btn w3-border w3-border-dark-gray w3-round-large" id="close">Fechar</button>
+	</div>
+</body>
+
+</html>

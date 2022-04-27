@@ -22,25 +22,19 @@
 		"aroari-docs": "node make-docs.js aroari",
 		"wanhamou-docs": "node make-docs.js wanhamou",
 		"hekura-docs": "node make-docs.js hekura",
-		"options-docs": "node make-docs.js options"
+		"options-docs": "node make-docs.js options",
+		"update-docs": "node make-docs.js update",
+		"all-docs": "node make-docs.js hamahiri aroari wanhamou hekura options update"
 	},
 	"repository": {
 		"type": "git",
 		"url": "https://bitbucket.org/yakoana/xapiripe.git"
 	},
-	"author": "Marco Antonio Gutierrez",
+	"author": "Marco Antonio Gutierrez<yorick.flannagan@gmail.com>",
 	"license": "LGPL-3.0-or-later",
-	"bugs": {
-		"email": "yorick.flannagan@gmail.com"
-	},
-	"keywords": [
-		"CAdES",
-		"Crypto",
-		"PKI"
-	],
-	"os": [
-		"win32"
-	],
+	"bugs": { "email": "yorick.flannagan@gmail.com" },
+	"keywords": [ "CAdES", "Crypto", "PKI" ],
+	"os": [ "win32" ],
 	"gypfile": true,
 	"devDependencies": {
 		"electron": "^18.0.3",

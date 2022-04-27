@@ -1,9 +1,32 @@
-'use strict';
+/**
+ * Xapiripë Project
+ * Software components for CAdES signatures
+ * See https://datatracker.ietf.org/doc/html/rfc5126
+ *
+ * Copyleft (C) 2020-2022 The Crypthing Initiative
+ * Authors:
+ * 		yorick.flannagan@gmail.com
+ *
+ * See https://bitbucket.org/yakoana/xapiripe/src/master/
+ * build.js - Build facility
+ * 
+ * This application is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 3.0 of
+ * the License, or (at your option) any later version.
+ *
+ * This application is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * See https://opensource.org/licenses/LGPL-3.0
+ *
+ */
+ 'use strict';
 
 const path = require('path');
 const fs = require('fs');
 const packager = require('electron-packager');
-const { app } = require('electron');
 const installer = require('electron-winstaller');
 const yargs = require('yargs');
 const { Distribution, uriPattern } = require('./components/options');
@@ -13,7 +36,7 @@ const svcIconFile = path.resolve('./appservice/res/signature-32x32.ico');
 const buildFolder = './build';
 const svcBuildOptions = {
 	appCopyright: 'Copyleft (C) 2020-2022 The Crypthing Initiative. All rights reversed.',
-	arch: 'x64',											// Da linha de comando
+	arch: '',
 	dir: '.',
 	executableName: 'hekura',
 	icon: svcIconFile,
@@ -46,7 +69,7 @@ const svcExcludeDirs = [ 'docs', 'hamahiri', 'pki', 'test' ];
 
 const packageFolder = buildFolder + '/installer';
 const svcPackageOptions = {
-	appDirectory: buildFolder + '/Hekura-win32-x64',		// Da execução do packager
+	appDirectory: buildFolder + '/Hekura-win32-x64',
 	outputDirectory: path.resolve(packageFolder),
 	loadingGif: path.resolve('./install-spinner.gif'),
 	authors: svcSignet.company,
@@ -83,7 +106,7 @@ function mintPackage(entryPoint, backup, signet) {
 	let version = getVersion(path.resolve(entryPoint));
 	let source = path.resolve(__dirname, 'package.json');
 	let pack = JSON.parse(fs.readFileSync(source));
-	pack.name = signet.productName;
+	pack.name = signet.productName.toLowerCase();
 	pack.version = version;
 	pack.main = entryPoint;
 	fs.renameSync(source, backup);
@@ -91,9 +114,8 @@ function mintPackage(entryPoint, backup, signet) {
 	return source;
 }
 
-function appPackage(arch, options, excludeDirs) {
+function appPackage(options, excludeDirs) {
 	return new Promise((resolve, reject) => {
-		options.arch = arch;
 		packager(options).then((appPaths) => {
 			let target = path.resolve(appPaths[0], 'resources', 'app');
 			let i = 0;
@@ -108,11 +130,8 @@ function appPackage(arch, options, excludeDirs) {
 	});
 }
 
-function appInstaller(appPath, entryPoint, options) {
-	if (!appPath) throw new Error('Missing --appPath argument');
+function appInstaller(options) {
 	return new Promise((resolve, reject) => {
-		let version = getVersion(path.resolve(entryPoint));
-		options.appDirectory = appPath;
 		installer.createWindowsInstaller(options).then(() => {
 			return resolve(true);
 		}).catch((reason) => {
@@ -124,20 +143,21 @@ function appInstaller(appPath, entryPoint, options) {
 /**
  * Linha de comando: node build.js [options], onde:
  * 	--build: string definindo a aplicação a ser construída, a saber: service | app. Obrigatório
- * 	--distributorId: string indicando o distribuidor da aplicação. Opcional. Default: br.gov.caixa
+ * 	--distributorId: string indicando o distribuidor da aplicação. Opcional. Default: org.crypthing.xapiripe
  * 	--updateURL: localização do servidor de atualização. Obrigatório.
  * 	--arch: string indicando a arquitetura de CPU alvo, a saber: x64 | ia32. Opcional. Default: x64
  */
 (function () {
 	const argv = yargs(process.argv).argv;
 	let target = argv.build;
-	let distributorId = argv.distributorId ? argv.distributorId : 'br.gov.caixa';
+	let distributorId = argv.distributorId ? argv.distributorId : 'org.crypthing.xapiripe';
 	let updateURL = argv.updateURL;
 	let arch = argv.arch ? argv.arch : 'x64';
 	let sourceDir;
 	let signet;
 	let buildOptions;
 	let excludeDirs;
+	let distributionFile;
 	let packageOptions;
 
 	switch (target) {
@@ -147,6 +167,7 @@ function appInstaller(appPath, entryPoint, options) {
 		buildOptions = svcBuildOptions;
 		excludeDirs = svcExcludeDirs;
 		packageOptions = svcPackageOptions;
+		distributionFile = './appservice/distribution.json';
 		break;
 	case 'app':
 		throw new Error('--build=app not implemented yet');
@@ -163,20 +184,22 @@ function appInstaller(appPath, entryPoint, options) {
 		.concat('\n\t--arch: ').concat(arch);
 	console.log(msg);
 
-	let newSignet = mintSignet(signet, distributorId, updateURL, sourceDir);
+	let newSignet = mintSignet(signet, distributorId, updateURL, distributionFile);
 	let backup = path.resolve(__dirname, 'package-old.json');
-	let pack = mintPackage(sourceDir, backup, signet);
+	let pack = mintPackage(sourceDir, backup, newSignet);
+	buildOptions.arch = arch;
 	msg = 'Standalone package will be built with the following definitions:'
-		.concat('\n\tsignet: ').concat(JSON.stringify(newSignet, null, 2))
-		.concat('\n\toptions: ').concat(JSON.stringify(buildOptions, null, 2));
+		.concat('\nsignet: ').concat(JSON.stringify(newSignet, null, 2))
+		.concat('\noptions: ').concat(JSON.stringify(buildOptions, null, 2));
 	console.log(msg);
-	appPackage(arch, buildOptions, excludeDirs).then((appPath) => {
+	appPackage(buildOptions, excludeDirs).then((appPath) => {
 		console.log('Package built to path: ' + appPath);
+		packageOptions.appDirectory = appPath;
 		msg = 'Application installer will be generated with the following definitions:'
 			.concat('\n').concat(JSON.stringify(packageOptions, null, 2))
 			.concat('\nIt may take a long, long, long time. Please, be patient...');
 		console.log(msg);
-		appInstaller(appPath, sourceDir, packageOptions).then(() => {
+		appInstaller(packageOptions).then(() => {
 			console.log('Application installer has been built... at last!');
 			fs.unlinkSync(pack);
 			fs.renameSync(backup, pack);

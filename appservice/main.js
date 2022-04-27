@@ -9,7 +9,7 @@
  * Xapiripe - Standalone Hekura service
  * See https://bitbucket.org/yakoana/xapiripe/src/master/appservice
  * main.js - Electron main process
- * @version: 1.0.0
+ * @version 1.0.0
  * 
  * This application is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -65,6 +65,7 @@ const CTX_MENU = [
 	{ label: 'Licença', click: () => { shell.openExternal(LICENCE)}},
 	{ label: 'Sobre...', click: () => {
 		let contents = distribution.productName
+			.concat(' - ').concat(app.getVersion())
 			.concat('\n  ').concat(distribution.productDescription)
 			.concat('\n  ').concat(distribution.company)
 			.concat('\n  Distribuído por: ').concat(distribution.distributorId);

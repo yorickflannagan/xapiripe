@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+
+<!--
+/**
+ * Xapiripë Project
+ * Software components for CAdES signatures
+ * See https://datatracker.ietf.org/doc/html/rfc5126
+ *
+ * Copyleft (C) 2020-2022 The Crypthing Initiative
+ * Authors:
+ * 		yorick.flannagan@gmail.com
+ *
+ * Signithing - desktop application UI
+ * See https://bitbucket.org/yakoana/xapiripe/src/master/signthing
+ * sign.html - signature wizard UI
+ * 
+ * This application is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 3.0 of
+ * the License, or (at your option) any later version.
+ *
+ * This application is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * See https://opensource.org/licenses/LGPL-3.0
+ *
+ */
+-->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta http-equiv="Content-Security-Policy" content="script-src *" />
+	<link rel="stylesheet" href="css/global.css" type="text/css" />
+	<link rel="stylesheet" href="css/w3pro.css"  type="text/css" />
+	<link rel="stylesheet" href="css/sign.css"   type="text/css" />
+</head>
+<body>
+
+	<div class="w3-container w3-display-container w3-border w3-border-grey w3-round-large wizard">
+		
+		<div id="step-1" class="w3-panel step"  style="display: none">
+			<p class="title">
+				Por favor, selecione um certificado, um algoritmo de assinatura, o tipo de compromisso firmado e o
+				formato do envelope produzido.
+			</p>
+
+			<p>
+				<label id="lbl-cert" for="certificate">Certificado do assinante:</label>
+				<select id="certificate" name="certificate">
+				</select>
+			</p>
+			<p>
+				<label for="algorithm" class="separator">Algoritmo de assinatura:</label>
+				<select id="algorithm" name="algorithm">
+					<option>sha1WithRSAEncryption</option>
+					<option>sha256WithRSAEncryption</option>
+					<option>sha384WithRSAEncryption</option>
+					<option>sha512WithRSAEncryption</option>
+				</select>
+			</p>
+			<p>
+				<label for="commitment" >Tipo de compromisso:</label>
+				<select id="commitment" name="commitment">
+					<option>Prova de origem</option>
+					<option>Prova de recepção</option>
+					<option>Prova de entrega</option>
+					<option>Prova de envio</option>
+					<option>Prova de aprovação</option>
+					<option>Prova de criação</option>
+				</select>
+			</p>
+			<p>
+				<label id="lbl-fmt" for="format">Formato do envelope:</label>
+				<select id="format" name="format">
+					<option>CAdES-BES (Basic Electronic Signature)</option>
+				</select>
+			</p>
+			<p id="dv-choice">
+				<label for="remember" class="separator">Lembrar minhas escolhas </label>
+				<input id="remember" type="checkbox" name="remember">
+			</p>
+		</div>
+
+		<div id="step-2" class="w3-panel step" style="display: none">
+			<p class="title">
+				Por favor, selecione um arquivo para assinar. Você pode também especificar um nome
+				e um diretório diferentes das sugestões para o envelope assinado. Por padrão, um 
+				arquivo com o mesmo nome e extensão .p76 é criado no mesmo diretório do arquivo 
+				selecionado. O envelope assinado está no formato PEM (Privacy Enhanced Mail).
+			</p>
+
+			<p>
+				<label for="source">Arquivo a assinar:</label><br>
+				<input id="source" type="text" class="w3-border input-dir">
+				<input id="btn-source" type="button" class="w3-round button" value="Select...">
+			</p>
+			<p>
+				<label for="target">Arquivo assinado:</label><br>
+				<input id="target" type="text" class="w3-border input-dir">
+				<input id="btn-target" type="button" class="w3-round button" value="Select...">
+			</p>
+
+			<p id="dv-attach">
+				<label for="attach" class="separator">Incluir conteúdo assinado </label>
+				<input id="attach" type="checkbox" name="attach">
+			</p>
+		</div>
+
+		<div id="step-3" class="w3-panel step" style="display: none">
+			<p class="title">
+				Clique no botão Finalizar para assinar o arquivo <span id="src-file"></span>.
+				O envelope assinado será salvo no formato PEM como <span id="tgt-file"></span>.
+			</p>
+		</div>
+
+		<div class="w3-panel w3-right">
+			<input id="prev" class="w3-round button" type="button" value=" " data-role="">
+			<input id="next" class="w3-round button" type="button" value=" " data-role="">
+		</div>
+	</div>
+
+</body>
+</html>

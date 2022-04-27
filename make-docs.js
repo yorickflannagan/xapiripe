@@ -34,6 +34,9 @@ function document(component) {
 	fs.unlinkSync(target);
 }
 
-if (process.argv.length < 3) throw new Error('Must specify a component name');
-console.log('Generating components documentation...');
-document(process.argv[2]);
+if (process.argv.length < 3) throw new Error('You must specify at least one component name');
+let i = 2;
+while (i < process.argv.length) {
+	console.log('Generating documentation for component named ' + process.argv[i] + '...');
+	document(process.argv[i++]);
+}

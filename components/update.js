@@ -27,14 +27,19 @@ const DEBUG_INIT_MSG = 'Depuração dos eventos Squirrel iniciada com os seguint
 class HandleEvtResult {
 	/**
 	 * Cria uma nova instância do objeto
-	 * @param { Boolean } success: indicador de sucesso da operação. Obrigatório
-	 * @param { String } stderror: mensagem de erro. Optional
+	 * @param { Boolean } success indicador de sucesso da operação. Obrigatório
+	 * @param { String } stderror mensagem de erro. Optional
 	 */
 	constructor(success, stderror) {
 		this.success = success;
 		this.stderror = stderror;
 		this.restart;
 	}
+	/**
+	 * Define o indicador de reinício do aplicativo
+	 * @param { Boolean } yes indicador de reinício do aplicativo 
+	 * @returns a instância corrente
+	 */
 	restart(yes) {
 		this.restart = yes;
 		return this;
@@ -59,9 +64,9 @@ class UpdateManager {
 	static UPDATE_MESSAGE = 2;
 	/**
 	 * Cria uma nova instância do gerenciador de atualização
-	 * @param { Process } nodeProcess: instância do objeto global process
-	 * @param { Distribution } distribution; identificação da distribuição do produto
-	 * @param { Function } callback: função a ser chamada quando houver necessidade de comunicação com o processo principal da aplicação,
+	 * @param { Process } nodeProcess instância do objeto global process
+	 * @param { Distribution } distribution identificação da distribuição do produto
+	 * @param { Function } callback função a ser chamada quando houver necessidade de comunicação com o processo principal da aplicação,
 	 * durante o processo contínuo de verificação de atualização.
 	 * Deve ter a assinatura (type, message), a saber:
 	 * - type: tipo de mensagem (ver propriedades estáticas da classe);
@@ -111,6 +116,10 @@ class UpdateManager {
 		if (ret.status != 0) return new HandleEvtResult(false, ret.stderr);
 		return new HandleEvtResult(true);
 	}
+	/**
+	 * Lida com os eventos de atualização, controlados pelo Squirrel
+	 * @returns uma instância de HandleEvtResult, com o resultado do processamento dos eventos
+	 */
 	handleUpdateEvents() {
 		if ((this.development && !this.debug) || !this.updateEvent) return new HandleEvtResult(true).restart(false);
 		let ret;
@@ -129,8 +138,13 @@ class UpdateManager {
 		default: return new HandleEvtResult(true).restart(false);
 		}
 	}
+	/**
+	 * Inicia a tarefa periódica de verificar se existem atualizações do produto.
+	 * Em produção, verifica a cada 15 minutos; se a variável de ambiente DEBUG estiver
+	 * definida, este intervalo é de 1 minuto.
+	 */
 	startAutoUpdater() {
-		if (this.development && !this.debug) return;		// O auto update só é ligado se estiver em depuração ou não estiver em desenvolvimento
+		if (this.development && !this.debug) return;	// Permite "depurar" a atualização, reduzindo o intervalo de buca
 		autoUpdater.setFeedURL(this.updateURL);
 		autoUpdater.on('error', (error) => {
 			this.callback(UpdateManager.ERROR_MESSAGE, sprintf(UPDATE_ERROR, error.toString()));

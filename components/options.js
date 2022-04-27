@@ -49,17 +49,21 @@ const DISTRIBUTION_TEMPLATE = new Map()
 
  /**
   * Identificação da distribuição do produto
-  * @property { String } productId: identificador do produto
-  * @property { String } distributorId: identificador do distribuidor
-  * @property { String } updateURL: URL de atualização do produto
+  * @property { String } productId identificador do produto
+  * @property { String } productName nome do produto
+  * @property { String } productDescription descrição do produto
+  * @property { String } exe nome do arquivo executável
+  * @property { String } company nome do fabricante
+  * @property { String } distributorId identificador do distribuidor
+  * @property { String } updateURL URL de atualização do produto
   */
  class Distribution {
 	 /**
 	  * Cria uma nova distribuição do produto especificado
-	  * @param { String } id: identificador do produto
-	  * @param { String } name: nome do produto
-	  * @param { String } description: descrição do produto
-	  * @param { String } exe: nome do executável do produto (incluir extensão)
+	  * @param { String } id identificador do produto
+	  * @param { String } name nome do produto
+	  * @param { String } description descrição do produto
+	  * @param { String } exe nome do executável do produto (incluir extensão)
 	  */
 	 constructor(id, name, description, exe) {
 		 this.productId = id ? id :'';
