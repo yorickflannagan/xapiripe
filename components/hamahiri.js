@@ -13,6 +13,7 @@ const addon = require('./hamahiri-native');
  * @namespace Xapiripe
  */
 /**
+/* TODO: Implementar campos de equivalência à Kryptonita
  * Certificate object
  * @class Certificate
  * @memberof Xapiripe

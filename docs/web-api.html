@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="pt">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" href="res/style.css" type="text/css" />
+	<title>A API para aplicações web</title>
+</head>
+<body>
+<div>
+	<h1>A API para aplicações web</h1>
+	<div>
+		<p>
+		Para falar de modo rigoroso, o <a href="hekura.html" target="_blank">serviço Hekura</a> já fornece uma 
+		API para aplicações web, já que se trata de um RESTful Web Service. Como ele se baseia numa
+		<a href="https://swagger.io/specification/" target="_blank">especificação</a> bem definida, não há
+		dificuldade alguma em implementar um cliente dedicado ao serviço Hekura. O próprio mantenedor da
+		especificação fornece ferramentas para a geração automática de servidores ou clientes nas linguagens de
+		programação mais populares do momento. O que nos move a implementar um cliente para uma especificação REST
+		é o fato do serviço pretender substituir as extensões Kryptonite para Chrome, como discutimos no
+		<a href="rational.html" target="_blank">racional</a> do projeto. Trata-se de reduzir o impacto na
+		migração da tecnologia utilizada por pelo menos duas aplicações com grande quantidade de usuários,
+		o <a href="https://tokenconectividade.caixa.gov.br/" target="_blank">Token Conectividade</a> e o
+		<a href="https://conectividadesocialv2.caixa.gov.br" target="_blank">Conectividade Social</a>, que contam
+		hoje com quase 100 mil instalações em computadores corporativos.
+		</p>
+		<p>
+		Naturalmente, a prioridade na redução de impacto deve ser para os próprios usuários. Como seria algo
+		extremamente complexo e custoso migrar milhares de instalações para um novo produto por conta da 
+		dificuldade de comunicação, o objetivo primário do design desta API deve ser assegurar a inexistência
+		de impacto para os usuários. Em outras palavras, as aplicações que usam a solução devem continuar a
+		suportar as extensões Kryptonite sem que seus usuários sequer saibam que algo mudou. Assim, o projeto
+		da API procura assegurar o funcionamento da aplicação tanta para instalações exclusivamente do serviço
+		Hekura quanto para instalações legadas, baseadas nas extensões Kryptonite. Aliás, o mesmo computador
+		poderá ter as duas soluções instaladas simultaneamente.
+		</p>
+		<p>
+		O segundo objetivo é um pouco mais difícil de alcançar &ndash; a ausência de impacto em termos de 
+		manutenção das aplicações que já usam o produto, já que recomendamos que novas aplicações que venham
+		a utilizar essas soluções criptográficas se concentrem exclusivamente no serviço Hekura, aquele que
+		terá continuidade de suporte, implementando o cliente REST fornecido agora. Idealmente, deveríamos implementar
+		um cliente estritamente com a mesma interface do cliente Kryptonite, tanto na entrada quanto na saída,
+		de tal modo que todo o necessário seria agregar mais um módulo javascript às aplicações, sem alterar
+		uma única linha de código. Este objetivo pode ser alcançado, ao custo porém de enorme complexidade da
+		implementação. Isto porque Hekura e Kryptonite não são produtos distintos apenas pela tecnologia, mas
+		principalmente pelos seus conceitos de projeto. Conciliar tais conceitos numa única implementação não
+		é possível sem o crescimento exponencial da complexidade. E complexidade tem um preço: bugs, cuja incidência
+		é uma função exponencial da complexidade. E as aplicações que hoje usam a Kryptonite já são suficientemente
+		complexas para que desejemos arriscar introduzir incerteza no seu comportamento.
+		</p>
+		<p>
+		Assim, optamos por um projeto que implicasse em esforço de manutenção, ainda que modesto. Assim, como se
+		verá mais adiante, as aplicações que usam hoje as extensões Kryptonite deverão saber que os usuários poderão estar
+		usando o serviço Hekura, alterando seu comportamento de acordo com esse conhecimento. As mudanças não
+		são muitas, mas deverão existir. É do que trata o restante deste documento.
+		</p>
+	</div>
+
+	<div>
+		<h2>O namespace xabo</h2>
+		<div>
+			<p>
+			As APIs <a href="api/1.0.0/index.html" target="_blank">criptográficas</a> (e as
+			<a href="fittings/1.0.0/index.html" target="_blank">acessórias</a> mudaram muito pouco,
+			basicamente alguns parâmetros de entrada e o conteúdo dos retornos das Promises resultantes de cada
+			método. Isso decorre de um fato simples: o trabalho a ser realizado pelo serviço Hekura é o mesmo realizado
+			pelas extensões Kryptonite. A mudança nos parâmetros decorre diretamente da agregação de recursos, o que
+			pode ser interpretado como melhoria. Por outro lado, a mudança conceitual nos retornos das Promises
+			estão ligadas ao fato de o modelo Hekura de conexão, por razões de segurança, não fornecer detalhes em caso de erros.
+			</p>
+			<p>
+			Assim, a mudança mais relevante é ocasionada pela nova arquitetura tecnológica e ela se expressa no modo de
+			determinar a correta instalação da estação cliente e suas capacidades. Nós sabemos que as extensões Kryptonite
+			estão instaladas simplesmente pela acessibilidade dos objetos que representam os seus namespaces: kptaenroll,
+			kptasign e kptaverify. Secundariamente, a aplicação pode verificar se qualquer elemento HTML identificado como
+			<i>kryptonite_install_signal</i> traz em seu conteúdo quaisquer dos indicadores enroll@kryptonite, sign@kryptonite e
+			verify@kryptonite.
+			</p>
+			<p>
+			Nada parecido ocorre com Hekura. É preciso executar um request HTTP para o destino http://127.0.0.1:9171
+			e avaliar o resultado. A presença e habilitação do serviço para a origem da aplicação é determinada por um
+			fetch bem sucedido de um request válido para aquele endereço. Por outro lado, a falha nesse fetch não indica
+			necessariamente que o serviço não esteja instalado. Ele pode simplesmente ser causado pelo fato de o
+			usuário não ter habilitado previamente a origem da requisição, conforme discutimos no documento
+			<a href="threat_model.html" target="_blank">Modelo de Ameaças</a>. Por razões de segurança, o navegador não
+			fornece detalhes da falha para a aplicação que tentou o fetch, já que pode ser simplesmente uma tentativa
+			de ação maliciosa. Apenas a console do navegador dá alguns detalhes a mais para o usuário e somente para
+			ele: caso o serviço não esteja instalado, é informada uma <i>conexão recusada</i>; caso a origem não tenha
+			sido habilitada, é informada uma linha de status HTTP <i>403 forbidden</i>.
+			</p>
+			<p>
+			Para dar conta dessas arquiteturas distintas, o namespace <a href="xabo/1.0.0/index.html" target="_blankk">xabo</a>,
+			o único objeto exportado pela API cliente necessário para a aplicação, fornece o método queryInterface(), cuja
+			Promise de retorno, se bem sucedida, retorna a API disponível. Esta função sempre procura, primeiro, determinar
+			se o serviço Hekura está instalado, através de um GET ao endereço presumido para o serviço, que, se bem
+			sucedido, retorna sua especificação YAML. Se o fetch falhar, ele tenta determinar se pelo menos uma das
+			extensões criptográficas da Kryptonite está instalada, caso em que é retornada.
+			</p>
+			<p>
+			Esta função admite dois parâmetros, que afetam o conteúdo do seu retorno. O primeiro deles, <i>compatibilityMode</i>,
+			espera um valor lógico para indicar se a API retornada deve incluir também as APIs não criptográficas
+			fornecidas pela <a href="fittings/1.0.0/index.html" target="_blank">extensão kptazip</a> da Kryptonite.
+			Se este parâmetro for declarado e contiver o valor true, a API de retorno inclui propriedades para
+			acesso a essas classes, mesmo que o serviço fornecido seja Hekura. O segundo parâmetro, <i>version</i>,
+			se presente, deve declarar a versão de Hekura que deve estar instalada. Neste caso, se houver uma
+			falha na obtenção da especificação YAML ou se a versão lá contida for menor que a desejada, é retornado
+			um erro e não a API Hekura.
+			</p>
+			<p>
+			Em caso de sucesso, é retornada uma instância do objeto <a href="xabo/1.0.0/API.html" target="_blank">API</a>.
+			A propriedade <i>signet</i> existe para fornecer à aplicação a informação de qual a API está sendo devolvida, de
+			modo a que esta possa lidar com eventuais diferenças entre ambas. O namespace xabo fornece constantes para
+			comparação precisa.
+			</p>
+			<p>
+			Essa informação é relevante para o caso de a API Kryptonite ser retornada. Neste caso, é possível que uma
+			ou mais das propriedades criptográficas do objeto (enroll, sign ou verify) não estejam definidas. Isto porque
+			o usuário pode escolher instalar apenas uma dessas extensões. Neste caso, a propriedade correspondente à
+			extensão não instalada não estará definida. Isso nunca ocorre no caso da API Hekura. Por outro lado, as
+			propriedades adicionais (base64, deflater e inflater) só estarão definidas caso o parâmetro compatibilityMode
+			esteja definido com o valor true.
+			</p>
+			<p>
+			Quanto aos retornos dos métodos (criptográficos ou acessórios) utilizados, são necessárias algumas informações
+			preliminares. Nas extensões Kryptonite, todo o processamento ocorre no nível mais distante possível da
+			aplicação, sendo mediado por um modelo tecnológico de mensagens trocadas entre os diferentes fossos que
+			formam as defesas em profundidade implementadas pelo navegador para isolar a aplicação nativa da aplicação
+			web. Para lidar com a complexidade deste modelo, as Promises retornadas pela API das extensões falha por um
+			<i>reject</i> em casos muito específicos onde a mensagem inicial entre a aplicação e os <i>content scripts</i> 
+			fornecidos pela extensão (o primeiro fosso a ser transposto) não puder ser enviada. Assim, o modelo de 
+			promessas daquela API usa os métodos <i>resolve</i> e <i>reject</i> somente para se referir à incapacidade
+			de enviar a primeira mensagem. Todas as demais falhas são relatadas por um objeto devolvido pelo <i>resolve</i>,
+			que contém as seguintes propriedades:
+			</p>
+			<ul>
+				<li>result, que informa sobre o resultado da operação, distinguindo sucesso de falha e método não suportado;</li>
+				<li>reason, que contém um numérico exprimindo o erro ocorrido, onde 0 significa sucesso;</li>
+				<li>payload, um slot livre para o valor retornado em caso de sucesso.</li>
+			</ul>
+			<p>
+			Nada disso é possível sob a API Hekura: as falhas são relatadas somente como códigos de estado HTTP e somente
+			no caso de a origem da requisição ter sido previamente aprovada pelo usuário. Assim, optamos por simplificar
+			o retorno das APIs fornecidas por Xabo, mesmo que relacionados às extensões Kryptonite. Assim, o método
+			<i>resolve</i> da Promise de retorno <i>sempre</i> devolve o objeto esperado no sucesso da operação. Por outro
+			lado, as falhas <i>sempre</i> são evocadas pelo método <i>reject</i> e sempre retornam uma instância do
+			objeto <a href="api/1.0.0/PromiseRejected.html" target="_blank">PromiseRejected</a>. Este objeto é retornado
+			em lugar de uma mensagem de erro para assegurar que a informação estruturada em códigos de retorno fornecida
+			pela Kryptonite seja propagada para a aplicação web.
+			</p>
+		</div>
+	</div>
+
+	<div>
+		<h2>Observações sobre a configuração</h2>
+		<div>
+			Ao contrário da API Kryptonite, que é fornecida como um <i>content script</i> pela extensão, o cliente
+			Hekura é formado por um conjunto de arquivos que precisam ser embarcados na aplicação web. De modo
+			a simplificar esse embarque, utilizaremos o empacotador javascript <a href="https://github.com/webpack/webpack"
+			target="_blank">Webpack</a>, de modo a distribuir um único arquivo.
+		</div>
+	</div>
+</div>
+</body>
+</html>

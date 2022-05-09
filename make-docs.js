@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');
+const yargs = require('yargs');
 
 function getVersion(jsfile) {
 	let src = fs.readFileSync(jsfile, { encoding: 'utf-8' });
@@ -17,12 +18,13 @@ function getVersion(jsfile) {
 	throw new Error('File does not contains a version reference');
 }
 
-function document(component) {
-	let source = path.resolve(__dirname, 'components', component + '.js');
-	let target = path.resolve(__dirname, component + '.json');
-	let pack = { name: component, version: getVersion(source) };
-	fs.writeFileSync(target, JSON.stringify(pack));
-	let args = ['--destination', 'docs/', '--package', target, '--verbose', source];
+function executeJSDoc(source, component) {
+	let origin = path.resolve(source, component + '.js');
+	let destiny = path.resolve(__dirname, 'docs/');
+	let jsonPackage = path.resolve(__dirname, component + '.json');
+	let pack = { name: component, version: getVersion(origin) };
+	fs.writeFileSync(jsonPackage, JSON.stringify(pack));
+	let args = ['--destination', destiny, '--package', jsonPackage, '--verbose', origin];
 	let ret = cp.spawnSync('jsdoc', args, {
 		cwd: __dirname,
 		encoding: 'utf-8',
@@ -31,12 +33,23 @@ function document(component) {
 	if (ret.signal) throw new Error('NPM process was killed by signal ' + ret.signal);
 	if (ret.stdout) console.log(ret.stdout);
 	if (ret.stderr) console.log(ret.stderr);
-	fs.unlinkSync(target);
+	fs.unlinkSync(jsonPackage);
 }
 
-if (process.argv.length < 3) throw new Error('You must specify at least one component name');
-let i = 2;
-while (i < process.argv.length) {
-	console.log('Generating documentation for component named ' + process.argv[i] + '...');
-	document(process.argv[i++]);
+const argv = yargs(process.argv).argv;
+if (argv.components) {
+	let list = argv.components.split(',');
+	let i = 0;
+	while (i < list.length) {
+		console.log('Generating documentation for component named ' + list[i] + '...');
+		executeJSDoc('./components', list[i++]);
+	}
+}
+if (argv.webapi) {
+	let list = argv.webapi.split(',');
+	let i = 0;
+	while (i < list.length) {
+		console.log('Generating documentation for web-api component named ' + list[i] + '...');
+		executeJSDoc('./web-api', list[i++]);
+	}
 }

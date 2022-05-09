@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Class: Verify</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Class: Verify</h1>
+
+    
+
+
+
+
+<section>
+
+<header>
+    
+        <h2><span class="attribs"><span class="type-signature"></span></span>Verify<span class="signature">()</span><span class="type-signature"></span></h2>
+        
+            <div class="class-description">Fornece acesso às funcionalidades de verificação de assinaturas digitais</div>
+        
+    
+</header>
+
+<article>
+    <div class="container-overview">
+    
+        
+
+    
+    <h2>Constructor</h2>
+    
+
+    
+    <h4 class="name" id="Verify"><span class="type-signature"></span>new Verify<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="api.js.html">api.js</a>, <a href="api.js.html#line146">line 146</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="verify"><span class="type-signature"></span>verify<span class="signature">(options)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Parâmetros para a verficação, a saber:<ul>	<li>pkcs7: Documento CMS Signed Data para ser verificado. Obrigatório;</li>	<li>signingCert: Certificado de assinatura. Opcional. Se não informado, o certificado de assinatura, deve estar embarcado no documento CMS;</li>	<li>eContent: Conteúdo assinado. Opcional. Se não informado, deve estar embarcado no documento CMS;</li>	<li>verifyTrustworthy: Indicador de verificação da confiabilidade do certificado do assinante. Se não estiver presente assume-se o valor false.</li>	<li>	getSignerIdentifier: Indicador de que é requerido para que a operação devolva, na sua resposta, o campo de identificação do assinante.	Se não estiver presente assume-se o valor false;	</li>	<li>	getSignedContent: Indicador de que é requerido para que a operação devolva, na sua resposta, o valor do campo EncapsulatedContentInfo.	Se não estiver presente assume-se o valor false;	</li>	<li>	getSigningTime: Indicador de que é requerido que a operação devolva, na sua resposta, o atributo assinado SigningTime, se existir	no documento.  Se não estiver presente assume-se o valor false.	</li></ul><p>Na especificação da interface REST, os campos pkcs7, signingCert e eContent estão definidos como um objeto AltString, onde:</p><ul>	<li>	data: A representação dos dados. Pode ser do tipo ArrayBuffer ou String. Se do tipo string, pode estar codificado em Base64 conforme	indicado na propriedade binary;	</li>	<li>	binary: Indicador de dado binário (codificado em Base64) ou string. Se não estiver presente, este indicador é inferido do	tipo de dado da propriedade data: se ArrayBuffer, é inferido como true; se String, é inferido como false.	</li></ul></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="api.js.html">api.js</a>, <a href="api.js.html#line197">line 197</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    um objeto indicando a resposta ás várias requisições contidas nos parâmetros de entrada, a saber:<ul>	<li>signatureVerification: Indica o resultado da verificação criptográfica da assinatura;</li>	<li>messageDigestVerification: Indica o resultado da verificação do atributo assinado Message Digest;</li>	<li>signingCertVerification: Indica o resultado da verificação do atributo assinado ESS signing-certificate-v2, se presente;</li>	<li>certChainVerification: Indica o resultado da verificação da confiabilidade do certificado do assinante, se solicitada;</li>	<li>eContent: Conteúdo assinado, caso tenha sido solicitado. Se presente é um objeto do tipo AltString;</li>	<li>signerIdentifier: Identificação do assinante, se solicitada</li>	<li>signingTime: Valor do atributo assinado SigningTime, se solicitado (e presente no documento CMS).</li></ul><p>Se solicitado, o campo signerIdentifier é retornado como presente no documento CMS, a saber:</p><ul>	<li>issuer: o emissor do certificado, caso a identificação do assinante esteja representada por um IssuerAndSerialNumber;</li>	<li>serial: o número de sério do certificado, se a identificação for um IssuerAndSerialNumber. É representado como um número em hexadecimal;</li>	<li>subjectKeyIdentifier: Identificação do assinante pelo hash da chave pública do certificado, codificado em hexadecimal, caso o emissor seja representado assim.</li></ul>
+</div>
+
+
+
+    
+
+
+
+
+
+        
+    
+
+    
+
+    
+</article>
+
+</section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Enroll.html">Enroll</a></li><li><a href="PromiseRejected.html">PromiseRejected</a></li><li><a href="Sign.html">Sign</a></li><li><a href="Verify.html">Verify</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu May 05 2022 15:05:46 GMT-0300 (Horário Padrão de Brasília)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

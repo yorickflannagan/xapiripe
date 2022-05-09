@@ -6,7 +6,7 @@
 		"start-server": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip",
 		"start-forbidden": "http-server ./test -a 10.0.2.15 -p 8090 -o --log-ip",
 		"sign-request": "node ./pki/pki.js --issue ./pki/usr/request.req",
-		"start-hekura": "node ./test/hekura-test.js --pki=./pki --service=true",
+		"start-hekura": "node ./test/hekura-test.js --pki=./pki --service=true --check",
 
 		"hamahiri-test": "node --napi-modules ./test/hamahiri-test.js --pki=./pki --check",
 		"aroari-test": "node ./test/aroari-test.js --pki=./pki --check",
@@ -18,13 +18,16 @@
 		"hamahiri-build": "cd hamahiri & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
 		"service-build": "node build.js --build=service --distributorId=br.gov.caixa --updateURL=http://192.168.0.3:8080 --arch=x64",
 
-		"hamahiri-docs": "node make-docs.js hamahiri",
-		"aroari-docs": "node make-docs.js aroari",
-		"wanhamou-docs": "node make-docs.js wanhamou",
-		"hekura-docs": "node make-docs.js hekura",
-		"options-docs": "node make-docs.js options",
-		"update-docs": "node make-docs.js update",
-		"all-docs": "node make-docs.js hamahiri aroari wanhamou hekura options update"
+		"hamahiri-docs": "node make-docs.js --components=hamahiri",
+		"aroari-docs": "node make-docs.js --components=aroari",
+		"wanhamou-docs": "node make-docs.js --components=wanhamou",
+		"hekura-docs": "node make-docs.js --components=hekura",
+		"options-docs": "node make-docs.js --components=options",
+		"update-docs": "node make-docs.js --components=update",
+		"api-docs": "node make-docs.js --webapi=api",
+		"fittings-docs": "node make-docs.js --webapi=fittings",
+		"xabo-docs": "node make-docs.js --webapi=xabo",
+		"all-docs": "node make-docs.js --components=hamahiri,aroari,wanhamou,hekura,options,update --webapi=api,fittings,xabo"
 	},
 	"repository": {
 		"type": "git",
