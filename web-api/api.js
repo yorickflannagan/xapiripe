@@ -214,3 +214,10 @@ export class Verify {
 		});
 	}
 }
+
+/**
+ * Localizador do serviço Hekura
+ * @member { String }
+ * @default http://127.0.0.1:9171
+ */
+export const urlHekura = 'http://127.0.0.1:9171';

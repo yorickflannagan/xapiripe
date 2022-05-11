@@ -7,17 +7,70 @@
 
 'use strict';
 
-import { Enroll, Sign, Verify, PromiseRejected } from './api.js';
+import { Enroll, Sign, Verify, PromiseRejected, urlHekura } from './api.js';
+
+const INVALID_JSON_RESPONSE = 'Ocorreu a seguinte falha ao converter a resposta [%r] recebida do serviço no objeto Javascript: %e';
+
+class HTTPResponse {
+	constructor(code, statusText) {
+		this.statusCode = code;
+		this.statusText = statusText;
+	}
+}
+function retrieve(path, init) {
+	return new Promise((resolve, reject) => {
+		window.fetch(urlHekura + path, init).then((response) => {
+			if (response.ok) {
+				response.text().then((value) => { return resolve(new HTTPResponse(response.status, value)); })
+				.catch((reason) => { return reject(new PromiseRejected(2, reason)); });
+			}
+			else return reject(new PromiseRejected(response.status, response.statusText));
+		})
+		.catch((reason) => { return reject(new PromiseRejected(2, reason)); });
+	});
+}
 
 export class HekuraEnroll extends Enroll {
 	enumerateDevices() {
-		return Promise.resolve([ new String('array de nomes de CSP') ]);
+		return new Promise((resolve, reject) => {
+			retrieve('/enroll', {
+				method: 'GET',
+				mode: 'cors',
+				cache: 'no-store'
+			})
+			.then((contents) => {
+				try { return resolve(JSON.parse(contents.statusText)); }
+				catch (e) { return reject(new PromiseRejected(2, INVALID_JSON_RESPONSE.replace('%r', contents.statusText).replace('%e', e))); }
+			})
+			.catch((reason) => { return reject(reason); });
+		});
 	}
 	generateCSR({ device, keySize = 2048, signAlg = 0x00000040, rdn = {c, o, ou, cn }}) {
-		return Promise.resolve(new String('PKCS #10 codificado em Base64 no formato PEM'));
+		return new Promise((resolve, reject) => {
+			let body;
+			try { body = JSON.stringify(arguments[0]); }
+			catch (e) { return reject(new PromiseRejected(1, 'Argumento inválido')); }
+			retrieve('/enroll', {
+				method: 'POST',
+				mode: 'cors',
+				cache: 'no-store',
+				headers: { 'Content-Type': 'application/json' },
+				body: new TextEncoder().encode(body)
+			})
+			.then((contents) => { return resolve(contents.statusText); })
+			.catch((reason) =>  { return reject(reason); });
+		});
 	}
 	installCertificates(pkcs7) {
-		return Promise.resolve(new Boolean());
+		retrieve('/enroll', {
+			method: 'POST',
+			mode: 'cors',
+			cache: 'no-store',
+			headers: { 'Content-Type': 'application/json' },
+			body: new TextEncoder().encode(JSON.stringify({ pkcs7: pkcs7 }))
+		})
+		.then((contents) => { return resolve(contents.statusCode === 201 ? true : false); })
+		.catch((reason) =>  { return reject(reason); });
 	}
 }
 

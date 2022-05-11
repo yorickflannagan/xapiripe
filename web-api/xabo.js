@@ -7,7 +7,7 @@
 
 'use strict';
 
-import { PromiseRejected } from './api.js';
+import { PromiseRejected, urlHekura } from './api.js';
 import { HekuraEnroll, HekuraSign, HekuraVerify } from './xapiripe.js';
 import { KryptoniteEnroll, KryptoniteSign, KryptoniteVerify } from './kryptonite.js';
 import { Base64, Deflate, Inflate } from './fittings.js';
@@ -165,7 +165,6 @@ export var xabo = {
 	 */
 	queryInterface: function(compatibilityMode = false, version = '') {
 
-		const HEKURA_URL = 'http://127.0.0.1:9171';
 		const HEKURA_NOT_FOUND_MSG = 'O serviço Hekura não foi encontrado. É possível que ele esteja instalado mas que o presente site não tenha sido autorizado pelo usuário. Verificando a instalação das extensões Kryptonita...';
 		const HEKURA_FAILURE_MSG = 'O serviço Hekura foi encontrado mas retornou o código HTTP %s. Impossível continuar.';
 		const HEKURA_GET_FAILURE_MSG = 'Ocorreu a seguinte falha ao obter a especificação do serviço Hekura: %s. Impossível continuar.';
@@ -248,14 +247,9 @@ export var xabo = {
 			}
 			catch (e) { return new QueryResult(xabo.queryHekuraFailure, HEKURA_GET_FAILURE_MSG.replace('%s', e.toString())); }
 		}
-		
 		function hekuraCheck(version = '') {
 			return new Promise((resolve, reject) => {
-				window.fetch(HEKURA_URL, {
-					method: 'GET',
-					mode: 'cors',
-					cache: 'no-store'
-				}).then((response) => {
+				window.fetch(urlHekura, { method: 'GET', mode: 'cors', cache: 'no-store' }).then((response) => {
 					if (response.ok) {
 						if (version.length > 0) {
 							response.text().then((value) => {
@@ -272,7 +266,6 @@ export var xabo = {
 				.catch(() => { return reject(new QueryResult(xabo.queryHekuraNotFound, HEKURA_NOT_FOUND_MSG)); });
 			});
 		}
-		
 		function kryptoniteCheck() {
 			let ret;
 			let enroll;
@@ -288,7 +281,6 @@ export var xabo = {
 			)	ret = new KryptoniteAPI(enroll, sign, verify);
 			return ret;
 		}
-		
 		function addCompatibilityProperties(api) {
 			return Object.defineProperties(api, {
 				base64:   { value: new Base64()  },

@@ -22,7 +22,7 @@ const Hekura = require('../components/hekura');
 let PKIDir = __dirname;
 let indexCN = 0;
 
-const ORIGINS = [ 'http://192.168.0.3:8080', 'http://10.0.2.15:8080', 'http://localhost:8080' ];
+const ORIGINS = [ 'http://192.168.0.3:8080', 'http://10.0.2.15:8080' /*, 'http://localhost:8080' */ ];
 const ORIGIN = 'http://10.0.2.15:8080';
 const LEGACY_PROVIDER = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
 const CNG_PROVIDER = 'Microsoft Software Key Storage Provider';

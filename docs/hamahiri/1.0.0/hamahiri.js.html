@@ -35,22 +35,29 @@
 
 'use strict';
 const addon = require('./hamahiri-native');
+const asn1js = require('asn1js');
 
 /**
- * Global objects
- * @namespace Xapiripe
- */
-/**
-/* TODO: Implementar campos de equivalência à Kryptonitas
  * Certificate object
- * @class Certificate
- * @memberof Xapiripe
- * @property { string } subject - Titular do certificado
- * @property { string } issuer  - Emissor do certificado
- * @property { string } serial  - Número de série do certificado, onde os bytes são representados em hexadecimal
- * @property { Number } handle  - Handle para acesso à chave privada associada ao certificado
+ * @property { string } subject Titular do certificado
+ * @property { string } issuer Emissor do certificado
+ * @property { string } serial Número de série do certificado, onde os bytes são representados em hexadecimal
+ * @property { Number } handle Handle para acesso à chave privada associada ao certificado
+ * @property { String } subject_id Identificação civil do titular do certificado, se pessoa física. Campo ICP-Brasil
+ * @property { String } company_id Identificação civil da empresa titular do certificado. Campo ICP-Brasil
+ * @property { String } sponsor_id Identificação civil da pessoa física responsável pelo certificado de empresa. Campo ICP-Brasil
  */
-
+class Certificate {
+	constructor(native, icp) {
+		this.handle = native.handle;
+		this.subject = native.subject;
+		this.issuer = native.issuer;
+		this.serial = native.serial;
+		this.subject_id = icp.subject_id;
+		this.company_id = icp.company_id;
+		this.sponsor_id = icp.sponsor_id;
+	}
+}
 
 /**
  * Acesso aos dispositivos criptográficos instalados no computador local
@@ -237,17 +244,82 @@ const addon = require('./hamahiri-native');
  * @memberof Hamahiri
  * @extends Hamahiri
  */
- class Sign extends Hamahiri
+class Sign extends Hamahiri
 {
 	constructor() { super(); }
+
+	#getSubjectAltNames(buf) {
+		let decoded = asn1js.fromBER(buf.buffer);
+		if (decoded.offset == -1 || !(decoded.result instanceof asn1js.Sequence)) return null;
+		let tbs = decoded.result.valueBlock.value[0];
+		if (!(tbs instanceof asn1js.Sequence)) return null;
+		let extensions = tbs.valueBlock.value[tbs.valueBlock.value.length - 1];
+		if (!(extensions instanceof asn1js.Constructed)) return null;
+		let extList = extensions.valueBlock.value[0].valueBlock.value;
+		let i = 0;
+		while (i &lt; extList.length) {
+			let extension = extList[i++];
+			if (extension instanceof asn1js.Sequence) {
+				let oid = extension.valueBlock.value[0];
+				if (oid instanceof asn1js.ObjectIdentifier) {
+					let value = oid.valueBlock.toString();
+					if (value === '2.5.29.17') return extension.valueBlock.value[1];
+				}
+			}
+		}
+		return null;
+	}
+	#parseGeneralNames(octets) {
+		let ret = { subject_id: null, company_id: null, sponsor_id: null };
+		let names = octets.valueBlock.value[0];
+		let nameList = names.valueBlock.value;
+		let i = 0;
+		while (i &lt; nameList.length) {
+			let name = nameList[i++];
+			if (name.idBlock.tagNumber == 0) {
+				let oid = name.valueBlock.value[0];
+				if (oid instanceof asn1js.ObjectIdentifier) {
+					let value = name.valueBlock.value[1];
+					if (value instanceof asn1js.Constructed &amp;&amp; value.valueBlock.value[0] instanceof asn1js.OctetString) {
+						let decoder = new TextDecoder();
+						switch (oid.valueBlock.toString()) {
+						case '2.16.76.1.3.1':
+							ret.subject_id = decoder.decode(value.valueBlock.value[0].valueBlock.valueHex);
+							break;
+						case '2.16.76.1.3.3':
+							ret.company_id = decoder.decode(value.valueBlock.value[0].valueBlock.valueHex);
+							break;
+						case '2.16.76.1.3.4':
+							ret.sponsor_id = decoder.decode(value.valueBlock.value[0].valueBlock.valueHex);
+							break;
+						}
+					}
+				}
+			}
+		}
+		return ret;
+	}
 
 	/**
 	 * Enumera os certificados em vigor que estejam associados a chaves privadas RSA nos repositórios criptográficos
      * @throws { Failure } Dispara uma instância de {@link Hamahiri.Failure} em caso de falha
 	 * @returns { Array } Um array de objetos {@link Xapiripe.Certificate}
 	 */
-	 enumerateCertificates() {
-		return this.addon.enumerateCertificates();
+	enumerateCertificates() {
+		let certs = this.addon.enumerateCertificates();
+		let ret = new Array();
+		let i = 0;
+		while (i &lt; certs.length) {
+			let native = certs[i++];
+			let chain = this.getCertificateChain(native.handle);
+			let ext = this.#getSubjectAltNames(chain[0]);
+			let icp;
+			if (ext) icp = this.#parseGeneralNames(ext);
+			else icp = { subject_id: null, company_id: null, sponsor_id: null };
+			let cert = new Certificate(native, icp);
+			ret.push(cert);
+		}
+		return ret;
 	}
 
 	/**
@@ -258,7 +330,7 @@ const addon = require('./hamahiri-native');
 	 * @param   { Number        } key       Handle para a chave privada de assinatura, obtido previamente
 	 * @returns { Uint8Array } Buffer assinado.
 	 */
-	 sign(hash, algorithm, key) {
+	sign(hash, algorithm, key) {
 		return this.addon.sign(hash, algorithm, key);
 	}
 
@@ -300,13 +372,13 @@ module.exports = {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hamahiri.html">Hamahiri</a></li><li><a href="Xapiripe.html">Xapiripe</a></li></ul><h3>Classes</h3><ul><li><a href="Hamahiri.Enroll.html">Enroll</a></li><li><a href="Hamahiri.Failure.html">Failure</a></li><li><a href="Hamahiri.Hamahiri.html">Hamahiri</a></li><li><a href="Hamahiri.KeyPair.html">KeyPair</a></li><li><a href="Hamahiri.Sign.html">Sign</a></li><li><a href="Xapiripe.Certificate.html">Certificate</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="Hamahiri.html">Hamahiri</a></li></ul><h3>Classes</h3><ul><li><a href="Certificate.html">Certificate</a></li><li><a href="Hamahiri.Enroll.html">Enroll</a></li><li><a href="Hamahiri.Failure.html">Failure</a></li><li><a href="Hamahiri.Hamahiri.html">Hamahiri</a></li><li><a href="Hamahiri.KeyPair.html">KeyPair</a></li><li><a href="Hamahiri.Sign.html">Sign</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed May 04 2022 17:38:05 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed May 11 2022 17:07:34 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>
