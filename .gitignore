@@ -9,3 +9,4 @@ pki/usr/*
 *.node
 options.json
 distribution.json
+test/xapiripe.js

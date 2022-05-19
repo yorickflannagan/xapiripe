@@ -416,3 +416,9 @@ V	270510205934Z		019E	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End
 V	270510205939Z		019F	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 282
 V	270510205952Z		01A0	unknown	/CN=User CN to legacy CryptoAPI 283
 V	270510210000Z		01A1	unknown	/CN=User CN to CNG API 284
+V	270515133848Z		01A2	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 283
+V	270515133901Z		01A3	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 284
+V	270515133912Z		01A4	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 285
+V	270515133917Z		01A5	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 286
+V	270515133930Z		01A6	unknown	/CN=User CN to legacy CryptoAPI 287
+V	270515133936Z		01A7	unknown	/CN=User CN to CNG API 288

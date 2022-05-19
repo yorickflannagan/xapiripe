@@ -29,37 +29,44 @@ function retrieve(path, init) {
 		.catch((reason) => { return reject(new PromiseRejected(2, reason)); });
 	});
 }
+function returnObject(contents, resolve, reject) {
+	try { return resolve(JSON.parse(contents.statusText)); }
+	catch (e) { return reject(new PromiseRejected(2, INVALID_JSON_RESPONSE.replace('%r', contents.statusText).replace('%e', e))); }
+}
+function get(path) {
+	return new Promise((resolve, reject) => {
+		retrieve(path, {
+			method: 'GET',
+			mode: 'cors',
+			cache: 'no-store'
+		})
+		.then((contents) => { return returnObject(contents, resolve, reject); })
+		.catch((reason) => { return reject(reason); });
+	});
+}
+function post(path, argument) {
+	return new Promise((resolve, reject) => {
+		let body;
+		try { body = JSON.stringify(argument); }
+		catch (e) { return reject(new PromiseRejected(1, 'Argumento inválido')); }
+		retrieve(path, {
+			method: 'POST',
+			mode: 'cors',
+			cache: 'no-store',
+			headers: { 'Content-Type': 'application/json' },
+			body: new TextEncoder().encode(body)
+		})
+		.then((contents) => { return resolve(contents.statusText); })
+		.catch((reason) =>  { return reject(reason); });
+	});
+}
 
 export class HekuraEnroll extends Enroll {
 	enumerateDevices() {
-		return new Promise((resolve, reject) => {
-			retrieve('/enroll', {
-				method: 'GET',
-				mode: 'cors',
-				cache: 'no-store'
-			})
-			.then((contents) => {
-				try { return resolve(JSON.parse(contents.statusText)); }
-				catch (e) { return reject(new PromiseRejected(2, INVALID_JSON_RESPONSE.replace('%r', contents.statusText).replace('%e', e))); }
-			})
-			.catch((reason) => { return reject(reason); });
-		});
+		return get('/enroll');
 	}
 	generateCSR({ device, keySize = 2048, signAlg = 0x00000040, rdn = {c, o, ou, cn }}) {
-		return new Promise((resolve, reject) => {
-			let body;
-			try { body = JSON.stringify(arguments[0]); }
-			catch (e) { return reject(new PromiseRejected(1, 'Argumento inválido')); }
-			retrieve('/enroll', {
-				method: 'POST',
-				mode: 'cors',
-				cache: 'no-store',
-				headers: { 'Content-Type': 'application/json' },
-				body: new TextEncoder().encode(body)
-			})
-			.then((contents) => { return resolve(contents.statusText); })
-			.catch((reason) =>  { return reject(reason); });
-		});
+		return post('/enroll', arguments[0]);
 	}
 	installCertificates(pkcs7) {
 		retrieve('/enroll', {
@@ -76,37 +83,34 @@ export class HekuraEnroll extends Enroll {
 
 export class HekuraSign extends Sign {
 	enumerateCerts() {
-		return Promise.resolve([ { subject: new String(), issuer: new String(), serial: new String(), handle: Number.MIN_VALUE } ]);
+		return get('/sign');
 	}
-	sign({
-		handle,
-		toBeSigned,
-		attach = true,
-		algorithm = 0x00000040,
-		cades = { policy: 'CAdES-BES', addSigningTime: true, commitmentType: '1.2.840.113549.1.9.16.6.4' }
-	}) {
-		return Promise.resolve(new String('PKCS#7 codificado em base64 no formato PEM'));
+	sign({ certificate, toBeSigned, attach = true, algorithm = 0x00000040, cades = { policy: 'CAdES-BES', addSigningTime: true, commitmentType: '1.2.840.113549.1.9.16.6.4' }}) {
+		return post( '/sign', {
+			handle: arguments[0].certificate.handle,
+			toBeSigned: arguments[0].toBeSigned,
+			attach: arguments[0].attach,
+			algorithm: arguments[0].algorithm,
+			cades: arguments[0].cades 
+		});
 	}
 }
 
 export class HekuraVerify extends Verify {
-	verify({
-		pkcs7 = { data: null, binary: false },
-		signingCert = { data: null, binary: false },
-		eContent = { data: null, binary: false },
-		verifyTrustworthy = true,
-		getSignerIdentifier = true,
-		getSignedContent = true,
-		getSigningTime = true
-	}) {
-		return Promise.resolve({
-			signatureVerification: true,
-			messageDigestVerification: true,
-			signingCertVerification: true,
-			certChainVerification: true,
-			eContent: { data: null, binary: false },
-			signerIdentifier: { issuer: null, serial: null, subjectKeyIdentifier:  null },
-			signingTime: new Date()
+	verify({ pkcs7 = { data: null, binary: false }, signingCert = { data: null, binary: false }, eContent = { data: null, binary: false }, verifyTrustworthy = false, getSignerIdentifier = false, getSignedContent = false, getSigningTime = false }) {
+		return new Promise((resolve, reject) => {
+			let body;
+			try { body = JSON.stringify(arguments[0]); }
+			catch (e) { return reject(new PromiseRejected(1, 'Argumento inválido')); }
+			retrieve('/verify', {
+				method: 'POST',
+				mode: 'cors',
+				cache: 'no-store',
+				headers: { 'Content-Type': 'application/json' },
+				body: new TextEncoder().encode(body)
+			})
+			.then((contents) => { return returnObject(contents, resolve, reject); })
+			.catch((reason) =>  { return reject(reason); });
 		});
 	}
 }

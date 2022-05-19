@@ -56,8 +56,7 @@ const Hamahiri = require('./hamahiri');
  * @property { Number } errorCode - Código do erro
  * @property { Object } native    - Erro gerado no processamento nativo, se for o caso. Ver {@link Hamahiri.Failure}
  */
- class APIError extends Error
-{
+class APIError extends Error {
 	/**
 	 * Falha na enumeração de dispositivos criptográficos
 	 * @member { Number }
@@ -282,8 +281,7 @@ const Hamahiri = require('./hamahiri');
 	 * @param { Number } errorCode Código de erro no módulo
 	 * @param { Object } native Objeto de erro do módulo nativo, ou null
 	 */
-	constructor(msg, method, errorCode, native)
-	{
+	constructor(msg, method, errorCode, native) {
 		super(msg);
 		this.component = 'Aroari';
 		this.method = method;
@@ -337,8 +335,7 @@ const Hamahiri = require('./hamahiri');
  * Políticas de assinatura, conforme RFC 5126. Atenção: somente a política CAdES-BES é presentemente suportada.
  * @memberof Aroari
  */
-class Policy
-{
+class Policy {
 	/**
 	 * CAdES Basic Electronic Signature
 	 * @member { String }
@@ -414,8 +411,7 @@ class Policy
  * Identificador dos algoritmos criptográficos
  * @memberof Aroari
  */
-class AlgorithmOID
-{
+class AlgorithmOID {
 	/**
 	 * 
 	 */
@@ -512,8 +508,7 @@ const content_4 = 4;
  * Utilitário para conversão de e para Base64
  * @memberof Aroari
  */
-class Base64
-{
+class Base64 {
 	/**
 	 * Converte um array de bytes para Base64
 	 * @param { Uint8Array } bytes Cadeia de bytes a ser convertida
@@ -569,8 +564,7 @@ class Base64
 	 * @param { String } base64 Array de bytes codificado em Base64
 	 * @returns { Uint8Array } Array de bytes convertido
 	 */
-	static atob(base64)
-	{
+	static atob(base64)	{
 		var charlen = base64.length;
 		var byteoff = 0;
 		var byteLength = Math.round(((charlen) / 4 * 3)+1);
@@ -581,8 +575,7 @@ class Base64
 		code = decodings[base64.charCodeAt(i)];
 		if (code == dash_value) {
 			while (code == dash_value && i < charlen) code = decodings[base64.charCodeAt(++i)];
-			if (i!=0)
-			{
+			if (i!=0) {
 				while(code != dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
 				while(code == dash_value && i < charlen) code=decodings[base64.charCodeAt(++i)];
 			}
@@ -627,8 +620,7 @@ class Base64
  * Constantes úteis para a identificação de objetos ASN.1
  * @memberof Aroari
  */
-class ASN1FieldOID
-{
+class ASN1FieldOID {
 	/**
 	 * Campo X.500 Country
 	 * @member { String }
@@ -718,8 +710,7 @@ class ASN1FieldOID
  * Implementa a parte cliente da emissão de um certificado digital
  * @memberof Aroari
  */
-class Enroll
-{
+class Enroll {
 	constructor() { this.addon = new Hamahiri.Enroll(); }
 
 	/**
@@ -916,8 +907,7 @@ class Enroll
  * Tipos de compromisso da assinatura CAdES
  * @memberof Aroari
  */
- class CommitmentType
- {
+class CommitmentType {
 	 /**
 	  * Indica que o assinante reconhece a criação, a aprovação e o envio do documento assinado
 	  * @member { String }
@@ -988,15 +978,13 @@ class Enroll
  * Representação ASN.1 de um certificado digital
  * @memberof Aroari
  */
- class X509Certificate
- {
+class X509Certificate {
 	/**
 	 * Efetua o parsing de um certificado digital utilizando a biblioteca asn1js
 	 * @param { Uint8Array } encoded Certificado encodado em DER
 	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
 	 */
-	constructor(encoded)
-	{
+	constructor(encoded) {
 		let decoded = asn1js.fromBER(encoded.buffer);
 		if (decoded.offset == -1) throw new APIError('Falha geral em efetuar o parsing do certificado', 'X509Certificate constructor', APIError.CERTIFICATE_DECODE_ERROR);
 		this.root = decoded.result;
@@ -1072,8 +1060,7 @@ class Enroll
  * Implementa as funções de assinatura digital utilizando chaves RSA
  * @memberof Aroari
  */
-class Sign
-{
+class Sign {
 	constructor() { this.addon = new Hamahiri.Sign(); }
 
 	/**
@@ -1319,8 +1306,7 @@ class Sign
  * Implementa um Relative Distinguished Name para comparação com outro RDN (stringprep)
  * @memberof Aroari
  */
-class RDN
-{
+class RDN {
 	/**
 	 * Cria uma nova instância de um RDN. O objeto asn1js.Sequence recebido como argumento é validado contra
 	 * a especificação
@@ -1413,8 +1399,7 @@ class RDN
  * Caso o documento CMS embarque mais de um assinante, somente o primeiro é considerado.
  * @memberof Aroari
  */
-class CMSSignedData
-{
+class CMSSignedData {
 	/**
 	 * Efetua o parsing do documento CMS especificado e valida os campos necessários à verificação criptográfica da assinatura.
 	 * @param { String | ArrayBuffer } cms Documento CMS SignedData, codificado em Base64 (seguindo as convenções PEM) ou DER.

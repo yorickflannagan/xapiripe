@@ -112,9 +112,9 @@ export class Sign {
 
 	/**
 	 * Assina digitalmente um documento ou transação
-	 * @param { Aroari.SignOptions } options Parâmetros para a operação, onde:
+	 * @param { Object } options Parâmetros para a operação, onde:
 	 * <ul>
-	 * 	<li>handle: Handle para o certificado, retornado por {@link enumerateCerts}</li>
+	 * 	<li>certificate: certificado de assinatura, retornado por {@link enumerateCerts}</li>
 	 * 	<li>toBesigned: Documento ou transação a ser assinada. Pode tanto ser uma string quanto um ArrayBuffer</li>
 	 * 	<li>attach: Indica se o documento toBeSigned deve ser anexado ao envelope CMS Signed Data. Opcional. Default: true</li>
 	 * 	<li>algorithm> Constante indicativa do algoritmo de assinatura a ser utilizado. Opcional. Default: CKM_SHA256_RSA_PKCS</li>
@@ -130,7 +130,7 @@ export class Sign {
 	 * @returns Promise que, quando resolvida, retorna um documento PKCS#7 codificado em base64 no formato PEM
 	 */
 	sign({
-		handle,
+		certificate,
 		toBeSigned,
 		attach = true,
 		algorithm = 0x00000040,
@@ -198,10 +198,10 @@ export class Verify {
 		pkcs7 = { data: null, binary: false },
 		signingCert = { data: null, binary: false },
 		eContent = { data: null, binary: false },
-		verifyTrustworthy = true,
-		getSignerIdentifier = true,
-		getSignedContent = true,
-		getSigningTime = true
+		verifyTrustworthy = false,
+		getSignerIdentifier = false,
+		getSignedContent = false,
+		getSigningTime = false
 	}) {
 		return Promise.resolve({
 			signatureVerification: true,
