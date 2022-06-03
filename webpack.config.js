@@ -57,7 +57,8 @@ let config = {
 		}),
 		new webpack.ProvidePlugin({
 			process: 'process/browser',
-			Buffer: [ 'buffer', 'Buffer' ]
+			Buffer: [ 'buffer', 'Buffer' ],
+			setImmediate: ['timers-browserify', 'setImmediate']
 		})
 	],
 	resolve: {

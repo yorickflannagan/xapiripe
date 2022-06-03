@@ -69,15 +69,17 @@ export class HekuraEnroll extends Enroll {
 		return post('/enroll', arguments[0]);
 	}
 	installCertificates(pkcs7) {
-		retrieve('/enroll', {
-			method: 'POST',
-			mode: 'cors',
-			cache: 'no-store',
-			headers: { 'Content-Type': 'application/json' },
-			body: new TextEncoder().encode(JSON.stringify({ pkcs7: pkcs7 }))
-		})
-		.then((contents) => { return resolve(contents.statusCode === 201 ? true : false); })
-		.catch((reason) =>  { return reject(reason); });
+		return new Promise((resolve, reject) => {
+			retrieve('/enroll', {
+				method: 'PUT',
+				mode: 'cors',
+				cache: 'no-store',
+				headers: { 'Content-Type': 'application/json' },
+				body: new TextEncoder().encode(JSON.stringify({ pkcs7: pkcs7 }))
+			})
+			.then((contents) => { return resolve(contents.statusCode === 201 ? true : false); })
+			.catch((reason) =>  { return reject(reason); });
+		});
 	}
 }
 

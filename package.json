@@ -3,23 +3,24 @@
 	"version": "1.0.0",
 	"description": "Digital signatures for web applications solution",
 	"scripts": {
-		"start-server": "http-server ./test -a 10.0.2.15 -p 8080 -o --log-ip",
+		"start-server": "http-server ./test -a localhost -p 8080 -o --log-ip",
 		"start-forbidden": "http-server ./test -a 10.0.2.15 -p 8090 -o --log-ip",
 		"sign-request": "node ./pki/pki.js --issue ./pki/usr/request.req",
 		"start-hekura": "node ./test/hekura-test.js --pki=./pki --service=true --check",
-		
+		"start-app-server": "node ./test/app-server.js",
+
 		"hamahiri-test": "node --napi-modules ./test/hamahiri-test.js --pki=./pki --check",
 		"aroari-test": "node ./test/aroari-test.js --pki=./pki --check",
 		"wanhamou-test": "node ./test/wanhamou-test.js --check",
 		"hekura-test": "node ./test/hekura-test.js --pki=./pki --service=false --check",
 		"test": "CD test & node all-components.js --pki=../pki --service=false",
 		"service-test": "CHCP 65001>nul & electron ./appservice/main.js",
-		
+
 		"hamahiri-build": "cd hamahiri & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
 		"service-build": "node build.js --build=service --distributorId=br.gov.caixa --updateURL=http://192.168.0.3:8080 --arch=x64",
 		"api-build": "webpack",
 		"api-dev-build": "webpack --env development & COPY build\\xapiripe.js test",
-		
+
 		"hamahiri-docs": "node make-docs.js --components=hamahiri",
 		"aroari-docs": "node make-docs.js --components=aroari",
 		"wanhamou-docs": "node make-docs.js --components=wanhamou",
@@ -37,9 +38,17 @@
 	},
 	"author": "Marco Antonio Gutierrez<yorick.flannagan@gmail.com>",
 	"license": "LGPL-3.0-or-later",
-	"bugs": { "email": "yorick.flannagan@gmail.com" },
-	"keywords": [ "CAdES", "Crypto", "PKI" ],
-	"os": [ "win32" ],
+	"bugs": {
+		"email": "yorick.flannagan@gmail.com"
+	},
+	"keywords": [
+		"CAdES",
+		"Crypto",
+		"PKI"
+	],
+	"os": [
+		"win32"
+	],
 	"gypfile": true,
 	"devDependencies": {
 		"electron": "^18.0.3",
@@ -51,12 +60,14 @@
 	},
 	"dependencies": {
 		"asn1js": "^2.3.2",
-		"node-addon-api": "^4.3.0",
 		"assert": "^2.0.0",
 		"browserify-zlib": "^0.2.0",
 		"buffer": "^6.0.3",
+		"node-addon-api": "^4.3.0",
 		"process": "^0.11.10",
+		"setimmediate": "^1.0.5",
 		"stream-browserify": "^3.0.0",
+		"timers-browserify": "^2.0.12",
 		"util": "^0.12.4",
 		"yauzl": "^2.10.0",
 		"yazl": "^2.5.1"

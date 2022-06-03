@@ -221,7 +221,7 @@ class Deflater {
 	}
 	add(entry) {
 		this.zip.addBuffer(
-			Buffer.from(new Uint8Array(new Base64().atob(entry.entry)).buffer),
+			Buffer.from(entry.entry),
 			entry.name,
 			{ mtime: new Date(entry.date), mode: REGULAR_FILE, compress: entry.compress }
 		);
@@ -272,7 +272,8 @@ export class Deflate {
 			let deflater = this.map.get(handle);
 			if (!deflater) return reject(new PromiseRejected(229, INVALID_HANDLE));
 			try {
-				deflater.add({ entry: entry, name: name, date: date, compress: compress });
+				let data = entry instanceof Uint8Array ? entry : new Uint8Array(entry);
+				deflater.add({ entry: data, name: name, date: date, compress: compress });
 				return resolve(true);
 			}
 			catch (e) { return reject(new PromiseRejected(230, e.toString())); }
@@ -365,7 +366,6 @@ export class Inflate {
 			})
 			.catch((reason) => { return reject(reason); });
 		});
-		return Promise.resolve(Number.MIN_VALUE);
 	}
 
 	/**
@@ -379,7 +379,6 @@ export class Inflate {
 			if (!inflater) return reject(new PromiseRejected(229, INVALID_HANDLE));
 			return resolve(Array.from(inflater.list()));
 		});
-		return Promise.resolve([ new String() ]);
 	}
 
 	/**
@@ -389,7 +388,7 @@ export class Inflate {
 	 * @param { boolean } preserve Indicador de formato do retorno. Se true, o valor retornado é um Uint8Array
 	 * que não é convertido para Base64. Valor default: false, com a consequente conversão para Base64
 	 * @returns Promise que, quando resolvida, retorna o arquivo de dados comprimido no formato String
-	 * ou Uint8Array, de acordo com o parâmetro preserve
+	 * codificada  em Base64 ou Uint8Array, de acordo com o parâmetro preserve
 	 */
 	inflate(handle, name, preserve = false) {
 		return new Promise((resolve, reject) => {
@@ -397,7 +396,7 @@ export class Inflate {
 			if (!inflater) return reject(new PromiseRejected(229, INVALID_HANDLE));
 			inflater.inflate(name).then((value) => {
 				let ret = value;
-				if (preserve) ret = new Base64().btoa(value);
+				if (!preserve) ret = new Base64().btoa(value);
 				return resolve(ret);
 			})
 			.catch((reason) => { return reject(reason); });

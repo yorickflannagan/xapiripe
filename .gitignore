@@ -10,3 +10,6 @@ pki/usr/*
 options.json
 distribution.json
 test/xapiripe.js
+test/*.req
+test/*.pem
+test/*.p7b
