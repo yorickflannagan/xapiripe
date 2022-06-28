@@ -99,7 +99,7 @@ class LogDevice
 	static getLogger(origin) {
 		let ret = new LogDevice(origin);
 		if (this.globalFD == 0) {
-			try { this.globalFD = ret.#openLogFile(); }
+			try { this.globalFD = ret.openLogFile(); }
 			catch (err) {
 				console.error('Impossível abrir o arquivo de log: ' + err);
 				console.error('Todos os registros de log subsequentes serão feitos na console');
@@ -126,7 +126,7 @@ class LogDevice
 	constructor(origin) {
 		this.origin = (typeof origin !== 'undefined') ? origin : 'Xapiripe';
 	}
-	#openLogFile() {
+	openLogFile() {
 		let i = 0;
 		let fd = 0;
 		let mtime = new Date();
@@ -149,13 +149,13 @@ class LogDevice
 		if (fd == 0) fd = fs.openSync(oldest, 'w');
 		return fd;
 	}
-	#rotate() {
+	rotate() {
 		try {
 			let stats = fs.fstatSync(LogDevice.globalFD);
 			if (stats.size > LogDevice.cfgLogMaxSize * 1024) {
 				try {
 					fs.closeSync(LogDevice.globalFD);
-					LogDevice.globalFD = this.#openLogFile();
+					LogDevice.globalFD = this.openLogFile();
 				}
 				catch (e) {
 					LogDevice.globalFD = 0;
@@ -168,7 +168,7 @@ class LogDevice
 			console.error('Todos os registros de log subsequentes serão feitos na console');
 		}
 	}
-	#getLevelInfo(level) {
+	getLevelInfo(level) {
 		switch (level) {
 		case LogLevel.DEBUG: return 'DEBUG: ';
 		case LogLevel.INFO: return 'INFO: ';
@@ -191,9 +191,9 @@ class LogDevice
 	 */
 	log(level, msg) {
 		if (level >= LogDevice.cfgLogLevel) {
-			this.#rotate();
+			this.rotate();
 			let cur = new Date();
-			let logged = this.origin.concat(' - ', cur.toUTCString(), ' - ', this.#getLevelInfo(level), msg, '\r\n');
+			let logged = this.origin.concat(' - ', cur.toUTCString(), ' - ', this.getLevelInfo(level), msg, '\r\n');
 			try { fs.writeSync(LogDevice.globalFD, logged); }
 			catch(e) {
 				switch (level) {

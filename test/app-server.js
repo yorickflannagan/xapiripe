@@ -7,7 +7,7 @@ const { resolve, join, extname, basename } = require('path');
 const { createServer } = require('http');
 const { existsSync, readFileSync, writeFileSync, unlinkSync } = require('fs');
 const { randomBytes } = require('crypto');
-const sprintf = require('../components/wanhamou').sprintf
+const sprintf = require('../components/wanhamou').sprintf;
 const OpenSSLWrapper = require('../pki/pki').OpenSSLWrapper;
 const argv = yargs(process.argv).argv;
 

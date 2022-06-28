@@ -5,7 +5,9 @@ resources/
 
 pki/newcerts/*.pem
 pki/*.old
-pki/usr/*
+pki/usr/*.req
+pki/usr/*.pem
+pki/usr/*.p7b
 *.log
 *.node
 options.json
