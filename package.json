@@ -17,7 +17,7 @@
 		"service-test": "CHCP 65001>nul & electron ./appservice/main.js",
 
 		"hamahiri-build": "cd hamahiri & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
-		"service-build": "node build.js --build=service --distributorId=br.gov.caixa --updateURL=http://192.168.0.3:8080 --arch=x64",
+		"service-build": "node build.js --build=service --distributorId=br.gov.caixa --updateURL=http://hekura.crypthings.org:8080 --arch=x64",
 		"api-build": "webpack",
 		"api-dev-build": "webpack --env development & COPY build\\xapiripe.js test",
 

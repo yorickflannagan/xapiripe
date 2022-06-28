@@ -51,6 +51,7 @@ const svcBuildOptions = {
 		'pki/',
 		'test/',
 		'web-api/',
+		'signthing/',
 		'options.json',
 		'package-lock.json',
 		'package-old.json',
@@ -71,7 +72,7 @@ const svcBuildOptions = {
 		FileDescription: svcSignet.productDescription
 	}
 }
-const svcExcludeDirs = [ 'docs', 'hamahiri', 'pki', 'test' ];
+const svcExcludeDirs = [ 'docs', 'hamahiri', 'pki', 'test', 'web-api', 'signthing' ];
 
 const packageFolder = buildFolder + '/installer';
 const svcPackageOptions = {
@@ -183,7 +184,7 @@ function appInstaller(options) {
 	}
 	if (!target) throw new Error('Missing --build argument');
 	if (!updateURL) throw new Error('Missing --updateURL argument');
-	if (!updateURL.match(uriPattern)) throw new Error('Argument --updateURL must be a valida URL');
+	if (!updateURL.match(uriPattern)) throw new Error('Argument --updateURL must be a valid URL');
 	let msg = 'Build arguments:'
 		.concat('\n\t--build: ').concat(target)
 		.concat('\n\t--distributorId: ').concat(distributorId)
