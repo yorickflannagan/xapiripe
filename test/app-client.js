@@ -53,11 +53,27 @@ function sprintf() {
 	return output;
 }
 
+function generateUUID() { // Public Domain/MIT
+    var d = new Date().getTime();//Timestamp
+    var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16;//random number between 0 and 16
+        if(d > 0){//Use timestamp until depleted
+            r = (d + r)%16 | 0;
+            d = Math.floor(d/16);
+        } else {//Use microseconds since page-load if supported
+            r = (d2 + r)%16 | 0;
+            d2 = Math.floor(d2/16);
+        }
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
 // Testes de emissão:
 const DEFAULT_PROVIDER = 'Microsoft Software Key Storage Provider';
 const LEGACY_PROVIDER = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
 function enrollBasicTest() {
-	let user = 'USER NAME ' + window.crypto.randomUUID();
+	let user = 'USER NAME ' + generateUUID();
 	txtOutput.value += sprintf(ISSUE_BASIC_TEST, user);
 	txtResult.value = '';
 	clientAPI.enroll.enumerateDevices().then((devices) => {
@@ -66,7 +82,7 @@ function enrollBasicTest() {
 		txtOutput.value += sprintf(ISSUE_TEST_PROVIDER, devices[provider]);
 		clientAPI.enroll.generateCSR({ device: devices[provider], rdn: { cn: user }}).then((request) => {
 			txtOutput.value += SEND_REQUEST_MSG;
-			window.fetch('http://localhost:8080/issue', { method: 'POST', body: request }).then((response) => {
+			window.fetch('http://userapp.crypthings.org:8080/issue', { method: 'POST', body: request }).then((response) => {
 				if (response.ok) {
 					response.text().then((value) => {
 						txtOutput.value += INSTALL_CERT_MSG;
@@ -111,7 +127,7 @@ function signBasicTest() {
 		txtOutput.value += sprintf(SELECTED_CERT, certs[idx].subject, BASIC_CONTENT);
 		clientAPI.sign.sign({ certificate: certs[idx], toBeSigned: { data: BASIC_CONTENT }}).then((cms) => {
 			txtOutput.value += SIGNED_CONTENT;
-			window.fetch('http://localhost:8080/store', { method: 'POST', body: cms }).then((response) => {
+			window.fetch('http://userapp.crypthings.org:8080/store', { method: 'POST', body: cms }).then((response) => {
 				if (response.ok) {
 					response.text().then((fname) => {
 						success++;
@@ -148,7 +164,7 @@ function verifyBasicTest() {
 	}
 	txtOutput.value += VERIFY_BASIC_TEST;
 	txtResult.value = '';
-	window.fetch('http://localhost:8080/' + lastSigned, { method: 'GET' }).then((response) => {
+	window.fetch('http://userapp.crypthings.org:8080/' + lastSigned, { method: 'GET' }).then((response) => {
 		if (response.ok) {
 			response.text().then((cms) => {
 				clientAPI.verify.verify({pkcs7: { data: cms }}).then((value) =>{

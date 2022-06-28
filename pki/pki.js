@@ -4,18 +4,19 @@
  * @author Marco Antonio Gutierrez<yorick.flannagan@gmail.com>
  */
 
- 'use strict';
+'use strict';
 
- const path = require('path');
+const path = require('path');
 const fs = require('fs');
 const cp = require('child_process');
+const platform = require('os').platform();
 
 
 class OpenSSLWrapper
 {
 	constructor() {
 		this.pki = path.resolve(__dirname);
-		this.openSSL = path.resolve(this.pki, 'openssl.exe');
+		this.openSSL = path.resolve(this.pki, platform === 'win32' ? 'openssl.exe' : 'openssl');
 		this.caConf = path.resolve(this.pki, 'caend.cnf');
 		this.signConf = path.resolve(this.pki, 'sign.cnf');
 		this.options = {cwd: this.pki, windowsHide: false };
