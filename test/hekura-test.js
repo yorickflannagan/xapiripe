@@ -455,119 +455,126 @@ class TestService
 }
 
 async function unit_test() {
-	// Initialization
-	let indexFile = path.join(PKIDir, 'CNindex.txt');
-	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
-	else fs.writeFileSync(indexFile, indexCN.toString());
-	new OpenSSLWrapper();
-	let current = path.resolve(__dirname);
-	Wanhamou.Logger.logConfig({ path: current, level: Wanhamou.LogLevel.DEBUG });
+	try {
+		// Initialization
+		let indexFile = path.join(PKIDir, 'CNindex.txt');
+		if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
+		else fs.writeFileSync(indexFile, indexCN.toString());
+		new OpenSSLWrapper();
+		let current = path.resolve(__dirname);
+		Wanhamou.Logger.logConfig({ path: current, level: Wanhamou.LogLevel.DEBUG });
 
-	console.log('Hekura test case battery')
-	let test = new TestService();
-	await test.startServerTestCase();
-	test.tests++;
-	LOG.write(' done!\n');
+		console.log('Hekura test case battery')
+		let test = new TestService();
+		await test.startServerTestCase();
+		test.tests++;
+		LOG.write(' done!\n');
 
-	// REST basic
-	let api = await test.getAPISpecificationTestCase();
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('API specification:');
-	console.log(api);
-	
-	await test.untrustedRequestTestCase();
-	test.tests++;
-	LOG.write(' done!\n');
+		// REST basic
+		let api = await test.getAPISpecificationTestCase();
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('API specification:');
+		console.log(api);
+		
+		await test.untrustedRequestTestCase();
+		test.tests++;
+		LOG.write(' done!\n');
 
-	await test.localRequestTestCase();
-	test.tests++;
-	LOG.write(' done!\n');
+		await test.localRequestTestCase();
+		test.tests++;
+		LOG.write(' done!\n');
 
-	let devices = await test.enumerateDevicesTestCase();
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('Cryptographic devices:');
-	console.log(devices);
+		let devices = await test.enumerateDevicesTestCase();
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('Cryptographic devices:');
+		console.log(devices);
 
-	// Enroll tests
-	let capiCN = 'User CN to legacy CryptoAPI ' + ++indexCN;
-	let capiCSR = await test.generateCSRTestCase(LEGACY_PROVIDER, capiCN);
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('Certificate signing request:');
-	console.log(capiCSR);
+		// Enroll tests
+		let capiCN = 'User CN to legacy CryptoAPI ' + ++indexCN;
+		let capiCSR = await test.generateCSRTestCase(LEGACY_PROVIDER, capiCN);
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('Certificate signing request:');
+		console.log(capiCSR);
 
-	let pkcs7 = test.signRequest(capiCSR, 'capi-request.req');
-	let statusCode = await test.installChainTestCase(pkcs7);
-	let msg = statusCode == 201 ? ' done!\n' : ' at least one certificate was already installed\n';
-	LOG.write(msg);
+		let pkcs7 = test.signRequest(capiCSR, 'capi-request.req');
+		let statusCode = await test.installChainTestCase(pkcs7);
+		let msg = statusCode == 201 ? ' done!\n' : ' at least one certificate was already installed\n';
+		LOG.write(msg);
 
-	let cngCN = 'User CN to CNG API ' + ++indexCN;
-	let cngCSR = await test.generateCSRTestCase(CNG_PROVIDER, cngCN);
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('Certificate signing request:');
-	console.log(cngCSR);
+		let cngCN = 'User CN to CNG API ' + ++indexCN;
+		let cngCSR = await test.generateCSRTestCase(CNG_PROVIDER, cngCN);
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('Certificate signing request:');
+		console.log(cngCSR);
 
-	pkcs7 = test.signRequest(cngCSR, 'cng-request.req');
-	statusCode = await test.installChainTestCase(pkcs7);
-	msg = statusCode == 201 ? ' done!\n' : ' at least one certificate was already installed\n';
-	LOG.write(msg);
+		pkcs7 = test.signRequest(cngCSR, 'cng-request.req');
+		statusCode = await test.installChainTestCase(pkcs7);
+		msg = statusCode == 201 ? ' done!\n' : ' at least one certificate was already installed\n';
+		LOG.write(msg);
 
-	// Sign tests
-	let certificates = await test.enumerateCertificatesTestCase();
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('Available signing certificates:');
-	console.log(certificates);
+		// Sign tests
+		let certificates = await test.enumerateCertificatesTestCase();
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('Available signing certificates:');
+		console.log(certificates);
 
-	let signingCert = test.selectCert(certificates, capiCN);
-	let cms = await test.signTestCase(signingCert);
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('CMS Signed Data document:');
-	console.log(cms);
+		let signingCert = test.selectCert(certificates, capiCN);
+		let cms = await test.signTestCase(signingCert);
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('CMS Signed Data document:');
+		console.log(cms);
 
-	let body = await test.basicVerifyTestCase(cms);
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('Report object in response:');
-	console.log(body);
+		let body = await test.basicVerifyTestCase(cms);
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('Report object in response:');
+		console.log(body);
 
-	body = await test.completeVerifyTestCase(cms);
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('Report object in response:');
-	console.log(body);
-	
-	signingCert = test.selectCert(certificates, cngCN);
-	cms = await test.signTestCase(signingCert);
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('CMS Signed Data document:');
-	console.log(cms);
+		body = await test.completeVerifyTestCase(cms);
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('Report object in response:');
+		console.log(body);
+		
+		signingCert = test.selectCert(certificates, cngCN);
+		cms = await test.signTestCase(signingCert);
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('CMS Signed Data document:');
+		console.log(cms);
 
-	body = await test.basicVerifyTestCase(cms);
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('Report object in response:');
-	console.log(body);
+		body = await test.basicVerifyTestCase(cms);
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('Report object in response:');
+		console.log(body);
 
-	body = await test.completeVerifyTestCase(cms);
-	test.tests++;
-	LOG.write(' done!\n');
-	console.log('Report object in response:');
-	console.log(body);
+		body = await test.completeVerifyTestCase(cms);
+		test.tests++;
+		LOG.write(' done!\n');
+		console.log('Report object in response:');
+		console.log(body);
 
-	// Finalization
-	await test.stopServerTestCase();
-	test.tests++;
-	LOG.write(' done!\n');
+		// Finalization
+		await test.stopServerTestCase();
+		test.tests++;
+		LOG.write(' done!\n');
 
-	LOG.write(test.tests.toString());
-	LOG.write(' test cases performed.\n')
-	fs.unlinkSync(path.join(current, 'xapiripe-0.log'));
+		LOG.write(test.tests.toString());
+		LOG.write(' test cases performed.\n')
+		fs.unlinkSync(path.join(current, 'xapiripe-0.log'));
+	}
+	catch (e) {
+		console.error('Erro inesperado ao executar o teste de unidade:');
+		console.error(e);
+		process.exit(1);
+	}
 }
 
 function testHekura() {

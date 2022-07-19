@@ -171,13 +171,14 @@ class RootService extends AbstractService
 				let origin = request.headers['origin'];
 				let target = path.join(__dirname, 'hekura-schema.json');
 				let schema = fs.readFileSync(target, { encoding: 'utf-8' });
+				logger.info(sprintf('Método GET originado em %s e destinado ao serviço / aceito', origin));
 				response.setHeader('Content-Type', 'application/json');
 				response.write(schema);
 				logger.debug(sprintf('Espeficação REST enviada à origem %s: [\r\n%s\r\n]', origin, beautify(schema)));
 				status = 200;
 			}
 			catch (err) {
-				logger.debug(sprintf('Ocorreu o seguinte erro ao obter a especificação REST a partir da requisição originada em %s: %s', origin, err.toString()));
+				logger.error(sprintf('Ocorreu o seguinte erro ao obter a especificação REST a partir da requisição originada em %s: %s', origin, err.toString()));
 				status = 500;
 			}
 			Logger.releaseLogger();
@@ -217,6 +218,7 @@ class EnrollService extends AbstractService
 				let status;
 				if (accept) {
 					try {
+						logger.info(sprintf('Método GET originado em %s e destinado ao serviço /enroll aceito', origin));
 						let devices = this.api.enumerateDevices();
 						response.setHeader('Content-Type', 'application/json');
 						response.write(JSON.stringify(devices));
@@ -224,7 +226,7 @@ class EnrollService extends AbstractService
 						status = 200;
 					}
 					catch (err) {
-						logger.error('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço enumerateDevices: %s', origin, err.toString());
+						logger.error(sprintf('Ocorreu o seguinte erro ao processar a requisição originada em %s pelo serviço enumerateDevices: %s', origin, err.toString()));
 						status = 500;
 					}
 				}
@@ -235,7 +237,7 @@ class EnrollService extends AbstractService
 				Logger.releaseLogger();
 				return resolve(status);
 			}).catch((reason) => {
-				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço enumerateDevices: %s', origin, reason.toString());
+				logger.error(sprintf('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço enumerateDevices: %s', origin, reason.toString()));
 				Logger.releaseLogger();
 				return resolve(500);
 			});
@@ -280,6 +282,7 @@ class EnrollService extends AbstractService
 				let status;
 				if (accept) {
 					try {
+						logger.info(sprintf('Método POST originado em %s e destinado ao serviço /enroll aceito', origin));
 						let pkcs7 = this.api.generateCSR(param);
 						response.setHeader('Content-Type', 'text/plain');
 						response.write(pkcs7);
@@ -299,7 +302,7 @@ class EnrollService extends AbstractService
 				Logger.releaseLogger();
 				return resolve(status);
 			}).catch((reason) => {
-				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço generateCSR: %s', origin, reason.toString());
+				logger.error(sprintf('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço generateCSR: %s', origin, reason.toString()));
 				Logger.releaseLogger();
 				return resolve(500);
 			});
@@ -345,6 +348,7 @@ class EnrollService extends AbstractService
 				let status;
 				if (accept) {
 					try {
+						logger.info(sprintf('Método PUT originado em %s e destinado ao serviço /enroll aceito', origin));
 						let done = this.api.installCertificates(param);
 						if (done) status = 201;
 						else status = 200;
@@ -367,7 +371,7 @@ class EnrollService extends AbstractService
 				Logger.releaseLogger();
 				return resolve(status);
 			}).catch((reason) => {
-				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço installCertificates: %s', origin, reason.toString());
+				logger.error(sprintf('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço installCertificates: %s', origin, reason.toString()));
 				Logger.releaseLogger();
 				return resolve(500);
 			});
@@ -389,7 +393,11 @@ class EnrollService extends AbstractService
 				}
 				else return resolve(405);
 			}
-			catch (e) { return resolve(500); }
+			catch (e) {
+				Logger.getLogger('EnrollService').error(sprintf('Ocorreu o erro [%s] inesperado noprocessamento da requisição.', e.toString()));
+				Logger.releaseLogger();
+				return resolve(500);
+			}
 		});
 	}
 }
@@ -425,6 +433,7 @@ class SignService extends AbstractService
 				let status;
 				if (accept) {
 					try {
+						logger.info(sprintf('Método GET originado em %s e destinado ao serviço /sign aceito', origin));
 						let certs = this.api.enumerateCertificates();
 						response.setHeader('Content-Type', 'application/json');
 						response.write(JSON.stringify(certs));
@@ -432,7 +441,7 @@ class SignService extends AbstractService
 						status = 200;
 					}
 					catch (err) {
-						logger.debug(sprintf('Ocorreu o seguinte erro no processamento originado em %s pelo serviço enumerateCertificates: %s', origin, err.toString()));
+						logger.error(sprintf('Ocorreu o seguinte erro no processamento originado em %s pelo serviço enumerateCertificates: %s', origin, err.toString()));
 						status = 500;
 					}
 				}
@@ -443,7 +452,7 @@ class SignService extends AbstractService
 				Logger.releaseLogger();
 				return resolve(status);
 			}).catch((reason) => {
-				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço enumerateCertificates: %s', origin, reason.toString());
+				logger.error(sprintf('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço enumerateCertificates: %s', origin, reason.toString()));
 				Logger.releaseLogger();
 				return resolve(500);
 			});
@@ -504,6 +513,7 @@ class SignService extends AbstractService
 				let status;
 				if (accept) {
 					try {
+						logger.info(sprintf('Método POST originado em %s e destinado ao serviço /sign aceito', origin));
 						let pkcs7 = this.api.sign(param);
 						response.setHeader('Content-Type', 'text/plain');
 						response.write(pkcs7);
@@ -523,7 +533,7 @@ class SignService extends AbstractService
 				Logger.releaseLogger();
 				return resolve(status);
 			}).catch((reason) => {
-				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço sign: %s', origin, reason.toString());
+				logger.error(sprintf('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço sign: %s', origin, reason.toString()));
 				Logger.releaseLogger();
 				return resolve(500);
 			});
@@ -542,7 +552,11 @@ class SignService extends AbstractService
 				}
 				else return resolve(405);
 			}
-			catch (e) { return resolve(500); }
+			catch (e) {
+				Logger.getLogger('EnrollService').error(sprintf('Ocorreu o erro [%s] inesperado noprocessamento da requisição.', e.toString()));
+				Logger.releaseLogger();
+				return resolve(500);
+			}
 		});
 	}
 }
@@ -663,6 +677,7 @@ class VerifyService extends AbstractService
 				let status;
 				if (accept) {
 					try {
+						logger.info(sprintf('Método POST originado em %s e destinado ao serviço /verify aceito', origin));
 						cmsSignedData.verify(vrfyParam);
 						signatureVerification = true;
 						messageDigestVerification = true;
@@ -683,16 +698,34 @@ class VerifyService extends AbstractService
 						status = 200;
 					}
 					catch (error) {
-						if      (error.errorCode == Aroari.AroariError.CMS_SIGNATURE_DOES_NOT_MATCH) signatureVerification = false;
-						else if (error.errorCode == Aroari.AroariError.CMS_MESSAGE_DIGEST_NOT_MATCH) messageDigestVerification = false;
-						else if (error.errorCode == Aroari.AroariError.CMS_SIGNING_CERTIFICATEV2_NOT_MATCH) signingCertVerification = false;
-						else if (error.errorCode == Aroari.AroariError.CMS_VRFY_NO_ISSUER_CERT_FOUND) certChainVerification = false;
+						if (error.errorCode) {
+							if      (error.errorCode == Aroari.AroariError.CMS_SIGNATURE_DOES_NOT_MATCH) {
+								signatureVerification = false;
+								status = 200;
+							}
+							else if (error.errorCode == Aroari.AroariError.CMS_MESSAGE_DIGEST_NOT_MATCH) {
+								messageDigestVerification = false;
+								status = 200;
+							}
+							else if (error.errorCode == Aroari.AroariError.CMS_SIGNING_CERTIFICATEV2_NOT_MATCH) {
+								signingCertVerification = false;
+								status = 200;
+							}
+							else if (error.errorCode == Aroari.AroariError.CMS_VRFY_NO_ISSUER_CERT_FOUND) {
+								certChainVerification = false;
+								status = 200;
+							}
+							else {
+								logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da origem %s pelo serviço verify: %s', origin, error.toString()));
+								status = 400;
+							}
+						}
 						else {
-							logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da origem %s pelo serviço verify: %s', origin, error.toString()));
-							status = 400;
+							logger.error(sprintf('Ocorreu um erro [%s] inesperado no processamento da requisição', error.toString()));
+							status = 500;
 						}
 					}
-					if (status != 400) {
+					if (status != 400 && status != 500) {
 						let ret = new Object();
 						ret = Object.defineProperty(ret, 'signatureVerification', { value: signatureVerification });
 						ret = Object.defineProperty(ret, 'messageDigestVerification', { value: messageDigestVerification });
@@ -714,7 +747,7 @@ class VerifyService extends AbstractService
 				Logger.releaseLogger();
 				return resolve(status);
 			}).catch((reason) => {
-				logger.error('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço verify: %s', origin, reason.toString());
+				logger.error(sprintf('Ocorreu o seguinte erro ao obter a aprovação do usuário para a requisição originada em %s pelo serviço verify: %s', origin, reason.toString()));
 				Logger.releaseLogger();
 				return resolve(500);
 			});
@@ -835,6 +868,7 @@ class HTTPServer
 			if (!svc) return resolve(404);
 			if (!svc.accept(method)) return resolve(405);
 			if (method === 'OPTIONS') {
+				this.logger.info(sprintf('Método OPTIONS originado em %s aceito', origin));
 				let responseHeaders = svc.preflight(headers);
 				let it = responseHeaders.keys();
 				let item = it.next();

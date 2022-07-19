@@ -296,13 +296,16 @@ class APIError extends Error {
 			'\tCódigo de erro: ', this.errorCode.toString()
 		);
 		if (typeof this.native !== 'undefined') {
-			value = value.concat('\r\n\t',
-				'Mensagem fornecida pelo componente nativo: ', this.native.message, '\r\n',
+			value = value.concat('\r\n\tMensagem fornecida pelo componente nativo: ');
+			if (this.native.message && this.native.component && this.native.method && this.native.errorCode) {
+				value = value.concat(this.native.message, '\r\n',
 				'\t\tComponente nativo: ', this.native.component, '\r\n',
 				'\t\tMétodo nativo: ', this.native.method, '\r\n',
 				'\t\tCódigo de erro nativo: ', this.native.errorCode.toString()
-			);
-			if (typeof this.native.apiError !== 'undefined')  value = value.concat('\r\n', '\t\tCódigo de erro Windows: ', this.native.apiError.toString());
+				);
+				if (typeof this.native.apiError !== 'undefined')  value = value.concat('\r\n', '\t\tCódigo de erro Windows: ', this.native.apiError.toString());
+			}
+			else value = value.concat(this.native.toString());
 		}
 		return value;
 	}
@@ -782,7 +785,7 @@ class Enroll {
 	 */
 	generateCSR(options) {
 		if (!options) throw new APIError('Argumento EnrollOptions obrigatório', 'generateCSR', APIError.ARGUMENT_ERROR);
-		if (typeof options.device  == 'undefined' || !isNaN(options.device)) throw new APIError('Argumento EnrollOptions.device obrigatório', 'generateCSR', APIError.ARGUMENT_ERROR);
+		if (typeof options.device  == 'undefined') throw new APIError('Argumento EnrollOptions.device obrigatório', 'generateCSR', APIError.ARGUMENT_ERROR);
 		if (typeof options.keySize != 'undefined' && isNaN(options.keySize)) throw new APIError('Argumento EnrollOptions.keySize, se presente, deve ser numérico', 'generateCSR', APIError.ARGUMENT_ERROR);
 		if (typeof options.signAlg != 'undefined' && isNaN(options.signAlg)) throw new APIError('Argumento EnrollOptions.signAlg, se presente, deve ser numérico', 'generateCSR', APIError.ARGUMENT_ERROR);
 		if (typeof options.rdn == 'undefined' || typeof options.rdn.cn == 'undefined') throw new APIError('Argumento EnrollOptions.rdn deve, obrigatoriamente, incluir pelo menos a propriedade cn', 'generateCSR', APIError.ARGUMENT_ERROR);
@@ -869,13 +872,18 @@ class Enroll {
 		let contentInfo = decoded.result;
 		if  (!(
 			contentInfo instanceof asn1js.Sequence &&
+			Array.isArray(contentInfo.valueBlock.value) &&
 			contentInfo.valueBlock.value[0] instanceof asn1js.ObjectIdentifier &&
-			contentInfo.valueBlock.value[0].valueBlock.toString() === ASN1FieldOID.cmsSignedData
+			contentInfo.valueBlock.value[0].valueBlock.toString() === ASN1FieldOID.cmsSignedData &&
+			contentInfo.valueBlock.value[1] &&
+			Array.isArray(contentInfo.valueBlock.value[1].valueBlock.value)
 		))	throw new APIError('CMS ContentInfo inesperado para um PKCS #7', 'installCertificates', APIError.INVALID_CONTENT_INFO_ERROR);
 		let signedData = contentInfo.valueBlock.value[1].valueBlock.value[0];
 		if (!(
 			signedData instanceof asn1js.Sequence &&
-			signedData.valueBlock.value.length >= 4
+			Array.isArray(signedData.valueBlock.value) &&
+			signedData.valueBlock.value.length >= 4 &&
+			Array.isArray(signedData.valueBlock.value[3].valueBlock.value)
 		))	throw new APIError('Documento CMS SignedData inválido', 'installCertificates', APIError.INVALID_SIGNED_DATA_ERROR);
 		
 		let certificates = signedData.valueBlock.value[3];
@@ -883,8 +891,12 @@ class Enroll {
 		while (i < certificates.valueBlock.value.length) {
 			let subject = certificates.valueBlock.value[i];
 			let issuer = (i + 1 < certificates.valueBlock.value.length) ? certificates.valueBlock.value[i + 1] : subject;
-			let certSubject = new crypto.X509Certificate(Buffer.from(subject.valueBeforeDecode));
-			let certIssuer = new crypto.X509Certificate(Buffer.from(issuer.valueBeforeDecode));
+			let certSubject, certIssuer;
+			try {
+				certSubject = new crypto.X509Certificate(Buffer.from(subject.valueBeforeDecode));
+				certIssuer = new crypto.X509Certificate(Buffer.from(issuer.valueBeforeDecode));
+			}
+			catch (err) { throw new APIError(err.toString(), 'installCertificates', APIError.INVALID_SIGNED_DATA_ERROR); }
 			if (!certSubject.verify(certIssuer.publicKey)) throw new APIError('Assinatura de um emissor inválida na cadeia de certificados', 'installCertificates', APIError.CERTIFICATE_CHAIN_VERIFY_ERROR);
 			i++;
 		}
@@ -990,6 +1002,7 @@ class X509Certificate {
 		this.root = decoded.result;
 		if (
 			!(this.root instanceof asn1js.Sequence) ||
+			!Array.isArray(this.root.valueBlock.value) ||
 			!(this.root.valueBlock.value[0] instanceof asn1js.Sequence)
 		)	throw new APIError('Codificação DER inválida para um certificado digital', 'X509Certificate constructor', APIError.CERTIFICATE_DECODE_ERROR);
 		this.tbs = this.root.valueBlock.value[0];
@@ -1228,7 +1241,7 @@ class Sign {
 			typeof options.toBeSigned === 'undefined' ||
 			(typeof options.toBeSigned !== 'string' && !(options.toBeSigned instanceof ArrayBuffer))
 		)	throw new APIError('Argumento SignOptions.toBeSigned must be an string or an instance of ArrayBuffer', 'sign', APIError.ARGUMENT_ERROR);
-		if (typeof options.attach !== 'undefined' && typeof options.attach != 'boolean') throw new APIError('Argumento SignOptions.attach, se presente, deve ser um valor lógico', 'sign', APIError.ARGUMENT_ERROR);
+		if (typeof options.attach !== 'undefined' && typeof options.attach !== 'boolean') throw new APIError('Argumento SignOptions.attach, se presente, deve ser um valor lógico', 'sign', APIError.ARGUMENT_ERROR);
 		if (typeof options.algorithm !== 'undefined' && isNaN(options.algorithm)) throw new APIError('Argumento SignOptions.algorithm, se presente, deve ser numérico', 'sign', APIError.ARGUMENT_ERROR);
 		if (typeof options.cades !== 'undefined') {
 			if (typeof options.cades !== 'object') throw new APIError('Argumento options.cades, se presente, deve ser um objeto do tipo Aroari.CAdES', 'sign', APIError.ARGUMENT_ERROR);
@@ -1236,10 +1249,10 @@ class Sign {
 				if (typeof options.cades.policy !== 'string') throw new APIError('Argumento options.cades.policy, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
 				if (options.cades.policy.localeCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
 			}
-			if (typeof options.cades.addSigningTime !== 'undefined' && typeof options.cades.addSigningTime != 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
+			if (typeof options.cades.addSigningTime !== 'undefined' && typeof options.cades.addSigningTime !== 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
 			if (typeof options.cades.commitmentType !=='undefined')
 			{
-				if (typeof options.cades.commitmentType != 'string') throw new APIError('Argumento options.cades.commitmentType, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
+				if (typeof options.cades.commitmentType !== 'string') throw new APIError('Argumento options.cades.commitmentType, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
 				if (
 					options.cades.commitmentType !== CommitmentType.proofOfOrigin &&
 					options.cades.commitmentType !== CommitmentType.proofOfReceipt &&
@@ -1265,7 +1278,7 @@ class Sign {
 		let signedAttrs = this.#makeSignedAttributes(hashAlg, toBeSigned, chain[0], commitmentType, addSigningTime);
 
 		// TODO: Support policies other than CAdES-BES
-		if (policy != Policy.typeBES) {
+		if (policy !== Policy.typeBES) {
 			if (policy === Policy.typeEPES);
 			else if (policy === Policy.typeT);
 			else if (policy === Policy.typeC);
@@ -1410,7 +1423,7 @@ class CMSSignedData {
 		if (typeof cms === 'string') {
 			let input = cms.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
 			try { encoded = Base64.atob(input); }
-			catch (err) { throw new APIError(err, 'CMSSignedData constructor', APIError.ARGUMENT_ERROR); }
+			catch (err) { throw new APIError(err.toString(), 'CMSSignedData constructor', APIError.ARGUMENT_ERROR); }
 		}
 		else if (cms instanceof ArrayBuffer) {
 			encoded = new Uint8Array(cms);
@@ -1496,7 +1509,7 @@ class CMSSignedData {
 			pubKey = x509Cert.publicKey;
 			if (typeof pubKey !== 'object') throw new Error('X509Certificate Public Key field is undefined');
 		}
-		catch (err) { throw new APIError(err, 'matchSignature', APIError.CERTIFICATE_DECODE_ERROR); }
+		catch (err) { throw new APIError(err.toString(), 'matchSignature', APIError.CERTIFICATE_DECODE_ERROR); }
 		let signAlg = this.#getSignatureAlgorithm();
 		let signed = new Uint8Array(signedAttrs.valueBeforeDecode);
 		signed[0] = 0x31;
@@ -1540,6 +1553,7 @@ class CMSSignedData {
 			}
 			i++;
 		}
+		return null;
 	}
 	#findSigningCertificateBySKI(certificates, sid) {
 		let octets = new Uint8Array(sid.valueBlock.valueHex);
@@ -1668,6 +1682,7 @@ class CMSSignedData {
 			let sid = this.#getSid();
 			if (sid instanceof asn1js.Sequence) signingCert = this.#findSigningCertificateByIssuerSerial(certificates, sid);
 			else signingCert = this.#findSigningCertificateBySKI(certificates, sid);
+			if (!signingCert) throw new APIError('O certificado digital do assinante é requerido para a verificação', 'verify', APIError.CMS_VRFY_NO_ISSUER_CERT_FOUND);
 		}
 		if (typeof eContent === 'undefined') eContent = this.getSignedContent();
 		let signedAttrs = this.#getSignedAttributes();
@@ -1697,6 +1712,7 @@ class CMSSignedData {
 			let sid = this.#getSid();
 			if (sid instanceof asn1js.Sequence) signingCert = this.#findSigningCertificateByIssuerSerial(certificates, sid);
 			else signingCert = this.#findSigningCertificateBySKI(certificates, sid);
+			if (!signingCert) throw new APIError('O certificado digital do assinante é requerido para a verificação', 'verify', APIError.CMS_VRFY_NO_ISSUER_CERT_FOUND);
 		}
 		this.#verifyCertChain(new Uint8Array(signingCert));
 	}

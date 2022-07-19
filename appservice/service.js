@@ -242,19 +242,16 @@
 				JSON.stringify(svrOpt, null, 2)
 			)
 		);
-	
 	}
 	catch (err) {
-		let errorMessage;
-		if (err.message) errorMessage = err.message;
-		else if (err.toString) errorMessage = err.toString();
-		else errorMessage = err;
 		process.send({
 			signal: 'error-on-service',
-			error: 'Ocorreu um erro fatal na operação do serviço, a saber: '
-				.concat(errorMessage)
-				.concat('. O aplicativo será encerrado.')
+			error: 'Ocorreu um erro fatal na operação do serviço, a saber: '.concat(err.toString(), '. O aplicativo precisa ser encerrado.')
+		}, (err) => {
+			if (!err) {
+				if (service) service.stop();
+				process.exit();
+			}
 		});
-		quitService();
 	}
 }());
