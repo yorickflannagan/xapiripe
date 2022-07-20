@@ -34,11 +34,7 @@ class OpenSSLWrapper
 	}
 	execOpenSSL(args) {
 		let ret = cp.spawnSync(this.openSSL, args, this.options);
-		if (ret.status != 0)
-		{
-			if (ret.stderr) console.log(new TextDecoder().decode(ret.stderr));
-			throw 'OpenSSL has exited with status code ' + ret.status.toString();
-		}
+		console.log('OpenSSL has exited with status code ' + ret.status.toString());
 		if (ret.stdout) console.log(new TextDecoder().decode(ret.stdout));
 		if (ret.stderr) console.log(new TextDecoder().decode(ret.stderr));
 		return ret.status;
@@ -85,7 +81,8 @@ class OpenSSLWrapper
 		];
 		if (!fs.existsSync(request)) throw 'Request file must exists at working directory';
 		if (fs.existsSync(out)) throw 'Request file must not have extension .pem';
-		this.execOpenSSL(args);
+		let ret = this.execOpenSSL(args);
+		if (ret != 0) throw 'Sign certificate request failed with error code ' + ret.toString();
 		return out;
 	}
 	mountPKCS7(cert) {
@@ -111,7 +108,8 @@ class OpenSSLWrapper
 			'-out',
 			out
 		];
-		this.execOpenSSL(args);
+		let ret = this.execOpenSSL(args);
+		if (ret != 0) throw 'Assembly PKCS #7 failed with error code ' + ret.toString();
 		return out;
 	}
 }
