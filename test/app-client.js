@@ -93,7 +93,7 @@ function enrollBasicTest() {
 							txtResult.value = '0:' + SUCCESSFUL_TEST;
 						})
 						.catch((reason) => {
-							txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+							txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 							txtResult.value = '1:' + reason.reason;
 						});
 					})
@@ -102,17 +102,17 @@ function enrollBasicTest() {
 				else throw new PromiseRejected(response.status, response.statusText);
 			})
 			.catch((reason) => {
-				txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+				txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 				txtResult.value = '1:' + reason.reason;
 			});
 		})
 		.catch((reason) => {
-			txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+			txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 			txtResult.value = '1:' + reason.reason;
 		});
 	})
 	.catch((reason) => {
-		txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+		txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 		txtResult.value = '1:' + reason.reason;
 	});
 }
@@ -135,23 +135,23 @@ function signBasicTest() {
 						txtOutput.value += sprintf(CMS_STORED, lastSigned);
 						txtResult.value = '0:' + SUCCESSFUL_TEST;
 						txtOutput.value += sprintf(TESTS_DONE, success.toString());
-				})
+					})
 					.catch((reason) => { throw new PromiseRejected(84, reason); });
 				}
 				else throw new PromiseRejected(response.status, response.statusText);
 			})
 			.catch((reason) => {
-				txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+				txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 				txtResult.value = '1:' + reason.reason;
 			});
 		})
 		.catch((reason) => {
-			txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+			txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 			txtResult.value = '1:' + reason.reason;
 		});
 	})
 	.catch((reason) => {
-		txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+		txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 		txtResult.value = '1:' + reason.reason;
 	});
 }
@@ -181,7 +181,7 @@ function verifyBasicTest() {
 					}
 				})
 				.catch((reason) => {
-					txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+					txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 					txtResult.value = '1' + reason.reason;
 				});
 			})
@@ -189,7 +189,7 @@ function verifyBasicTest() {
 		else throw new PromiseRejected(response.status, response.statusText);
 	})
 	.catch((reason) => {
-		txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+		txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 		txtResult.value = '1' + reason.reason;
 	});
 }
@@ -241,32 +241,32 @@ function zipBasicTest() {
 								}
 							})
 							.catch((reason) => {
-								txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+								txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 								txtResult.value = '1:' + reason.reason;
 							});
 						})
 						.catch((reason) => {
-							txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+							txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 							txtResult.value = '1:' + reason.reason;
 						});
 					})
 					.catch((reason) => {
-						txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+						txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 						txtResult.value = '1:' + reason.reason;
 					});
 				})
 				.catch((reason) => {
-					txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+					txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 					txtResult.value = '1:' + reason.reason;
 				});
 			})
 			.catch((reason) => {
-				txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+				txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 				txtResult.value = '1';
 			});
 		})
 		.catch((reason) => {
-			txtOutput.value += sprintf(UNSUCCESSFUL_TEST, JSON.stringify(reason));
+			txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
 			txtResult.value = '1';
 		});
 	});

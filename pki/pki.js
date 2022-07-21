@@ -33,8 +33,9 @@ class OpenSSLWrapper
 		))	throw 'Some of the PKI required files does not found';
 	}
 	execOpenSSL(args) {
+		console.log('OpenSSL will be executed with following arguments:');
+		console.log(args);
 		let ret = cp.spawnSync(this.openSSL, args, this.options);
-		console.log('OpenSSL has exited with status code ' + ret.status.toString());
 		if (ret.stdout) console.log(new TextDecoder().decode(ret.stdout));
 		if (ret.stderr) console.log(new TextDecoder().decode(ret.stderr));
 		return ret.status;
