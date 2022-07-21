@@ -76,9 +76,30 @@ keyUsage					= nonRepudiation, digitalSignature, keyEncipherment
 extendedKeyUsage			= clientAuth, emailProtection, 1.3.6.1.4.1.311.20.2.2
 subjectKeyIdentifier		= hash
 authorityKeyIdentifier		= keyid:always
+subjectAltName				= @$ENV::ALT_NAMES
+2.5.29.32					= DER:30:5D:30:5B:06:06:60:4C:01:02:03:08:30:51:30:4F:06:08:2B:06:01:05:05:07:02:01:16:43:68:74:74:70:3A:2F:2F:63:65:72:74:69:66:69:63:61:64:6F:64:69:67:69:74:61:6C:2E:63:61:69:78:61:2E:67:6F:76:2E:62:72:2F:64:6F:63:75:6D:65:6E:74:6F:73:2F:64:70:63:61:63:2D:63:61:69:78:61:70:66:2E:70:64:66
 crlDistributionPoints		= @cdps
 authorityInfoAccess			= @aia
-subjectAltName				= @altNames
+
+
+####################################################################
+[ PF ]
+otherName.1=2.16.76.1.3.1;OCTETSTRING:$ENV::SUBJECTID
+otherName.2=2.16.76.1.3.5;OCTETSTRING:$ENV::SUBJECTTE
+otherName.3=2.16.76.1.3.6;OCTETSTRING:$ENV::SUBJECTCEI
+
+[ PJ ]
+otherName.1=2.16.76.1.3.4;OCTETSTRING:$ENV::SPONSORID
+otherName.2=2.16.76.1.3.2;OCTETSTRING:$ENV::SPONSOR
+otherName.3=2.16.76.1.3.3;OCTETSTRING:$ENV::COMPANYID
+otherName.4=2.16.76.1.3.7;OCTETSTRING:$ENV::COMPANYCEI
+
+[ EQ ]
+otherName.1=2.16.76.1.3.8;OCTETSTRING:$ENV::COMPANY
+otherName.2=2.16.76.1.3.2;OCTETSTRING:$ENV::SPONSOR
+otherName.3=2.16.76.1.3.3;OCTETSTRING:$ENV::COMPANYID
+otherName.4=2.16.76.1.3.4;OCTETSTRING:$ENV::SPONSORID
+
 
 ####################################################################
 [ cdps ]
@@ -93,10 +114,3 @@ caIssuers;URI.0		= http://localhost/ac/end.html
 [ cert_pol ]
  policyIdentifier	= 1.3.5.8
  CPS				="http://my.host.name/"
-
-####################################################################
-[ altNames ]
-otherName.1=2.16.76.1.3.4;OCTETSTRING:230319400998242683400000000000000000000000000
-otherName.2=2.16.76.1.3.2;OCTETSTRING:SEIFUKO YAMAUTI
-otherName.3=2.16.76.1.3.3;OCTETSTRING:60621992000104
-otherName.4=2.16.76.1.3.7;OCTETSTRING:000000000000
