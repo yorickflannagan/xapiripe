@@ -53,6 +53,7 @@
 		const { CORSBlockade, HTTPServer } = require('../components/hekura');
 		const { Message, WarnMessage } = require('./module');
 		const { DelayedPromise } = require('../components/options');
+		const alert = require('alert');
 
 
 		/**
@@ -244,9 +245,11 @@
 		);
 	}
 	catch (err) {
+		let msg = 'Ocorreu um erro fatal na operação do serviço, a saber: '.concat(err.toString(), '. O aplicativo precisa ser encerrado.');
+		alert(msg);
 		process.send({
 			signal: 'error-on-service',
-			error: 'Ocorreu um erro fatal na operação do serviço, a saber: '.concat(err.toString(), '. O aplicativo precisa ser encerrado.')
+			error: msg
 		}, (err) => {
 			if (!err) {
 				if (service) service.stop();

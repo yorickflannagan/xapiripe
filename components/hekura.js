@@ -163,6 +163,12 @@ class RootService extends AbstractService
 {
 	constructor(corsMaxAge, approvalCallback) { super('/', corsMaxAge, approvalCallback); }
 	accept(method) { return (method === 'GET'); }
+	preflight(headers) {
+		let ret = new Map();
+		ret.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+		ret.set('Access-Control-Max-Age', this.maxAge);
+		return ret;
+	}
 	execute(request, response) {
 		return new Promise((resolve) => {
 			let status;

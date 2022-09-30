@@ -35,7 +35,8 @@ const svcSignet = new Distribution('org.crypthing.xapiripe.hekura', 'Hekura', 'H
 const svcIconFile = path.resolve('./appservice/res/signature-32x32.ico');
 const buildFolder = './build';
 const svcDependencies = {
-	asn1js: '^2.3.2',
+	'alert': '^5.1.1',
+	'asn1js': '^2.3.2',
 	'node-addon-api': '^4.3.0'
 }
 const svcBuildOptions = {
