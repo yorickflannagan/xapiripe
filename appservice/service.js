@@ -49,7 +49,7 @@
 		const path = require('path');
 		const fs = require('fs');
 		const { Config } = require('./config');
-		const { Logger, LogLevel, sprintf } = require('../components/wanhamou');
+		const { Logger, LogLevel, sprintf, beautify } = require('../components/wanhamou');
 		const { CORSBlockade, HTTPServer } = require('../components/hekura');
 		const { Message, WarnMessage } = require('./module');
 		const { DelayedPromise } = require('../components/options');
@@ -190,15 +190,15 @@
 				quitService();
 			}
 			else if (message.signal === Message.WARN) {
-				logger.debug(sprintf('Mensagem recebida:\n%s', JSON.stringify(message, null, 2)));
+				logger.debug(sprintf('Mensagem recebida:\n%s', beautify(message)));
 				let promise = messages.get(message.msgId);
 				if (promise) {
 					promise.resolve(message.response);
 					messages.delete(message.msgId);
 				}
-				else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', JSON.stringify(message, null, 2)));
+				else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', beautify(message)));
 			}
-			else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', JSON.stringify(message, null, 2)));
+			else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', beautify(message)));
 		});
 
 
@@ -236,13 +236,7 @@
 		});
 	
 		await service.start();
-		logger.info(
-			sprintf(
-				'Log do serviço iniciado com as seguinte opções:\n%s\nServiço Hekura iniciado com as seguintes opções:\n%s',
-				JSON.stringify(logOpt, null, 2),
-				JSON.stringify(svrOpt, null, 2)
-			)
-		);
+		logger.info(sprintf('Log do serviço iniciado com as seguinte opções:\n%s\nServiço Hekura iniciado com as seguintes opções:\n%s', beautify(logOpt), beautify(svrOpt)));
 	}
 	catch (err) {
 		let msg = 'Ocorreu um erro fatal na operação do serviço, a saber: '.concat(err.toString(), '. O aplicativo precisa ser encerrado.');

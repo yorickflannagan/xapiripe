@@ -31,7 +31,7 @@ const installer = require('electron-winstaller');
 const yargs = require('yargs');
 const { Distribution, uriPattern } = require('./components/options');
 
-const svcSignet = new Distribution('org.crypthing.xapiripe.hekura', 'Hekura', 'Hekura REST service', 'hekura.exe');
+const svcSignet = new Distribution('org.crypthing.xapiripe.CriptoCNS', 'CriptoCNS', 'CriptoCNS REST service', 'CriptoCNS.exe');
 const svcIconFile = path.resolve('./appservice/res/signature-32x32.ico');
 const buildFolder = './build';
 const svcDependencies = {
@@ -43,7 +43,7 @@ const svcBuildOptions = {
 	appCopyright: 'Copyleft (C) 2020-2022 The Crypthing Initiative. All rights reversed.',
 	arch: '',
 	dir: '.',
-	executableName: 'hekura',
+	executableName: 'criptocns',
 	icon: svcIconFile,
 	ignore: [
 		'.vscode',

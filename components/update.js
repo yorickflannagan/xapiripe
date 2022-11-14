@@ -11,7 +11,7 @@ const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { autoUpdater } = require('electron');
-const { sprintf } = require('./wanhamou');
+const { Logger, sprintf } = require('./wanhamou');
 
 const REG_KEY = 'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run';
 const UPDATE_ERROR = 'Ocorreu o seguinte erro na atualização do aplicativo: %s. O serviço não está funcionando apropriadamente.';
@@ -147,10 +147,16 @@ class UpdateManager {
 		if (this.development && !this.debug) return;	// Permite "depurar" a atualização, reduzindo o intervalo de buca
 		autoUpdater.setFeedURL(this.updateURL);
 		autoUpdater.on('error', (error) => {
-			this.callback(UpdateManager.ERROR_MESSAGE, sprintf(UPDATE_ERROR, error.toString()));
+			let msg = sprintf(UPDATE_ERROR, error.toString());
+			Logger.getLogger('Hekura Updater').error(msg);
+			Logger.releaseLogger();
+			this.callback(UpdateManager.ERROR_MESSAGE, msg);
 		});
 		autoUpdater.on('update-downloaded', (evt, releaseNotes, releaseName) => {
-			if (this.callback(UpdateManager.UPDATE_MESSAGE, sprintf(RESTART_MSG, releaseName))) autoUpdater.quitAndInstall();
+			let msg = sprintf(RESTART_MSG, releaseName);
+			Logger.getLogger('Hekura Updater').debug(msg);
+			Logger.releaseLogger();
+			if (this.callback(UpdateManager.UPDATE_MESSAGE, msg)) autoUpdater.quitAndInstall();
 		});
 		setInterval(() => { autoUpdater.checkForUpdates(); }, this.updateInterval);
 	}

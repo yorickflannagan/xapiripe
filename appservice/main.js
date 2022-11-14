@@ -46,8 +46,8 @@ const HELP_URL = 'file:///' + path.resolve(__dirname, './res', 'help.html');
 
 const APP_UPDATE = 'Atualização do aplicativo';
 const APP_EXIT = 'Finalização do aplicativo';
-const APP_TITLE = 'Serviço Hekura';
-const APP_FAILURE = 'Falha no Serviço Hekura';
+const APP_TITLE = 'Serviço CriptoCNS';
+const APP_FAILURE = 'Falha no Serviço CriptoCNS';
 const OPERATIONS = [ 'enumerateDevices', 'generateCSR', 'installCertificates', 'enumerateCertificates', 'sign', 'verify' ];
 const ACTIONS = [
 	'enumerar dispositivos criptográficos presentes',
