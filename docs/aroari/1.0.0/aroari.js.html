@@ -84,8 +84,7 @@ const Hamahiri = require('./hamahiri');
  * @property { Number } errorCode - Código do erro
  * @property { Object } native    - Erro gerado no processamento nativo, se for o caso. Ver {@link Hamahiri.Failure}
  */
- class APIError extends Error
-{
+class APIError extends Error {
 	/**
 	 * Falha na enumeração de dispositivos criptográficos
 	 * @member { Number }
@@ -310,8 +309,7 @@ const Hamahiri = require('./hamahiri');
 	 * @param { Number } errorCode Código de erro no módulo
 	 * @param { Object } native Objeto de erro do módulo nativo, ou null
 	 */
-	constructor(msg, method, errorCode, native)
-	{
+	constructor(msg, method, errorCode, native) {
 		super(msg);
 		this.component = 'Aroari';
 		this.method = method;
@@ -326,13 +324,16 @@ const Hamahiri = require('./hamahiri');
 			'\tCódigo de erro: ', this.errorCode.toString()
 		);
 		if (typeof this.native !== 'undefined') {
-			value = value.concat('\r\n\t',
-				'Mensagem fornecida pelo componente nativo: ', this.native.message, '\r\n',
+			value = value.concat('\r\n\tMensagem fornecida pelo componente nativo: ');
+			if (this.native.message &amp;&amp; this.native.component &amp;&amp; this.native.method &amp;&amp; this.native.errorCode) {
+				value = value.concat(this.native.message, '\r\n',
 				'\t\tComponente nativo: ', this.native.component, '\r\n',
 				'\t\tMétodo nativo: ', this.native.method, '\r\n',
 				'\t\tCódigo de erro nativo: ', this.native.errorCode.toString()
-			);
-			if (typeof this.native.apiError !== 'undefined')  value = value.concat('\r\n', '\t\tCódigo de erro Windows: ', this.native.apiError.toString());
+				);
+				if (typeof this.native.apiError !== 'undefined')  value = value.concat('\r\n', '\t\tCódigo de erro Windows: ', this.native.apiError.toString());
+			}
+			else value = value.concat(this.native.toString());
 		}
 		return value;
 	}
@@ -365,8 +366,7 @@ const Hamahiri = require('./hamahiri');
  * Políticas de assinatura, conforme RFC 5126. Atenção: somente a política CAdES-BES é presentemente suportada.
  * @memberof Aroari
  */
-class Policy
-{
+class Policy {
 	/**
 	 * CAdES Basic Electronic Signature
 	 * @member { String }
@@ -442,8 +442,7 @@ class Policy
  * Identificador dos algoritmos criptográficos
  * @memberof Aroari
  */
-class AlgorithmOID
-{
+class AlgorithmOID {
 	/**
 	 * 
 	 */
@@ -540,8 +539,7 @@ const content_4 = 4;
  * Utilitário para conversão de e para Base64
  * @memberof Aroari
  */
-class Base64
-{
+class Base64 {
 	/**
 	 * Converte um array de bytes para Base64
 	 * @param { Uint8Array } bytes Cadeia de bytes a ser convertida
@@ -597,8 +595,7 @@ class Base64
 	 * @param { String } base64 Array de bytes codificado em Base64
 	 * @returns { Uint8Array } Array de bytes convertido
 	 */
-	static atob(base64)
-	{
+	static atob(base64)	{
 		var charlen = base64.length;
 		var byteoff = 0;
 		var byteLength = Math.round(((charlen) / 4 * 3)+1);
@@ -609,8 +606,7 @@ class Base64
 		code = decodings[base64.charCodeAt(i)];
 		if (code == dash_value) {
 			while (code == dash_value &amp;&amp; i &lt; charlen) code = decodings[base64.charCodeAt(++i)];
-			if (i!=0)
-			{
+			if (i!=0) {
 				while(code != dash_value &amp;&amp; i &lt; charlen) code=decodings[base64.charCodeAt(++i)];
 				while(code == dash_value &amp;&amp; i &lt; charlen) code=decodings[base64.charCodeAt(++i)];
 			}
@@ -655,8 +651,7 @@ class Base64
  * Constantes úteis para a identificação de objetos ASN.1
  * @memberof Aroari
  */
-class ASN1FieldOID
-{
+class ASN1FieldOID {
 	/**
 	 * Campo X.500 Country
 	 * @member { String }
@@ -746,8 +741,7 @@ class ASN1FieldOID
  * Implementa a parte cliente da emissão de um certificado digital
  * @memberof Aroari
  */
-class Enroll
-{
+class Enroll {
 	constructor() { this.addon = new Hamahiri.Enroll(); }
 
 	/**
@@ -819,7 +813,7 @@ class Enroll
 	 */
 	generateCSR(options) {
 		if (!options) throw new APIError('Argumento EnrollOptions obrigatório', 'generateCSR', APIError.ARGUMENT_ERROR);
-		if (typeof options.device  == 'undefined' || !isNaN(options.device)) throw new APIError('Argumento EnrollOptions.device obrigatório', 'generateCSR', APIError.ARGUMENT_ERROR);
+		if (typeof options.device  == 'undefined') throw new APIError('Argumento EnrollOptions.device obrigatório', 'generateCSR', APIError.ARGUMENT_ERROR);
 		if (typeof options.keySize != 'undefined' &amp;&amp; isNaN(options.keySize)) throw new APIError('Argumento EnrollOptions.keySize, se presente, deve ser numérico', 'generateCSR', APIError.ARGUMENT_ERROR);
 		if (typeof options.signAlg != 'undefined' &amp;&amp; isNaN(options.signAlg)) throw new APIError('Argumento EnrollOptions.signAlg, se presente, deve ser numérico', 'generateCSR', APIError.ARGUMENT_ERROR);
 		if (typeof options.rdn == 'undefined' || typeof options.rdn.cn == 'undefined') throw new APIError('Argumento EnrollOptions.rdn deve, obrigatoriamente, incluir pelo menos a propriedade cn', 'generateCSR', APIError.ARGUMENT_ERROR);
@@ -906,13 +900,18 @@ class Enroll
 		let contentInfo = decoded.result;
 		if  (!(
 			contentInfo instanceof asn1js.Sequence &amp;&amp;
+			Array.isArray(contentInfo.valueBlock.value) &amp;&amp;
 			contentInfo.valueBlock.value[0] instanceof asn1js.ObjectIdentifier &amp;&amp;
-			contentInfo.valueBlock.value[0].valueBlock.toString() === ASN1FieldOID.cmsSignedData
+			contentInfo.valueBlock.value[0].valueBlock.toString() === ASN1FieldOID.cmsSignedData &amp;&amp;
+			contentInfo.valueBlock.value[1] &amp;&amp;
+			Array.isArray(contentInfo.valueBlock.value[1].valueBlock.value)
 		))	throw new APIError('CMS ContentInfo inesperado para um PKCS #7', 'installCertificates', APIError.INVALID_CONTENT_INFO_ERROR);
 		let signedData = contentInfo.valueBlock.value[1].valueBlock.value[0];
 		if (!(
 			signedData instanceof asn1js.Sequence &amp;&amp;
-			signedData.valueBlock.value.length >= 4
+			Array.isArray(signedData.valueBlock.value) &amp;&amp;
+			signedData.valueBlock.value.length >= 4 &amp;&amp;
+			Array.isArray(signedData.valueBlock.value[3].valueBlock.value)
 		))	throw new APIError('Documento CMS SignedData inválido', 'installCertificates', APIError.INVALID_SIGNED_DATA_ERROR);
 		
 		let certificates = signedData.valueBlock.value[3];
@@ -920,8 +919,12 @@ class Enroll
 		while (i &lt; certificates.valueBlock.value.length) {
 			let subject = certificates.valueBlock.value[i];
 			let issuer = (i + 1 &lt; certificates.valueBlock.value.length) ? certificates.valueBlock.value[i + 1] : subject;
-			let certSubject = new crypto.X509Certificate(Buffer.from(subject.valueBeforeDecode));
-			let certIssuer = new crypto.X509Certificate(Buffer.from(issuer.valueBeforeDecode));
+			let certSubject, certIssuer;
+			try {
+				certSubject = new crypto.X509Certificate(Buffer.from(subject.valueBeforeDecode));
+				certIssuer = new crypto.X509Certificate(Buffer.from(issuer.valueBeforeDecode));
+			}
+			catch (err) { throw new APIError(err.toString(), 'installCertificates', APIError.INVALID_SIGNED_DATA_ERROR); }
 			if (!certSubject.verify(certIssuer.publicKey)) throw new APIError('Assinatura de um emissor inválida na cadeia de certificados', 'installCertificates', APIError.CERTIFICATE_CHAIN_VERIFY_ERROR);
 			i++;
 		}
@@ -944,8 +947,7 @@ class Enroll
  * Tipos de compromisso da assinatura CAdES
  * @memberof Aroari
  */
- class CommitmentType
- {
+class CommitmentType {
 	 /**
 	  * Indica que o assinante reconhece a criação, a aprovação e o envio do documento assinado
 	  * @member { String }
@@ -1016,20 +1018,19 @@ class Enroll
  * Representação ASN.1 de um certificado digital
  * @memberof Aroari
  */
- class X509Certificate
- {
+class X509Certificate {
 	/**
 	 * Efetua o parsing de um certificado digital utilizando a biblioteca asn1js
 	 * @param { Uint8Array } encoded Certificado encodado em DER
 	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
 	 */
-	constructor(encoded)
-	{
+	constructor(encoded) {
 		let decoded = asn1js.fromBER(encoded.buffer);
 		if (decoded.offset == -1) throw new APIError('Falha geral em efetuar o parsing do certificado', 'X509Certificate constructor', APIError.CERTIFICATE_DECODE_ERROR);
 		this.root = decoded.result;
 		if (
 			!(this.root instanceof asn1js.Sequence) ||
+			!Array.isArray(this.root.valueBlock.value) ||
 			!(this.root.valueBlock.value[0] instanceof asn1js.Sequence)
 		)	throw new APIError('Codificação DER inválida para um certificado digital', 'X509Certificate constructor', APIError.CERTIFICATE_DECODE_ERROR);
 		this.tbs = this.root.valueBlock.value[0];
@@ -1100,8 +1101,7 @@ class Enroll
  * Implementa as funções de assinatura digital utilizando chaves RSA
  * @memberof Aroari
  */
-class Sign
-{
+class Sign {
 	constructor() { this.addon = new Hamahiri.Sign(); }
 
 	/**
@@ -1269,7 +1269,7 @@ class Sign
 			typeof options.toBeSigned === 'undefined' ||
 			(typeof options.toBeSigned !== 'string' &amp;&amp; !(options.toBeSigned instanceof ArrayBuffer))
 		)	throw new APIError('Argumento SignOptions.toBeSigned must be an string or an instance of ArrayBuffer', 'sign', APIError.ARGUMENT_ERROR);
-		if (typeof options.attach !== 'undefined' &amp;&amp; typeof options.attach != 'boolean') throw new APIError('Argumento SignOptions.attach, se presente, deve ser um valor lógico', 'sign', APIError.ARGUMENT_ERROR);
+		if (typeof options.attach !== 'undefined' &amp;&amp; typeof options.attach !== 'boolean') throw new APIError('Argumento SignOptions.attach, se presente, deve ser um valor lógico', 'sign', APIError.ARGUMENT_ERROR);
 		if (typeof options.algorithm !== 'undefined' &amp;&amp; isNaN(options.algorithm)) throw new APIError('Argumento SignOptions.algorithm, se presente, deve ser numérico', 'sign', APIError.ARGUMENT_ERROR);
 		if (typeof options.cades !== 'undefined') {
 			if (typeof options.cades !== 'object') throw new APIError('Argumento options.cades, se presente, deve ser um objeto do tipo Aroari.CAdES', 'sign', APIError.ARGUMENT_ERROR);
@@ -1277,10 +1277,10 @@ class Sign
 				if (typeof options.cades.policy !== 'string') throw new APIError('Argumento options.cades.policy, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
 				if (options.cades.policy.localeCompare(Policy.typeBES) != 0) throw new APIError('Padrão de assinatura CAdES não suportado', 'sign', APIError.UNSUPPORTED_CADES_SIGNATURE);
 			}
-			if (typeof options.cades.addSigningTime !== 'undefined' &amp;&amp; typeof options.cades.addSigningTime != 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
+			if (typeof options.cades.addSigningTime !== 'undefined' &amp;&amp; typeof options.cades.addSigningTime !== 'boolean') throw new APIError('Argumento options.cades.addSigningTime, se presente, deve ser do tipo boolean', 'sign', APIError.ARGUMENT_ERROR);
 			if (typeof options.cades.commitmentType !=='undefined')
 			{
-				if (typeof options.cades.commitmentType != 'string') throw new APIError('Argumento options.cades.commitmentType, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
+				if (typeof options.cades.commitmentType !== 'string') throw new APIError('Argumento options.cades.commitmentType, se presente, deve ser do tipo string', 'sign', APIError.ARGUMENT_ERROR);
 				if (
 					options.cades.commitmentType !== CommitmentType.proofOfOrigin &amp;&amp;
 					options.cades.commitmentType !== CommitmentType.proofOfReceipt &amp;&amp;
@@ -1306,7 +1306,7 @@ class Sign
 		let signedAttrs = this.#makeSignedAttributes(hashAlg, toBeSigned, chain[0], commitmentType, addSigningTime);
 
 		// TODO: Support policies other than CAdES-BES
-		if (policy != Policy.typeBES) {
+		if (policy !== Policy.typeBES) {
 			if (policy === Policy.typeEPES);
 			else if (policy === Policy.typeT);
 			else if (policy === Policy.typeC);
@@ -1347,8 +1347,7 @@ class Sign
  * Implementa um Relative Distinguished Name para comparação com outro RDN (stringprep)
  * @memberof Aroari
  */
-class RDN
-{
+class RDN {
 	/**
 	 * Cria uma nova instância de um RDN. O objeto asn1js.Sequence recebido como argumento é validado contra
 	 * a especificação
@@ -1441,8 +1440,7 @@ class RDN
  * Caso o documento CMS embarque mais de um assinante, somente o primeiro é considerado.
  * @memberof Aroari
  */
-class CMSSignedData
-{
+class CMSSignedData {
 	/**
 	 * Efetua o parsing do documento CMS especificado e valida os campos necessários à verificação criptográfica da assinatura.
 	 * @param { String | ArrayBuffer } cms Documento CMS SignedData, codificado em Base64 (seguindo as convenções PEM) ou DER.
@@ -1453,7 +1451,7 @@ class CMSSignedData
 		if (typeof cms === 'string') {
 			let input = cms.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
 			try { encoded = Base64.atob(input); }
-			catch (err) { throw new APIError(err, 'CMSSignedData constructor', APIError.ARGUMENT_ERROR); }
+			catch (err) { throw new APIError(err.toString(), 'CMSSignedData constructor', APIError.ARGUMENT_ERROR); }
 		}
 		else if (cms instanceof ArrayBuffer) {
 			encoded = new Uint8Array(cms);
@@ -1539,7 +1537,7 @@ class CMSSignedData
 			pubKey = x509Cert.publicKey;
 			if (typeof pubKey !== 'object') throw new Error('X509Certificate Public Key field is undefined');
 		}
-		catch (err) { throw new APIError(err, 'matchSignature', APIError.CERTIFICATE_DECODE_ERROR); }
+		catch (err) { throw new APIError(err.toString(), 'matchSignature', APIError.CERTIFICATE_DECODE_ERROR); }
 		let signAlg = this.#getSignatureAlgorithm();
 		let signed = new Uint8Array(signedAttrs.valueBeforeDecode);
 		signed[0] = 0x31;
@@ -1583,6 +1581,7 @@ class CMSSignedData
 			}
 			i++;
 		}
+		return null;
 	}
 	#findSigningCertificateBySKI(certificates, sid) {
 		let octets = new Uint8Array(sid.valueBlock.valueHex);
@@ -1711,6 +1710,7 @@ class CMSSignedData
 			let sid = this.#getSid();
 			if (sid instanceof asn1js.Sequence) signingCert = this.#findSigningCertificateByIssuerSerial(certificates, sid);
 			else signingCert = this.#findSigningCertificateBySKI(certificates, sid);
+			if (!signingCert) throw new APIError('O certificado digital do assinante é requerido para a verificação', 'verify', APIError.CMS_VRFY_NO_ISSUER_CERT_FOUND);
 		}
 		if (typeof eContent === 'undefined') eContent = this.getSignedContent();
 		let signedAttrs = this.#getSignedAttributes();
@@ -1740,6 +1740,7 @@ class CMSSignedData
 			let sid = this.#getSid();
 			if (sid instanceof asn1js.Sequence) signingCert = this.#findSigningCertificateByIssuerSerial(certificates, sid);
 			else signingCert = this.#findSigningCertificateBySKI(certificates, sid);
+			if (!signingCert) throw new APIError('O certificado digital do assinante é requerido para a verificação', 'verify', APIError.CMS_VRFY_NO_ISSUER_CERT_FOUND);
 		}
 		this.#verifyCertChain(new Uint8Array(signingCert));
 	}
@@ -1840,7 +1841,7 @@ module.exports = {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Wed May 04 2022 17:24:41 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Fri Dec 02 2022 09:30:14 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

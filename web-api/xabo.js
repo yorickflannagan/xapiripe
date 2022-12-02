@@ -201,6 +201,32 @@ export var xabo = {
 				this.sign = sign;
 				this.verify = verify;
 			}
+			/**
+			 * Verifica se dois distinguished names são o mesmo DN. O método é capaz de comparar duas representações distintas
+			 * de DNs, desde que atendam à {@link https://www.rfc-editor.org/rfc/rfc1779|RFC 1779}.
+			 * @param { String } dna DN que se quer validar
+			 * @param { string } dnb DN contra o qual se quer comparar
+			 * @returns Booleano indicando se as duas strings representam o mesmo DN, mesmo que com variações.
+			 */
+			matchDN(dna, dnb) {
+				let from = this.#shrink(dna.split(/,|;/));
+				let to = this.#shrink(dnb.split(/,|;/));
+				let match = true;
+				if (from.size == to.size) {
+					from.forEach((value) => { if (!to.delete(value)) match = false; });
+					if (match) match = to.size == 0;
+				}
+				return match;
+			}
+			#shrink(dn) {
+				let target = new Set();
+				dn.forEach((value) => {
+					let pair = value.split('=');
+					let attr = (pair.length == 2) ? pair[0].toLowerCase().trim() + '=' + pair[1].toLowerCase().trim() : pair[0].toLowerCase().trim();
+					target.add(attr);
+				});
+				return target;
+			}
 		}
 		class XapiripeAPI extends API {
 			constructor() {

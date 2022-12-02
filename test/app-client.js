@@ -25,7 +25,12 @@ const CMS_STORED = 'Documento CMS armazenado com o nome %s.\n';
 const VERIFY_CONDITION = 'A realização do teste de verificação requer um teste de assinatura prévio.\n';
 const VERIFY_BASIC_TEST = 'Iniciando o teste básic de verificação de assinatura digital...\n';
 const VERIFY_BASIC_RESULT = 'Recebido o resultado da verificação: [%s]\n';
+const MATCH_DN_TEST_INIT = 'Testando a comparação com o DN [%s]...\n';
+const MATCH_DN = 'Comparando com o DN [%s]... %s\n';
 
+const REMOTE_SERVER = 'http://userapp.crypthings.org:8080';
+const LOCAL_SERVER = 'http://localhost:8080';
+const APP_SERVER = LOCAL_SERVER;
 
 let selectTest;
 let btnExecute;
@@ -82,7 +87,7 @@ function enrollBasicTest() {
 		txtOutput.value += sprintf(ISSUE_TEST_PROVIDER, devices[provider]);
 		clientAPI.enroll.generateCSR({ device: devices[provider], rdn: { cn: user }}).then((request) => {
 			txtOutput.value += SEND_REQUEST_MSG;
-			window.fetch('http://userapp.crypthings.org:8080/issue', { method: 'POST', body: request }).then((response) => {
+			window.fetch(APP_SERVER + '/issue', { method: 'POST', body: request }).then((response) => {
 				if (response.ok) {
 					response.text().then((value) => {
 						txtOutput.value += INSTALL_CERT_MSG;
@@ -125,9 +130,9 @@ function signBasicTest() {
 	clientAPI.sign.enumerateCerts().then((certs) => {
 		let idx = Math.floor(Math.random() * certs.length);
 		txtOutput.value += sprintf(SELECTED_CERT, certs[idx].subject, BASIC_CONTENT);
-		clientAPI.sign.sign({ certificate: certs[idx], toBeSigned: { data: BASIC_CONTENT }}).then((cms) => {
+		clientAPI.sign.sign({ certificate: certs[idx], toBeSigned: BASIC_CONTENT }).then((cms) => {
 			txtOutput.value += SIGNED_CONTENT;
-			window.fetch('http://userapp.crypthings.org:8080/store', { method: 'POST', body: cms }).then((response) => {
+			window.fetch(APP_SERVER + '/store', { method: 'POST', body: cms }).then((response) => {
 				if (response.ok) {
 					response.text().then((fname) => {
 						success++;
@@ -164,7 +169,7 @@ function verifyBasicTest() {
 	}
 	txtOutput.value += VERIFY_BASIC_TEST;
 	txtResult.value = '';
-	window.fetch('http://userapp.crypthings.org:8080/' + lastSigned, { method: 'GET' }).then((response) => {
+	window.fetch(APP_SERVER + '/' + lastSigned, { method: 'GET' }).then((response) => {
 		if (response.ok) {
 			response.text().then((cms) => {
 				clientAPI.verify.verify({pkcs7: { data: cms }}).then((value) =>{
@@ -272,6 +277,37 @@ function zipBasicTest() {
 	});
 }
 
+function matchDNTest() {
+	const from = 'C = FR, O = INRIA, CN = Christian Huitema'
+	let to = [
+		'CN=Christian Huitema, O=INRIA, C=FR', 
+		'CN = Christian Huitema, O = INRIA, C = FR',
+		'CN=Christian Huitema,O=INRIA,C=FR',
+		'CN=Christian Huitema; O=INRIA; C=FR',
+		'C=FR, O=INRIA, CN=Christian Huitema',
+		'C = FR, O = INRIA, CN = Christian Huitema',
+		'C=FR,O=INRIA,CN=Christian Huitema',
+		'C=FR; O=INRIA; CN=Christian Huitema'
+	];
+	txtOutput.value += sprintf(MATCH_DN_TEST_INIT, from);
+	txtResult.value = '';
+	let ok = true;
+	to.forEach((value) => {
+		let match = clientAPI.matchDN(from, value);
+		txtOutput.value += sprintf(MATCH_DN, value, match.toString());
+		if (!match) ok = false;
+		else success++;
+	});
+	if (ok) {
+		txtOutput.value += sprintf(TESTS_DONE, success.toString());
+		txtResult.value = '0:' + SUCCESSFUL_TEST;
+	}
+	else {
+		txtOutput.value += sprintf(UNSUCCESSFUL_TEST, 'Falha na comparação');
+		txtResult.value = '1';
+	}
+}
+
 window.addEventListener('load', () => {
 	selectTest = document.getElementById('script');
 	btnExecute = document.getElementById('exec');
@@ -301,6 +337,9 @@ window.addEventListener('load', () => {
 			break;
 		case '5':
 			zipBasicTest();
+			break;
+		case '6':
+			matchDNTest();
 			break;
 		default:
 			// TODO: Enviar sinal de teste não selecionado

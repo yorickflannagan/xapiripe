@@ -7,7 +7,9 @@
 
 'use strict';
 
+import { parseArgs } from 'util';
 import { Enroll, Sign, Verify, PromiseRejected, urlHekura } from './api.js';
+import { Base64 } from './fittings.js';
 
 const INVALID_JSON_RESPONSE = 'Ocorreu a seguinte falha ao converter a resposta [%r] recebida do serviço no objeto Javascript: %e';
 
@@ -65,8 +67,30 @@ export class HekuraEnroll extends Enroll {
 	enumerateDevices() {
 		return get('/enroll');
 	}
-	generateCSR({ device, keySize = 2048, signAlg = 0x00000040, rdn = {c, o, ou, cn }}) {
-		return post('/enroll', arguments[0]);
+	generateCSR(options) {
+		let params = {
+			device: null,
+			keySize: 2048,
+			signAlg: 0x00000040,
+			rdn: {
+				c: null,
+				o: null,
+				ou: null,
+				cn: null
+			}
+		};
+		if (typeof(options) === 'object') {
+			if (typeof(options.device) === 'string') params.device = options.device
+			if (typeof(options.keySize) === 'number') params.keySize = options.keySize;
+			if (typeof(options.signAlg) === 'number') params.signAlg = options.signAlg;
+			if (typeof(options.rdn) === 'object') {
+				if (typeof(options.rdn.c) === 'string') params.rdn.c = options.rdn.c;
+				if (typeof(options.rdn.o) === 'string') params.rdn.o = options.rdn.o;
+				if (typeof(options.rdn.ou) === 'string') params.rdn.ou = options.rdn.ou;
+				if (typeof(options.rdn.cn) === 'string') params.rdn.cn = options.rdn.cn;
+			}
+		}
+		return post('/enroll', params);
 	}
 	installCertificates(pkcs7) {
 		return new Promise((resolve, reject) => {
@@ -87,22 +111,66 @@ export class HekuraSign extends Sign {
 	enumerateCerts() {
 		return get('/sign');
 	}
-	sign({ certificate, toBeSigned, attach = true, algorithm = 0x00000040, cades = { policy: 'CAdES-BES', addSigningTime: true, commitmentType: '1.2.840.113549.1.9.16.6.4' }}) {
-		return post( '/sign', {
-			handle: arguments[0].certificate.handle,
-			toBeSigned: arguments[0].toBeSigned,
-			attach: arguments[0].attach,
-			algorithm: arguments[0].algorithm,
-			cades: arguments[0].cades 
-		});
+	sign(options) {
+		let params = {
+			handle: 0,
+			toBeSigned: null,
+			attach: true,
+			algorithm: 0x00000040,
+			cades: {
+				policy: 'CAdES-BES',
+				addSigningTime: true,
+				commitmentType: '1.2.840.113549.1.9.16.6.4'
+			}
+		};
+		let altString = { data: null, binary: false };
+		if (typeof(options) === 'object') {
+			if (typeof(options.certificate) === 'object' && typeof(options.certificate.handle) === 'number') params.handle = options.certificate.handle;
+			if (typeof(options.toBeSigned) === 'string') altString.data = options.toBeSigned;
+			else {
+				let cv = new Base64();
+				altString.data = cv.btoa(options.toBeSigned);
+				altString.binary = true;
+			}
+			params.toBeSigned = altString;
+			if (typeof(options.attach) === 'boolean') params.attach = options.attach;
+			if (typeof(options.algorithm) === 'number') params.algorithm = options.algorithm;
+			if (typeof(options.cades) === 'object') {
+				if (typeof(options.cades.policy) === 'string') params.cades.policy = options.cades.policy;
+				if (typeof(options.cades.addSigningTime) === 'boolean') params.cades.addSigningTime = options.cades.addSigningTime;
+				if (typeof(options.cades.commitmentType) === 'string') params.cades.commitmentType = options.cades.commitmentType;
+			}
+		}
+		return post('/sign', params);
 	}
 }
 
 export class HekuraVerify extends Verify {
-	verify({ pkcs7 = { data: null, binary: false }, signingCert = { data: null, binary: false }, eContent = { data: null, binary: false }, verifyTrustworthy = false, getSignerIdentifier = false, getSignedContent = false, getSigningTime = false }) {
+	verify(options) {
 		return new Promise((resolve, reject) => {
+			let params = {
+				pkcs7: { data: null, binary: false },
+				signingCert: undefined,
+				eContent: undefined,
+				verifyTrustworthy: false,
+				getSignerIdentifier: false,
+				getSignedContent: false,
+				getSigningTime: false
+			};
+			if (typeof(options) === 'object') {
+				if (typeof(options.pkcs7) === 'object') {
+					if (typeof(options.pkcs7.data) !== 'undefined') params.pkcs7.data = options.pkcs7.data;
+					if (typeof(options.pkcs7.binary) === 'boolean') params.pkcs7.binary = options.pkcs7.binary;
+				}
+				if (typeof(options.signingCert) === 'object' && typeof(options.signingCert.data) !== 'undefined') params.signingCert = options.signingCert;
+				if (typeof(options.eContent) === 'object' && typeof(options.eContent.data) !== 'undefined')params.eContent = options.eContent;
+				if (typeof(options.verifyTrustworthy) === 'boolean') params.verifyTrustworthy = options.verifyTrustworthy;
+				if (typeof(options.getSignerIdentifier) === 'boolean') params.getSignerIdentifier = options.getSignerIdentifier;
+				if (typeof(options.getSignedContent) === 'boolean') params.getSignedContent = options.getSignedContent;
+				if (typeof(options.getSigningTime) === 'boolean') params.getSigningTime = options.getSigningTime;
+			}
 			let body;
-			try { body = JSON.stringify(arguments[0]); }
+			try { body = JSON.stringify(params); }
 			catch (e) { return reject(new PromiseRejected(1, 'Argumento inválido')); }
 			retrieve('/verify', {
 				method: 'POST',
