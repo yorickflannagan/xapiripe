@@ -15,20 +15,20 @@
 		"service-test": "CHCP 65001>nul & electron ./appservice/main.js",
 		
 		"hamahiri-build": "cd hamahiri & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
-		"service-build": "node build.js --build=service --distributorId=br.gov.caixa --updateURL=http://hekura.crypthings.org:8090 --arch=x64",
-		"api-build": "webpack",
-		"api-dev-build": "webpack --env development & COPY build\\xapiripe.js test",
+		"service-build": "node ./build/build.js --build=service --arch=x64 --distribution=./build/caixa.distribution",
+		"api-build": "webpack --config ./build/webpack.config.js",
+		"api-dev-build": "webpack --config ./build/webpack.config.js --env development & COPY build\\output\\xapiripe.js test",
 		
-		"hamahiri-docs": "node make-docs.js --components=hamahiri",
-		"aroari-docs": "node make-docs.js --components=aroari",
-		"wanhamou-docs": "node make-docs.js --components=wanhamou",
-		"hekura-docs": "node make-docs.js --components=hekura",
-		"options-docs": "node make-docs.js --components=options",
-		"update-docs": "node make-docs.js --components=update",
-		"api-docs": "node make-docs.js --webapi=api",
-		"fittings-docs": "node make-docs.js --webapi=fittings",
-		"xabo-docs": "node make-docs.js --webapi=xabo",
-		"all-docs": "node make-docs.js --components=hamahiri,aroari,wanhamou,hekura,options,update --webapi=api,fittings,xabo"
+		"hamahiri-docs": "node ./build/make-docs.js --components=hamahiri",
+		"aroari-docs": "node ./build/make-docs.js --components=aroari",
+		"wanhamou-docs": "node ./build/make-docs.js --components=wanhamou",
+		"hekura-docs": "node ./build/make-docs.js --components=hekura",
+		"options-docs": "node ./build/make-docs.js --components=options",
+		"update-docs": "node ./build/make-docs.js --components=update",
+		"api-docs": "node ./build/make-docs.js --webapi=api",
+		"fittings-docs": "node ./build/make-docs.js --webapi=fittings",
+		"xabo-docs": "node ./build/make-docs.js --webapi=xabo",
+		"all-docs": "node ./build/make-docs.js --components=hamahiri,aroari,wanhamou,hekura,options,update --webapi=api,fittings,xabo"
 	},
 	"repository": {
 		"type": "git",

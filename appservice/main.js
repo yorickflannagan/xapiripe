@@ -25,6 +25,7 @@
  */
 'use strict';
 
+// TODO: Review distribution loading
 const { app, BrowserWindow, Menu, Tray, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const cp = require('child_process');
@@ -36,7 +37,7 @@ const { UpdateManager } = require('../components/update');
 
 
 const DISTRIBUTION_FILE = path.resolve(__dirname, './distribution.json');
-const OPTIONS_FILE = path.resolve(process.env.USERPROFILE, '.hekura', 'options.json');
+const OPTIONS_FILE = path.resolve(process.env.USERPROFILE, '.criptocns', 'options.json');
 const ICON_FILE = path.resolve(__dirname, './res', 'signature-32x32.ico');
 const OPTIONS_HTML = path.resolve(__dirname, './res', 'options.html');
 const ASK_HTML = path.resolve(__dirname, './res', 'ask.html');

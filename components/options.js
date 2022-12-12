@@ -33,7 +33,6 @@ const DISTRIBUTION_PROPERTIES = [
 	'productName',
 	'productDescription',
 	'company',
-	'exe',
 	'distributorId',
 	'updateURL'
 ];
@@ -42,7 +41,6 @@ const DISTRIBUTION_TEMPLATE = new Map()
 	.set('productName', 'string')
 	.set('productDescription', 'string')
 	.set('company', 'string')
-	.set('exe', 'string')
 	.set('distributorId', 'string')
 	.set('updateURL', 'string')
 	.set('', 'object');
@@ -52,7 +50,6 @@ const DISTRIBUTION_TEMPLATE = new Map()
   * @property { String } productId identificador do produto
   * @property { String } productName nome do produto
   * @property { String } productDescription descrição do produto
-  * @property { String } exe nome do arquivo executável
   * @property { String } company nome do fabricante
   * @property { String } distributorId identificador do distribuidor
   * @property { String } updateURL URL de atualização do produto
@@ -69,7 +66,6 @@ const DISTRIBUTION_TEMPLATE = new Map()
 		 this.productId = id ? id :'';
 		 this.productName = name ? name : '';
 		 this.productDescription = description ? description : '';
-		 this.exe = exe ? exe : '';
 		 this.company = 'The Crypthing Initiative';
 		 this.distributorId = '';
 		 this.updateURL = '';

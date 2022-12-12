@@ -27,12 +27,14 @@
 
 const webpack = require('webpack');
 const path = require('path');
+const project = path.dirname(__dirname);
+
 
 let config = {
 	bail: true,
-	context: path.resolve(__dirname),
+	context: project,
 	devtool: false,
-	entry: './web-api/xabo.js',
+	entry: path.join(project, 'web-api', 'xabo.js'),
 	infrastructureLogging: {
 		appendOnly: true,
 		level: 'verbose',
@@ -45,7 +47,7 @@ let config = {
 		filename: 'xapiripe.js',
 		library: 'xabo',
 		libraryExport: 'xabo',
-		path: path.resolve(__dirname, 'build'),
+		path: path.resolve(__dirname, 'output'),
 		pathinfo: false
 	},
 	plugins: [
