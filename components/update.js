@@ -33,7 +33,7 @@ class HandleEvtResult {
 	constructor(success, stderror) {
 		this.success = success;
 		this.stderror = stderror;
-		this.restart;
+		this.mustRestart = false;
 	}
 	/**
 	 * Define o indicador de reinício do aplicativo
@@ -41,7 +41,7 @@ class HandleEvtResult {
 	 * @returns a instância corrente
 	 */
 	restart(yes) {
-		this.restart = yes;
+		this.mustRestart = yes;
 		return this;
 	}
 }
@@ -50,6 +50,7 @@ class HandleEvtResult {
  * Lida com os eventos Squirrel de atualização da aplicação
  */
 class UpdateManager {
+	/* jshint ignore:start */
 	/**
 	 * Mensagem de erro durante a atualização
 	 * @member { Number }
@@ -62,6 +63,7 @@ class UpdateManager {
 	 * @default 2
 	 */
 	static UPDATE_MESSAGE = 2;
+	/* jshint ignore:end */
 	/**
 	 * Cria uma nova instância do gerenciador de atualização
 	 * @param { Process } nodeProcess instância do objeto global process
@@ -78,10 +80,10 @@ class UpdateManager {
 		let env = nodeProcess.env;
 		this.debug = (typeof env.DEBUG !== 'undefined');		// env.DEBUG indica que esta classe está sendo depurada (com ou sem Squirrel)
 		this.development = argv[0].endsWith('electron.exe');	// Indicador de não utilização do Squirrel
-		this.updateArgument;									// Comando Squirrel
+		this.updateArgument = '';								// Comando Squirrel
 		this.updateEvent = false;								// Indicador de execução sob controle do Squirrel
-		this.regAddArguments;									// Argumentos para execução do comando REG ADD
-		this.regDeleteArguments;								// Argumentos para execução do comando REG DELETE
+		this.regAddArguments = null;							// Argumentos para execução do comando REG ADD
+		this.regDeleteArguments = null;							// Argumentos para execução do comando REG DELETE
 		this.appDir =  path.resolve(env.USERPROFILE, '.' + distribution.productName.toLowerCase());	// Diretório dos dados da aplicação
 		this.updateURL = distribution.updateURL;				// URL de atualização
 		this.updateInterval = this.debug? 1000 * 60 * 1 : 1000 * 60 * 15;	// Timeout de execução da verificação de atualização
@@ -91,8 +93,9 @@ class UpdateManager {
 
 		switch(argv.length) {
 		case 3 + offset:
-			let registryData = path.resolve(nodeProcess.env.LOCALAPPDATA, distribution.productName, 'app-' + argv[2 + offset], distribution.exe);
+			let registryData = path.resolve(nodeProcess.env.LOCALAPPDATA, distribution.productName, 'app-' + argv[2 + offset], distribution.productName.toLowerCase() + '.exe');
 			this.regAddArguments = [ 'ADD', REG_KEY, '/v', distribution.productName, '/t', 'REG_SZ', '/d', registryData, '/f' ];
+			/* falls through */
 		case 2 + offset:
 			this.updateArgument = argv[1 + offset];
 			this.updateEvent = true;
@@ -103,14 +106,14 @@ class UpdateManager {
 		// Se classe em depuração sem utilização do Squirrel, exibe o resultado da inicialização
 		if (this.debug && this.development) console.log(sprintf(DEBUG_INIT_MSG, this.updateArgument, this.regAddArguments, this.regDeleteArguments, this.appDir, this.updateURL));
 	}
-	#createAppDir(appDir) {
+	createAppDir(appDir) {
 		try {
 			if (!fs.existsSync(appDir)) fs.mkdirSync(appDir);
 			return new HandleEvtResult(true);
 		}
 		catch (e) { return new HandleEvtResult(false, e.toString()); }
 	}
-	#updateRegistry(args) {
+	updateRegistry(args) {
 		let ret = cp.spawnSync('REG', args, { encoding: 'utf-8', shell: true });
 		if (ret.signal) return new HandleEvtResult(false, ret.signal);
 		if (ret.status != 0) return new HandleEvtResult(false, ret.stderr);
@@ -125,15 +128,15 @@ class UpdateManager {
 		let ret;
 		switch(this.updateArgument) {
 		case '--squirrel-install':
-			ret = this.#createAppDir(this.appDir);
-			if (ret.success) ret = this.#updateRegistry(this.regAddArguments);
+			ret = this.createAppDir(this.appDir);
+			if (ret.success) ret = this.updateRegistry(this.regAddArguments);
 			return ret.restart(true);
 		case '--squirrel-updated':
 		case '--squirrel-obsolete':
-			ret = this.#updateRegistry(this.regAddArguments);
+			ret = this.updateRegistry(this.regAddArguments);
 			return ret.restart(true);
 		case '--squirrel-uninstall':
-			ret = this.#updateRegistry(this.regDeleteArguments);
+			ret = this.updateRegistry(this.regDeleteArguments);
 			return ret.restart(true);
 		default: return new HandleEvtResult(true).restart(false);
 		}

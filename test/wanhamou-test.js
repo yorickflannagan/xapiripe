@@ -130,12 +130,15 @@ function testWanhamou() {
 	LOG.write(' test cases performed.\n');
 
 	// Clean-up
-	let file = path.join(__dirname, '..', 'components', Wanhamou.Logger.cfgLogPattern.replace('-n', '-0'));
-	fs.unlinkSync(file);
-	file = path.join(__dirname, '..', 'components', Wanhamou.Logger.cfgLogPattern.replace('-n', '-1'));
-	fs.unlinkSync(file);
-	file = path.join(__dirname, '..', 'components', Wanhamou.Logger.cfgLogPattern.replace('-n', '-2'));
-	fs.unlinkSync(file);
+	let file = path.resolve(__dirname, '..', 'components', Wanhamou.Logger.cfgLogPattern.replace('-n', '-0'));
+	console.log('Trying to remove file ' + file);
+	if (fs.existsSync(file)) fs.unlinkSync(file);
+	file = path.resolve(__dirname, '..', 'components', Wanhamou.Logger.cfgLogPattern.replace('-n', '-1'));
+	console.log('Trying to remove file ' + file);
+	if (fs.existsSync(file)) fs.unlinkSync(file);
+	file = path.resolve(__dirname, '..', 'components', Wanhamou.Logger.cfgLogPattern.replace('-n', '-2'));
+	console.log('Trying to remove file ' + file);
+	if (fs.existsSync(file)) fs.unlinkSync(file);
 
 }
 

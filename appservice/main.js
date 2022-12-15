@@ -358,7 +358,7 @@ app.on('ready', () => {
 	let manager = new UpdateManager(process, distribution, updateCallback);
 	let ret = manager.handleUpdateEvents();
 	if (!ret.success) {
-		if (ret.restart) {
+		if (ret.mustRestart) {
 			if (!lastEventError) lastEventError = ret.stderror;
 		}
 		else {
@@ -369,7 +369,7 @@ app.on('ready', () => {
 			});
 		}
 	}
-	if (ret.restart) {
+	if (ret.mustRestart) {
 		app.quit();
 		return;
 	}
