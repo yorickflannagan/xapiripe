@@ -23,7 +23,17 @@
  * See https://opensource.org/licenses/LGPL-3.0
  *
  */
+/* jshint -W053 */
 'use strict';
+
+const path = require('path');
+const { Config } = require('./config');
+const { Logger, LogLevel, sprintf } = require('../components/wanhamou');
+const { CORSBlockade, HTTPServer } = require('../components/hekura');
+const { Message, WarnMessage } = require('./module');
+const { DelayedPromise } = require('../components/options');
+const alert = require('alert');
+
 
 
 (async function () {
@@ -46,23 +56,14 @@
 	let logger = null;
 
 	try {
-		const path = require('path');
-		const fs = require('fs');
-		const { Config } = require('./config');
-		const { Logger, LogLevel, sprintf, beautify } = require('../components/wanhamou');
-		const { CORSBlockade, HTTPServer } = require('../components/hekura');
-		const { Message, WarnMessage } = require('./module');
-		const { DelayedPromise } = require('../components/options');
-		const alert = require('alert');
-
 
 		/**
 		 * Libera recursos alocados, finaliza o serviço e encerra o processo.
 		 */
-		async function quitService() {
+		let quitService = async function() {
 			if (service) await service.stop();
 			process.exit();
-		}
+		};
 
 		/**
 		 * Callback evocada sempre que o processador REST precisa alertar o usuário de que uma operação criptográfica
@@ -75,15 +76,15 @@
 		 * @param { String } value: conteúdo da requisição, no caso da operação sign
 		 * @returns { Promise<boolean> } um indicador de aceitação da rerquisição, emitido pelo usuário.
 		 */
-		function approvalCallback(operationId, referer, value) {
+		let approvalCallback = function(operationId, referer, value) {
 			return new Promise((resolve, reject) => {
 				let msg = new WarnMessage(operationId, referer, value);
 				messages.set(msg.msgId, new DelayedPromise(resolve, reject));
 				process.send(msg);
 			});
-		}
+		};
 
-		function usage(code) {
+		let usage = function(code) {
 			console.log([
 				'uso: node service.js [--config=[path] | --log=[logJSON] --server=[serverJSON]]',
 				'onde',
@@ -95,9 +96,9 @@
 				'caso contrário ambos os argumentos --log e --server devem estar presentes.'
 			].join('\n'));
 			process.exit(code);
-		}
+		};
 	
-		function processCmdLine() {
+		let processCmdLine = function() {
 			let i = 2;
 			let args = new Map();
 			while (i < process.argv.length) {
@@ -144,7 +145,7 @@
 					maxSize: 2048,
 					rotate: 5,
 					level: 1
-				}
+				};
 				serverOptions = {
 					port: 9171,
 					maxAge: 1800,
@@ -152,7 +153,7 @@
 						warning: true,
 						origins: []
 					}
-				}
+				};
 			}
 		
 			let ret = new Map();
@@ -160,7 +161,7 @@
 			if (logOptions)	ret.set('log', logOptions);
 			if (serverOptions) ret.set('server', serverOptions);
 			return ret;
-		}
+		};
 
 
 		/**
@@ -190,15 +191,15 @@
 				quitService();
 			}
 			else if (message.signal === Message.WARN) {
-				logger.debug(sprintf('Mensagem recebida:\n%s', beautify(message)));
+				logger.debug(sprintf('Mensagem recebida:\n%s', JSON.stringify(message, null, 2)));
 				let promise = messages.get(message.msgId);
 				if (promise) {
 					promise.resolve(message.response);
 					messages.delete(message.msgId);
 				}
-				else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', beautify(message)));
+				else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', JSON.stringify(message, null, 2)));
 			}
-			else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', beautify(message)));
+			else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', JSON.stringify(message, null, 2)));
 		});
 
 
@@ -222,7 +223,7 @@
 			maxAge: svrOpt.maxAge,
 			cors: new CORSBlockade(origins),
 			callback: approvalCallback
-		}
+		};
 	
 		Logger.logConfig(logOpt);
 		logger = Logger.getLogger('Hekura Service App');
@@ -236,7 +237,7 @@
 		});
 	
 		await service.start();
-		logger.info(sprintf('Log do serviço iniciado com as seguinte opções:\n%s\nServiço Hekura iniciado com as seguintes opções:\n%s', beautify(logOpt), beautify(svrOpt)));
+		logger.info(sprintf('Log do serviço iniciado com as seguinte opções:\n%s\nServiço Hekura iniciado com as seguintes opções:\n%s', JSON.stringify(logOpt, null, 2), JSON.stringify(svrOpt, null, 2)));
 	}
 	catch (err) {
 		let msg = 'Ocorreu um erro fatal na operação do serviço, a saber: '.concat(err.toString(), '. O aplicativo precisa ser encerrado.');

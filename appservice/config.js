@@ -7,7 +7,6 @@
 
 'use strict';
 
-const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { uriPattern, jsonValidator } = require('../components/options');

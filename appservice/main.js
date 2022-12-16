@@ -36,52 +36,17 @@ const { Distribution, DelayedPromise } = require('../components/options');
 const { UpdateManager } = require('../components/update');
 
 
-const DISTRIBUTION_FILE = path.resolve(__dirname, './distribution.json');
-const OPTIONS_FILE = path.resolve(process.env.USERPROFILE, '.criptocns', 'options.json');
-const ICON_FILE = path.resolve(__dirname, './res', 'signature-32x32.ico');
-const OPTIONS_HTML = path.resolve(__dirname, './res', 'options.html');
-const ASK_HTML = path.resolve(__dirname, './res', 'ask.html');
-const ASK_JS = path.resolve(__dirname, './ask.js')
+const DISTRIBUTION_FILE = path.resolve(__dirname, 'distribution.json');
+const ICON_FILE = path.resolve(__dirname, 'res', 'signature-32x32.ico');
+const OPTIONS_HTML = path.resolve(__dirname, 'res', 'options.html');
+const ASK_HTML = path.resolve(__dirname, 'res', 'ask.html');
+const ASK_JS = path.resolve(__dirname, 'ask.js');
 const LICENCE = 'https://opensource.org/licenses/LGPL-3.0';
-const HELP_URL = 'file:///' + path.resolve(__dirname, './res', 'help.html');
+const HELP_URL = 'file:///' + path.resolve(__dirname, 'res', 'help.html');
 
 const APP_UPDATE = 'Atualização do aplicativo';
 const APP_EXIT = 'Finalização do aplicativo';
-const APP_TITLE = 'Serviço CriptoCNS';
-const APP_FAILURE = 'Falha no Serviço CriptoCNS';
-const OPERATIONS = [ 'enumerateDevices', 'generateCSR', 'installCertificates', 'enumerateCertificates', 'sign', 'verify' ];
-const ACTIONS = [
-	'enumerar dispositivos criptográficos presentes',
-	'assinar requisição de certificado digital',
-	'instalar certificado assinado',
-	'enumerar certificados de assinatura instalados',
-	'assinar o documento a seguir',
-	'verificar documento assinado'
-];
-const CHOICE_BUTTONS = [ 'Sim', 'Não' ];
-const CTX_MENU = [
-	{ label: 'Opções do serviço...', click: () => { optionsWindow.show(); }},
-	{ 'type': 'separator' },
-	{ label: 'Ajuda', click: () => { shell.openExternal(HELP_URL)}},
-	{ label: 'Licença', click: () => { shell.openExternal(LICENCE)}},
-	{ label: 'Sobre...', click: () => {
-		let contents = distribution.productName
-			.concat(' - ').concat(app.getVersion())
-			.concat('\n  ').concat(distribution.productDescription)
-			.concat('\n  ').concat(distribution.company)
-			.concat('\n  Distribuído por: ').concat(distribution.distributorId);
-		tray.displayBalloon({
-			iconType: 'info',
-			title: 'Sobre o ' + APP_TITLE,
-			content: contents,
-			noSound: true
-		});
-	}},
-	{ 'type': 'separator' },
-	{ label: 'Sair', click: () => { app.quit(); }}
-];
-const OPTION_SMENU = [{ label: 'Fechar', click: () => { optionsWindow.close(); }}];
-
+const APP_FAILURE = 'Falha no Serviço criptográfico';
 const UNKNOWN_PROPERTY = 'Valor da propriedade operationId do objeto de mensagem não conhecido';
 const ASK_MESSAGE = 'Você recebeu uma solicitação para %s do serviço web residente em %s. Deseja prosseguir?';
 const ASK_FAILURE = 'Ocorreu o seguinte erro ao solicitar a aprovação do usuário: %s';
@@ -92,6 +57,7 @@ const CONFIG_FAILURE = 'Ocorreu o seguinte erro ao processar o arquivo de config
 const ORIGINS_INFO = 'Atendendo às seguintes origens confiáveis:';
 const ORIGINS_NO_INFO = ' nenhuma origem cadastrada';
 const QUIT_FAILURE = 'Ocorreu o seguinte erro ao salvar o arquivo de configuração: %s. Todas as alterações eventualmente feitas serão perdidas.';
+const CHOICE_BUTTONS = [ 'Sim', 'Não' ];
 
 
 /**
@@ -135,6 +101,10 @@ let service = null;
  */
 let params = new Map();
 
+/**
+ * Localização do arquivo de opções (dependente da distribuição)
+ */
+let optionsFile = null;
 
 /**
  * Valor do mapa de mensagens enviadas
@@ -154,6 +124,15 @@ class RenderParams {
  * @param { WarnMessage } message: mensagem recebida do processo responsável pela execução do serviço Hekura
  * @returns Promise<boolean> a ser resolvida quando o evento user-answer for recebido
  */
+const OPERATIONS = [ 'enumerateDevices', 'generateCSR', 'installCertificates', 'enumerateCertificates', 'sign', 'verify' ];
+const ACTIONS = [
+	'enumerar dispositivos criptográficos presentes',
+	'assinar requisição de certificado digital',
+	'instalar certificado assinado',
+	'enumerar certificados de assinatura instalados',
+	'assinar o documento a seguir',
+	'verificar documento assinado'
+];
 function askUser(message) {
 	return new Promise((resolve, reject) => {
 		let idx = OPERATIONS.findIndex((value) => { return message.operationId === value; });
@@ -174,7 +153,7 @@ function askUser(message) {
 			minimizable: false,
 			alwaysOnTop: true,
 			skipTaskbar: true,
-			title: APP_TITLE,
+			title: distribution.productName,
 			webPreferences: {
 				preload: ASK_JS,
 				additionalArguments: [ "--id=" + question.msgId ]
@@ -203,7 +182,6 @@ function updateCallback(type, msg) {
 			noSound: false
 		});
 		return true;
-		break;
 	case UpdateManager.UPDATE_MESSAGE:
 		let choice = dialog.showMessageBoxSync({
 			message: msg,
@@ -248,7 +226,7 @@ ipcMain.on('user-answer', (evt, answer) => {
 	else {
 		tray.displayBalloon({
 			iconType: 'error',
-			title: APP_TITLE,
+			title: distribution.productName,
 			content: IPC_FAILURE,
 			noSound: false
 		});
@@ -264,7 +242,7 @@ ipcMain.on('user-answer', (evt, answer) => {
 ipcMain.on('report-error', (evt, message) => {
 	tray.displayBalloon({
 		iconType: 'error',
-		title: APP_TITLE,
+		title: distribution.productName,
 		content: message,
 		noSound: false
 	});
@@ -290,7 +268,7 @@ ipcMain.on('report-error', (evt, message) => {
 		evt.returnValue = {
 			response: 0,
 			checkboxChecked: false
-		}
+		};
 	});
 });
 
@@ -374,8 +352,9 @@ app.on('ready', () => {
 		return;
 	}
 
+	optionsFile = path.resolve(process.env.USERPROFILE, '.' + distribution.productName.toLowerCase(), 'options.json');
 	let launchError = null;
-	try { config = Config.load(OPTIONS_FILE); }
+	try { config = Config.load(optionsFile); }
 	catch (e) {
 		launchError = sprintf(CONFIG_FAILURE, e.toString());
 		config = new Config();
@@ -394,7 +373,7 @@ app.on('ready', () => {
 			}).catch((reason) => {
 				tray.displayBalloon({
 					iconType: 'error',
-					title: APP_TITLE,
+					title: distribution.productName,
 					content: sprintf(ASK_FAILURE, reason.toString()),
 					noSound: false
 				});
@@ -402,7 +381,7 @@ app.on('ready', () => {
 			break;
 		case Message.ERROR:
 			dialog.showMessageBoxSync({
-				title: APP_TITLE,
+				title: distribution.productName,
 				type: 'error',
 				message: message.error
 			});
@@ -424,7 +403,7 @@ app.on('ready', () => {
 		},
 		show: false
 	});
-	optionsWindow.setMenu(Menu.buildFromTemplate(OPTION_SMENU));
+	optionsWindow.setMenu(Menu.buildFromTemplate([{ label: 'Fechar', click: () => { optionsWindow.close(); }}]));
 	optionsWindow.webContents.loadFile(OPTIONS_HTML);
 	//optionsWindow.webContents.openDevTools();
 
@@ -449,8 +428,28 @@ app.on('ready', () => {
 	});
 
 	tray = new Tray(ICON_FILE);
-	tray.setContextMenu(Menu.buildFromTemplate(CTX_MENU));
-	tray.setToolTip(APP_TITLE);
+	tray.setContextMenu(Menu.buildFromTemplate([
+		{ label: 'Opções do serviço...', click: () => { optionsWindow.show(); }},
+		{ 'type': 'separator' },
+		{ label: 'Ajuda', click: () => { shell.openExternal(HELP_URL); }},
+		{ label: 'Licença', click: () => { shell.openExternal(LICENCE); }},
+		{ label: 'Sobre...', click: () => {
+			let contents = distribution.productName
+				.concat(' ').concat(app.getVersion())
+				.concat(', ').concat(distribution.productDescription)
+				.concat(',').concat(distribution.company)
+				.concat('. Distribuído por: ').concat(distribution.distributorId);
+			tray.displayBalloon({
+				iconType: 'info',
+				title: 'Sobre o ' + distribution.productName,
+				content: contents,
+				noSound: true
+			});
+		}},
+		{ 'type': 'separator' },
+		{ label: 'Sair', click: () => { app.quit(); }}
+	]));
+	tray.setToolTip(distribution.productName);
 
 	if (lastEventError) {
 		tray.displayBalloon({
@@ -481,14 +480,14 @@ app.on('ready', () => {
 		let contents = ORIGINS_INFO;
 		if (config.serverOptions.trustedOrigins.origins.length > 0) {
 			config.serverOptions.trustedOrigins.origins.forEach((item) => {
-				contents = contents.concat(', ').concat(item.origin);
+				contents = contents.concat(' ').concat(item.origin);
 			});
 		}
 		else contents = contents.concat(ORIGINS_NO_INFO);
 		tray.displayBalloon({
 			icon: ICON_FILE,
 			iconType: 'custom',
-			title: APP_TITLE,
+			title: distribution.productName,
 			content: contents,
 			noSound: true
 		});
@@ -502,7 +501,7 @@ app.on('ready', () => {
  */
 app.on('before-quit', () => {
 	isQuiting = true;
-	try { if(config) config.store(OPTIONS_FILE); }
+	try { if(config) config.store(optionsFile); }
 	catch (e)
 	{
 		dialog.showMessageBoxSync({

@@ -60,7 +60,7 @@ class Sampler
 	 * @param { Number } byte: byte a ser analisado
 	 * @returns a quantidade de caracteres
 	 */
-	#count_chars(byte) {
+	count_chars(byte) {
 		let j = 0;
 		while (j < 6 && (byte >> (7 - j) & 1)) j++;
 		return (j - 1);
@@ -72,7 +72,7 @@ class Sampler
 	 * @param { Number } len: tamanho da amostra
 	 * @returns caso um caractere não aceitável em UTF-8 seja encontrado, retorna false. Caso contrário, true.
 	 */
-	#sample(buffer, pos, len) {
+	sample(buffer, pos, len) {
 		let i = pos;
 		if (buffer.length < pos + len) throw new RangeError("Out of range arguments");
 		while (i < len)
@@ -98,7 +98,7 @@ class Sampler
 	 * @param { Numbere } pos: posição calculada da amostra
 	 * @returns a posição da amostra desejada
 	 */
-	#get_sample(buffer, pos)
+	get_sample(buffer, pos)
 	{
 		let i = pos;
 		while (i > 0)
@@ -221,7 +221,7 @@ window.addEventListener('DOMContentLoaded', () => {
 	if (param.value) {
 		let sample = {};
 		let mimeType = 'text/plain';
-		let fileName = 'contents.txt'
+		let fileName = 'contents.txt';
 		if (param.value instanceof ArrayBuffer) {
 			sample = getBinaryContentsSample(param.value);
 			mimeType = 'application/octet-stream';

@@ -1,4 +1,10 @@
 {
 	"esversion": 8,
-	"node": true
+	"node": true,
+	"globals": {
+		"TextDecoder": true,
+		"window": true,
+		"document": true,
+		"Blob": true
+	}
 }

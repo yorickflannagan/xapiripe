@@ -12,6 +12,7 @@ const crypto = require('crypto');
  * Mensagem trocada no contexto da aplicação entre seus vários processos
  */
 class Message {
+	/* jshint ignore:start */
 	/**
 	 * Sinaliza a necessidade de finalização do serviço Hekura
 	 * @member { String }
@@ -30,6 +31,7 @@ class Message {
 	 * @default error-on-service
 	 */
 	static ERROR = 'error-on-service';
+	/* jshint ignore:end */
 	/**
 	 * Cria uma nova instância do objeto
 	 * @param { String } signal: identificador do tipo da mensagem
