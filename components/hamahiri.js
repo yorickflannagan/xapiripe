@@ -61,6 +61,7 @@ class Certificate {
  */
  class SignMechanism
 {
+	/* jshint ignore:start */
 	/**
 	 * Constante para o algoritmo sha1WithRSAEncryption
 	 * @constant
@@ -96,6 +97,7 @@ class Certificate {
 	 * @default 0x00000042
 	 */
 	static CKM_SHA512_RSA_PKCS = 0x00000042;
+	/* jshint ignore:end */
 }
 
 /**
@@ -123,7 +125,7 @@ class Certificate {
 	 */
 	enumerateDevices() {
 		return this.addon.enumerateDevices();
-	};
+	}
 
 	/**
 	 * Gera um par de chaves RSA
@@ -220,7 +222,7 @@ class Sign extends Hamahiri
 {
 	constructor() { super(); }
 
-	#getSubjectAltNames(buf) {
+	getSubjectAltNames(buf) {
 		let decoded = asn1js.fromBER(buf.buffer);
 		if (decoded.offset == -1 || !(decoded.result instanceof asn1js.Sequence)) return null;
 		let tbs = decoded.result.valueBlock.value[0];
@@ -241,7 +243,7 @@ class Sign extends Hamahiri
 		}
 		return null;
 	}
-	#parseGeneralNames(octets) {
+	parseGeneralNames(octets) {
 		let ret = { subject_id: null, company_id: null, sponsor_id: null };
 		let names = octets.valueBlock.value[0];
 		let nameList = names.valueBlock.value;
@@ -279,14 +281,14 @@ class Sign extends Hamahiri
 	 */
 	enumerateCertificates() {
 		let certs = this.addon.enumerateCertificates();
-		let ret = new Array();
+		let ret = [];
 		let i = 0;
 		while (i < certs.length) {
 			let native = certs[i++];
 			let chain = this.getCertificateChain(native.handle);
-			let ext = this.#getSubjectAltNames(chain[0]);
+			let ext = this.getSubjectAltNames(chain[0]);
 			let icp;
-			if (ext) icp = this.#parseGeneralNames(ext);
+			if (ext) icp = this.parseGeneralNames(ext);
 			else icp = { subject_id: null, company_id: null, sponsor_id: null };
 			ret.push(new Certificate(native, icp));
 		}
@@ -332,4 +334,4 @@ module.exports = {
 	SignMechanism: SignMechanism,
 	Enroll:        Enroll,
 	Sign:          Sign
-}
+};

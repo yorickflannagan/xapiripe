@@ -32,8 +32,8 @@ const fs = require('fs');
 /**
  * Níveis de log
  */
-class LogLevel
-{
+class LogLevel {
+	/* jshint ignore:start */
 	/**
 	 * Indicador de mensagem de depuração
 	 * @member { Number }
@@ -60,15 +60,16 @@ class LogLevel
 	  * @member { Number }
 	  * @default 3
 	  */
-	 static ERROR = 3; 
+	 static ERROR = 3;
+	 /* jshint ignore:end */
 }
 
 
 /**
  * Dispositivo simplificado de log
  */
-class LogDevice
-{
+class LogDevice {
+	/* jshint ignore:start */
 	static cfgFilePath = __dirname;
 	static cfgLogPattern = 'xapiripe-n.log';
 	static cfgLogMaxSize = 2048;
@@ -77,6 +78,7 @@ class LogDevice
 
 	static globalFD = 0;
 	static refCount = 0;
+	/* jshint ignore:end */
 
 	/**
 	 * Fornece uma nova configuração para o log
@@ -257,4 +259,4 @@ module.exports = {
 	Logger: LogDevice,
 	beautify: beautify,
 	sprintf: sprintf
-}
+};

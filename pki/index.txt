@@ -56,3 +56,10 @@ V	271214200700Z		36	unknown	/CN=USER NAME 6f9182e5-d895-48c4-9560-f42160a3de44
 V	271214201914Z		37	unknown	/CN=USER NAME fb9c7ca6-ca83-4516-b9c4-7bccebd483f4
 V	271214202457Z		38	unknown	/CN=USER NAME 97a04c16-ad33-4e63-894d-3c6cf55abdcb
 V	271214203403Z		39	unknown	/CN=USER NAME 4a2e34ff-96d8-4341-b299-a5289aa4fc65
+V	271215121940Z		3A	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 21
+V	271215121947Z		3B	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 22
+V	271215123006Z		3C	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 23
+V	271215123013Z		3D	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 24
+V	271215123931Z		3E	unknown	/CN=User CN to legacy CryptoAPI 25
+V	271215123937Z		3F	unknown	/CN=User CN to CNG API 26
+V	271215124025Z		40	unknown	/CN=USER NAME 49a34107-aac2-4d8d-95cc-93bb81afeda8

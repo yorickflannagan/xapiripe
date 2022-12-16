@@ -5,6 +5,7 @@
 		"TextDecoder": true,
 		"window": true,
 		"document": true,
-		"Blob": true
+		"Blob": true,
+		"TextEncoder": true
 	}
 }

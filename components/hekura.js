@@ -5,7 +5,9 @@
  * @version 1.0.0
  */
 
+/* jshint -W069 */
 'use strict';
+
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -60,7 +62,7 @@ class ServiceError extends Aroari.AroariError
 	 * @member { Number }
 	 * @default 128
 	 */
-	static HTTP_PORT_ALREADY_USED = 128;
+	static HTTP_PORT_ALREADY_USED = 128;	// jshint ignore:line
 
 	/**
 	 * Cria uma nova instância do relatório de erros
@@ -184,7 +186,7 @@ class RootService extends AbstractService
 				status = 200;
 			}
 			catch (err) {
-				logger.error(sprintf('Ocorreu o seguinte erro ao obter a especificação REST a partir da requisição originada em %s: %s', origin, err.toString()));
+				logger.error(sprintf('Ocorreu o seguinte erro ao obter a especificação REST a partir da requisição originada em %s: %s', request.headers['origin'], err.toString()));
 				status = 500;
 			}
 			Logger.releaseLogger();
@@ -215,7 +217,7 @@ class EnrollService extends AbstractService
 		return ret;
 	}
 
-	#processGet(headers, response) {
+	processGet(headers, response) {
 		return new Promise((resolve) => {
 			let logger = Logger.getLogger('EnrollService');
 			let origin = headers['origin'];
@@ -250,7 +252,7 @@ class EnrollService extends AbstractService
 		});
 	}
 
-	#processPost(headers, response, body) {
+	processPost(headers, response, body) {
 		return new Promise((resolve) => {
 			let logger = Logger.getLogger('EnrollService');
 			let origin = headers['origin'];
@@ -279,7 +281,7 @@ class EnrollService extends AbstractService
 				if (typeof param.rdn === 'undefined' || typeof param.rdn.cn !== 'string') throw new Error('Argumento rdn inválido');
 			}
 			catch (err) {
-				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da requisição originada em %s pelo serviço generateCSR: %s', origin, err.toString()))
+				logger.warn(sprintf('Ocorreu o seguinte erro ao processar os parâmetros da requisição originada em %s pelo serviço generateCSR: %s', origin, err.toString()));
 				Logger.releaseLogger();
 				return resolve(400);
 			}
@@ -316,7 +318,7 @@ class EnrollService extends AbstractService
 		});
 	}
 
-	#processPut(headers, response, body) {
+	processPut(headers, response, body) {
 		return new Promise((resolve) => {
 			let logger = Logger.getLogger('EnrollService');
 			let origin = headers['origin'];
@@ -389,13 +391,13 @@ class EnrollService extends AbstractService
 			const { method, headers } = request;
 			try {
 				if (method === 'GET') {
-					this.#processGet(headers, response).then((value) => { return resolve(value); });
+					this.processGet(headers, response).then((value) => { return resolve(value); });
 				}
 				else if (method === 'POST') {
-					this.#processPost(headers, response, body).then((value) => { return resolve(value); });
+					this.processPost(headers, response, body).then((value) => { return resolve(value); });
 				}
 				else if (method === 'PUT') {
-					this.#processPut(headers, response, body).then((value) => { return resolve(value); });
+					this.processPut(headers, response, body).then((value) => { return resolve(value); });
 				}
 				else return resolve(405);
 			}
@@ -430,7 +432,7 @@ class SignService extends AbstractService
 		return ret;
 	}
 
-	#processGet(headers, response) {
+	processGet(headers, response) {
 		return new Promise((resolve) => {
 			let logger = Logger.getLogger('SignService');
 			let referer = headers['referer'];
@@ -465,7 +467,7 @@ class SignService extends AbstractService
 		});
 	}
 
-	#processPost(headers, response, body) {
+	processPost(headers, response, body) {
 		return new Promise((resolve) => {
 			let logger = Logger.getLogger('SignService');
 			let referer = headers['referer'];
@@ -478,7 +480,7 @@ class SignService extends AbstractService
 				return resolve(415);
 			}
 
-			let param = new Object();
+			let param = {};
 			try {
 				let json = JSON.parse(body.toString(), (key, value) => {
 					if (signProps.has(key)) return value;
@@ -551,10 +553,10 @@ class SignService extends AbstractService
 			try {
 				const { method, headers } = request;
 				if (method === 'GET') {
-					this.#processGet(headers, response).then((value) => { return resolve(value); });
+					this.processGet(headers, response).then((value) => { return resolve(value); });
 				}
 				else if (method === 'POST') {
-					this.#processPost(headers, response, body).then((value) => { return resolve(value); });
+					this.processPost(headers, response, body).then((value) => { return resolve(value); });
 				}
 				else return resolve(405);
 			}
@@ -607,7 +609,7 @@ class VerifyService extends AbstractService
 			}
 
 			let cmsSignedData;
-			let vrfyParam = new Object();
+			let vrfyParam = {};
 			let verifyTrustworthy = false;
 			let getSignerIdentifier = false;
 			let getSignedContent = false;
@@ -690,7 +692,7 @@ class VerifyService extends AbstractService
 						signingCertVerification = true;
 						if (verifyTrustworthy) {
 							cmsSignedData.verifyTrustworthy(vrfyParam.signingCert);
-							certChainVerification = true
+							certChainVerification = true;
 						}
 						if (getSignerIdentifier) sid = cmsSignedData.getSignerIdentifier();
 						if (getSignedContent) {
@@ -732,7 +734,7 @@ class VerifyService extends AbstractService
 						}
 					}
 					if (status != 400 && status != 500) {
-						let ret = new Object();
+						let ret = {};
 						ret = Object.defineProperty(ret, 'signatureVerification', { value: signatureVerification });
 						ret = Object.defineProperty(ret, 'messageDigestVerification', { value: messageDigestVerification });
 						ret = Object.defineProperty(ret, 'signingCertVerification', { value: signingCertVerification });
@@ -785,11 +787,11 @@ class PortChecker {
 	 * @param { Number } port: porta a ser verificada
 	 */
 	constructor(port) {
-		this.deferred = this.#getDeferred();
+		this.deferred = this.getDeferred();
 		this.port = port;
 		this.client = new net.Socket();
-		this.client.once('connect', this.#onConnect.bind(this));
-		this.client.once('error', this.#onError.bind(this));
+		this.client.once('connect', this.onConnect.bind(this));
+		this.client.once('error', this.onError.bind(this));
 	}
 	/**
 	 * Verifica a disponibilidade da porta
@@ -799,7 +801,7 @@ class PortChecker {
 		this.client.connect({ port: this.port, host: '127.0.0.1' });
 		return this.deferred.promise;
 	}
-	#getDeferred() {
+	getDeferred() {
 		let resolve, reject, promise = new Promise(function(res, rej) {
 			resolve = res;
 			reject = rej;
@@ -810,16 +812,16 @@ class PortChecker {
 			promise: promise
 		};	
 	}
-	#onConnect() {
+	onConnect() {
 		this.deferred.resolve(true);
-		this.#cleanUp();
+		this.cleanUp();
 	}
-	#onError(reason) {
+	onError(reason) {
 		if (reason.code !== 'ECONNREFUSED') this.deferred.reject(reason);
 		else this.deferred.resolve(true);
-		this.#cleanUp();
+		this.cleanUp();
 	}
-	#cleanUp() {
+	cleanUp() {
 		this.client.removeAllListeners('connect');
 		this.client.removeAllListeners('error');
 		this.client.end();
@@ -852,7 +854,7 @@ class HTTPServer
 		this.services.set('/enroll', new EnrollService(maxAge, callback));
 		this.services.set('/sign', new SignService(maxAge, callback));
 		this.services.set('/verify', new VerifyService(maxAge, callback));
-		this.server = http.createServer(this.#listener.bind(this));
+		this.server = http.createServer(this.listener.bind(this));
 		this.checkPort = new PortChecker((this.port = port));
 		let origins = '[\r\n';
 		let it = this.blockade.trustedOrigins.values();
@@ -864,7 +866,7 @@ class HTTPServer
 		this.logger.debug(sprintf('O serviço foi instanciado com os seguintes parâmetros:\r\n\tPorta: %s\r\n\tAccess-Control-Max-Age: %s\r\n\tOrigens confiáveis: %s]', port.toString(), maxAge.toString(), origins));
 	}
 
-	#requestProcessor(request, response, body) {
+	requestProcessor(request, response, body) {
 		return new Promise((resolve) => {
 			const { method, headers, url } = request;
 			let origin = headers['origin'];
@@ -901,7 +903,7 @@ class HTTPServer
 			}
 		});
 	}
-	#listener(request, response) {
+	listener(request, response) {
 		let chunks = [];
 		const { method, headers, url } = request;
 		let origin = headers['origin'];
@@ -915,7 +917,7 @@ class HTTPServer
 		.on('end', () => {
 			let body = Buffer.concat(chunks);
 			if (body.length > 0) this.logger.debug(sprintf('Corpo da requisição: [\r\n%s]', beautify(body.toString().replace(/\\r?\\n|\\r|\\n/g, '\r\n'))));
-			this.#requestProcessor(request, response, body).then((retCode) =>{
+			this.requestProcessor(request, response, body).then((retCode) =>{
 				let status = retCode;
 				switch(status) {
 				case 403:
@@ -988,4 +990,4 @@ module.exports = {
 	ServiceError: ServiceError,
 	CORSBlockade: CORSBlockade,
 	HTTPServer: HTTPServer
-}
+};
