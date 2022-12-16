@@ -63,3 +63,5 @@ V	271215123013Z		3D	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End U
 V	271215123931Z		3E	unknown	/CN=User CN to legacy CryptoAPI 25
 V	271215123937Z		3F	unknown	/CN=User CN to CNG API 26
 V	271215124025Z		40	unknown	/CN=USER NAME 49a34107-aac2-4d8d-95cc-93bb81afeda8
+V	271215141517Z		41	unknown	/CN=USER NAME f0cf7dc5-ff3e-44a5-b2f2-994ef3da1219
+V	271215141633Z		42	unknown	/CN=USER NAME 9ff032b4-a6dd-4e70-abbc-d23476004bd6

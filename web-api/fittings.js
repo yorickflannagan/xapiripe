@@ -114,7 +114,7 @@ export class Base64 {
 		var charlen = base64.length;
 		var byteoff = 0;
 		var byteLength = Math.round(((charlen) / 4 * 3) + 1);
-		var bytes = new Uint8Array(byteLength)
+		var bytes = new Uint8Array(byteLength);
 		var chunk = 0;
 		var i = 0;
 		var code;
@@ -153,7 +153,9 @@ export class Base64 {
 			switch(stage) {
 			case content_1: throw new Error(INVALID_B64);
 			case content_4:	bytes[byteoff + 2] = chunk &  255;
+			/* falls through */
 			case content_3:	bytes[byteoff + 1] = chunk >> 8;
+			/* falls through */
 			case content_2:	bytes[byteoff    ] = chunk >> 16;
 			}
 			byteoff += stage-1;
@@ -168,11 +170,11 @@ class MemoryStream extends Writable {
 
 	constructor() {
 		super();
-		this._buffer = new Array();
+		this._buffer = [];
 		this._stream= null;	
 	}
 
-	#getEncoding(value)
+	getEncoding(value)
 	{
 		let ret;
 		if (
@@ -195,7 +197,7 @@ class MemoryStream extends Writable {
 			let err;
 			let data;
 			try {
-				if (typeof chunk === 'string') data = Buffer.from(chunk, this.#getEncoding(encoding));
+				if (typeof chunk === 'string') data = Buffer.from(chunk, this.getEncoding(encoding));
 				else data = chunk;
 				this._buffer.push(data);
 			}
@@ -313,7 +315,7 @@ class Inflater {
 				{
 					ret.zip = zipFile;
 					ret.zip.on('entry', (entry) => { ret.entries.set(entry.fileName, entry); });
-					ret.zip.on('end', () => { return resolve(ret) });
+					ret.zip.on('end', () => { return resolve(ret); });
 				}
 				else reject(new PromiseRejected(228, MALFORMED_ZIP));
 			});
@@ -322,7 +324,7 @@ class Inflater {
 	constructor(buffer) {
 		this.handle = ++iCounter;
 		this.buffer = Buffer.from(buffer);
-		this.zip;
+		this.zip = new ZipFile();
 		this.entries = new Map();
 	}
 	list() { return new Set(this.entries.keys()); }

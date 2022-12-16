@@ -7,7 +7,6 @@
 
 'use strict';
 
-import { parseArgs } from 'util';
 import { Enroll, Sign, Verify, PromiseRejected, urlHekura } from './api.js';
 import { Base64 } from './fittings.js';
 
@@ -80,7 +79,7 @@ export class HekuraEnroll extends Enroll {
 			}
 		};
 		if (typeof(options) === 'object') {
-			if (typeof(options.device) === 'string') params.device = options.device
+			if (typeof(options.device) === 'string') params.device = options.device;
 			if (typeof(options.keySize) === 'number') params.keySize = options.keySize;
 			if (typeof(options.signAlg) === 'number') params.signAlg = options.signAlg;
 			if (typeof(options.rdn) === 'object') {

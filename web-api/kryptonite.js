@@ -89,7 +89,7 @@ export class KryptoniteVerify extends Verify {
 		super();
 		this.krypton = kryptoObject;
 	}
-	#getSignerIdentifier(vrfy, cms) {
+	getSignerIdentifier(vrfy, cms) {
 		return new Promise((resolve, reject) => {
 			vrfy.getSignerId(cms).then((value) => {
 				let ret = null;
@@ -99,7 +99,7 @@ export class KryptoniteVerify extends Verify {
 			.catch((reason) => { return reject(PromiseRejected(2, reason.toString())); });
 		});
 	}
-	#getSignedContent(vrfy, cms) {
+	getSignedContent(vrfy, cms) {
 		return new Promise((resolve, reject) => {
 			vrfy.getContent(cms).then((value) => {
 				let ret =  null;
@@ -141,14 +141,15 @@ export class KryptoniteVerify extends Verify {
 				ret.signatureVerification = value.reason == this.krypton.KPTAError.KPTA_OK;
 				ret.messageDigestVerification = ret.signatureVerification;
 				if (!ret.signatureVerification) return resolve(ret);
-				let stack = new Array();
-				if (options.getSignerIdentifier) stack.push({ ret: 'signerIdentifier', execute: this.#getSignerIdentifier.bind(this) });
-				if (options.getSignedContent) stack.push({ ret: 'eContent', execute: this.#getSignedContent.bind(this) });
+				let stack = [];
+				if (options.getSignerIdentifier) stack.push({ ret: 'signerIdentifier', execute: this.getSignerIdentifier.bind(this) });
+				if (options.getSignedContent) stack.push({ ret: 'eContent', execute: this.getSignedContent.bind(this) });
 				while (stack.length > 0) {
+					/* jshint ignore:start */
 					let task = stack.pop();
-					task.execute(vrfy, cms).then((value) => { ret[task.ret] = value;
-					})
+					task.execute(vrfy, cms).then((value) => { ret[task.ret] = value; })
 					.catch((reason) => { return reject(PromiseRejected(2, reason.toString())); });
+					/* jshint ignore:end */
 				}
 				return resolve(ret);
 			})

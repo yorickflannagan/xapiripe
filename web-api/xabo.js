@@ -209,8 +209,8 @@ export var xabo = {
 			 * @returns Booleano indicando se as duas strings representam o mesmo DN, mesmo que com variações.
 			 */
 			matchDN(dna, dnb) {
-				let from = this.#shrink(dna.split(/,|;/));
-				let to = this.#shrink(dnb.split(/,|;/));
+				let from = this.shrink(dna.split(/,|;/));
+				let to = this.shrink(dnb.split(/,|;/));
 				let match = true;
 				if (from.size == to.size) {
 					from.forEach((value) => { if (!to.delete(value)) match = false; });
@@ -218,7 +218,7 @@ export var xabo = {
 				}
 				return match;
 			}
-			#shrink(dn) {
+			shrink(dn) {
 				let target = new Set();
 				dn.forEach((value) => {
 					let pair = value.split('=');
@@ -247,13 +247,13 @@ export var xabo = {
 
 		function checkVersion(schema, version) {
 			try {
-				function compare(va, vb) {
+				let compare = function(va, vb) {
 					let a = Number.parseInt(va);
 					let b = Number.parseInt(vb);
 					if (isNaN(a) || isNaN(b)) throw new Error('Invalid version number');
 					return a - b;
-				}
-				function greaterOrEquals(target, source) {
+				};
+				let greaterOrEquals =  function(target, source) {
 					let i = 0, j = 0;
 					while (i < source.length && j == 0) {
 						j = compare(target[i], source[i]);
@@ -262,7 +262,7 @@ export var xabo = {
 						i++;
 					}
 					return true;
-				}
+				};
 				let ob = JSON.parse(schema);
 				if (!ob.openapi || !ob.info || !ob.info.version) throw new Error('Schema is not a valid OpenAPI specification');
 				let target = ob.info.version.split('.');
@@ -283,7 +283,7 @@ export var xabo = {
 								if (ret.code == xabo.querySuccess) return resolve(new XapiripeAPI());
 								else return reject(ret);
 							})
-							.catch((reason) => { return reject(new QueryResult(xabo.queryHekuraFailure, HEKURA_GET_FAILURE_MSG.replace('%s', reason.toString())))});
+							.catch((reason) => { return reject(new QueryResult(xabo.queryHekuraFailure, HEKURA_GET_FAILURE_MSG.replace('%s', reason.toString()))); });
 						}
 						else return resolve(new XapiripeAPI());
 					}

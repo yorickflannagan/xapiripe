@@ -43,7 +43,7 @@ export class Enroll {
 	 * pelo fabricante ao CSP, conforme instalação do Windows
 	 */
 	enumerateDevices() {
-		return Promise.resolve([ new String('array de nomes de CSP') ]);
+		return Promise.resolve([ 'array de nomes de CSP' ]);
 	}
 
 	/**
@@ -71,8 +71,8 @@ export class Enroll {
 		* </ul>
 		* @returns Promise que, quando resolvida, retorna um PKCS #10 codificado em Base64 no formato PEM.
 		*/
-	generateCSR({ device, keySize = 2048, signAlg = 0x00000040, rdn = {c, o, ou, cn }}) {
-		return Promise.resolve(new String('PKCS #10 codificado em Base64 no formato PEM'));
+	generateCSR(options) {
+		return Promise.resolve('PKCS #10 codificado em Base64 no formato PEM');
 	}
 
 	/**
@@ -87,7 +87,7 @@ export class Enroll {
 	 * instalada; caso um dos certificados de AC já esteja presente no repositório do Windows, retorna false.
 	 */
 	installCertificates(pkcs7) {
-		return Promise.resolve(new Boolean());
+		return Promise.resolve(true);
 	}
 }
 
@@ -107,7 +107,7 @@ export class Sign {
 	 * </ul>
 	 */
 	enumerateCerts() {
-		return Promise.resolve([ { subject: new String(), issuer: new String(), serial: new String(), handle: Number.MIN_VALUE } ]);
+		return Promise.resolve([ { subject: '', issuer: '', serial: '', handle: Number.MIN_VALUE } ]);
 	}
 
 	/**
@@ -129,14 +129,8 @@ export class Sign {
 	 * </ul>
 	 * @returns Promise que, quando resolvida, retorna um documento PKCS#7 codificado em base64 no formato PEM
 	 */
-	sign({
-		certificate,
-		toBeSigned,
-		attach = true,
-		algorithm = 0x00000040,
-		cades = { policy: 'CAdES-BES', addSigningTime: true, commitmentType: '1.2.840.113549.1.9.16.6.4' }
-	}) {
-		return Promise.resolve(new String('PKCS#7 codificado em base64 no formato PEM'));
+	sign(options) {
+		return Promise.resolve('PKCS#7 codificado em base64 no formato PEM');
 	}
 }
 
@@ -194,15 +188,7 @@ export class Verify {
 	 * 	<li>subjectKeyIdentifier: Identificação do assinante pelo hash da chave pública do certificado, codificado em hexadecimal, caso o emissor seja representado assim.</li>
 	 * </ul>
 	 */
-	verify({
-		pkcs7 = { data: null, binary: false },
-		signingCert = { data: null, binary: false },
-		eContent = { data: null, binary: false },
-		verifyTrustworthy = false,
-		getSignerIdentifier = false,
-		getSignedContent = false,
-		getSigningTime = false
-	}) {
+	verify(options) {
 		return Promise.resolve({
 			signatureVerification: true,
 			messageDigestVerification: true,
