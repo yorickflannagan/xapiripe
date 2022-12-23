@@ -28,8 +28,9 @@
 
 const { ipcRenderer } = require('electron');
 const { UserAnswer } = require('./module');
+const { Base64 } = require('../components/aroari');
 
-const BUFFER_MAX_LENGTH = 1024 * 256;
+const BUFFER_MAX_LENGTH = 1024 * 32;	// Tamanho máximo para exibição
 const DOC_TOO_LONG = '...\nO documento a ser assinado é muito grande para visualização completa. Clique no botão download para baixá-lo e inspecioná-lo completamente.';
 const DOC_IS_BIN = 'O documento a ser assinado não parece estar codificado em UTF-8. Se desejar inspecioná-lo, clique no botão Download.';
 const ERROR_NO_PARAM = 'O diálogo e alerta sobre operação criptográfica a ser realizada não recebeu o parâmetro apropriado. A aplicação não está funcionando corretamente.';
@@ -154,12 +155,11 @@ class Sample {
  */
 function getBinaryContentsSample(value) {
 	let ret = new Sample();
-	let buffer = new Uint8Array(value);
 	let sampler = new Sampler();
-	let isUTFEncoded = sampler.check(buffer);
+	let isUTFEncoded = sampler.check(value);
 	if (isUTFEncoded) {
-		ret.contents = new TextDecoder('utf-8').decode(buffer.subarray(0, BUFFER_MAX_LENGTH));
-		ret.download = buffer.length > BUFFER_MAX_LENGTH;
+		ret.contents = new TextDecoder('utf-8').decode(value.subarray(0, BUFFER_MAX_LENGTH));
+		ret.download = value.length > BUFFER_MAX_LENGTH;
 		if (ret.download) ret.contents = ret.contents.concat(DOC_TOO_LONG);
 	}
 	else {
@@ -204,6 +204,7 @@ window.addEventListener('DOMContentLoaded', () => {
 	if (!param || !param.message || !param.msgId) {
 		ipcRenderer.send('report-error', ERROR_INVALID_PARAM);
 		window.close();
+		return;
 	}
 
 	let pLegend = document.getElementById('pLegend');
@@ -222,17 +223,22 @@ window.addEventListener('DOMContentLoaded', () => {
 		let sample = {};
 		let mimeType = 'text/plain';
 		let fileName = 'contents.txt';
-		if (param.value instanceof ArrayBuffer) {
-			sample = getBinaryContentsSample(param.value);
+		let completeData = param.value.data;
+		
+		if (param.value.binary) {
+			let toConvert = param.value.data instanceof ArrayBuffer ? new Uint8Array(param.value.data) : param.value.data;
+			completeData = Base64.atob(toConvert);
+			sample = getBinaryContentsSample(completeData);
 			mimeType = 'application/octet-stream';
 			fileName = 'contents.bin';
 		}
-		else sample = getTextContentsSample(param.value);
-		pContents.innerHTML = sample.contents;
+		else sample = getTextContentsSample(completeData);
+
+		pContents.innerText = sample.contents;
 		pContents.hidden = false;
 		if (sample.download) {
 			btnDownload.addEventListener('click', () => {
-				let blob = new Blob([param.value], { type: mimeType });
+				let blob = new Blob([completeData], { type: mimeType });
 				let url = URL.createObjectURL(blob);
 				let elem = document.createElement('a');
 				elem.setAttribute('href', url);
@@ -240,6 +246,7 @@ window.addEventListener('DOMContentLoaded', () => {
 				elem.setAttribute('id', 'link');
 				document.body.appendChild(elem);
 				document.getElementById('link').click();
+				document.body.removeChild(elem);
 			});
 			btnDownload.hidden = false;
 		}

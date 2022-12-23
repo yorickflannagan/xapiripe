@@ -42,7 +42,7 @@
 	},
 	"keywords": [
 		"CAdES",
-		"Crypto",
+		"Cryptography",
 		"PKI"
 	],
 	"gypfile": true,

@@ -1,0 +1,82 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"  xml:lang="en" lang="pt">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<link rel="icon" href="data:,">
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" type="text/css" />
+	<title>Hekura &ndash; Teste de assinatura</title>
+	<script type="text/javascript" src="xapiripe.js"></script>
+	<script type="text/javascript" src="sign.js"></script>
+	<style>
+	body { 
+		margin: 2em;
+		font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+		font-size: 12pt;
+	}
+	div  {
+		margin: 2em;
+	}
+	h1 {
+		font-size: 20pt;
+		font-weight: bold;
+	}
+	input {
+		font-size: 12pt;
+	}
+	h2 {
+		font-size: 16pt;
+		font-weight: bold;
+	}
+	select {
+		padding: 3px;
+	}
+	span.sep {
+		margin-left: 1em;
+	}
+	input.but {
+		padding: 2pt;
+		min-width: 120px;
+	}
+	p.highlight {
+		font-weight: bold;
+		padding: 2pt;
+	}
+	</style>
+</head>
+
+<body>
+	<h1>Hekura &ndash; Teste de Assinatura</h1>
+	<div>
+		<h2>Selecionar certificado de assinatura</h2>
+		<div>
+			<label for="enum-certs">Liste os certificados presentes:</label>
+			<span class="sep"><input type="button" id="enum-certs" name="enum-certs" class="w3-button w3-light-grey w3-border but" value="Certificados" /></span>
+		</div>
+		<div>
+			<label for="certs">Selecione um certificado:</label>
+			<span class="sep">
+				<select name="certs" id="certs">
+					<option>Nenhum certificado identificado</option>
+				</select>
+			</span>
+		</div>
+	</div>
+	<div>
+		<h2>Assinar arquivo</h2>
+		<div>
+			<label for="docs">Selecione um arquivo:</label>
+			<span class="sep"><input type="file" id="docs" name="docs" class="but" value="Selecionar" /></span>
+		</div>
+		<div>
+			<label for="sign">Clique para assinar:</label>
+			<span class="sep"><input type="button" id="sign" name="sign" class="w3-button w3-light-grey w3-border but" value="Assinar" /></span>
+			<output name="output" id="output" for="sign"></output>
+		</div>
+	</div>
+
+	<div id="outputError">
+		<p id="error" class="highlight w3-red" hidden></p>
+	</div>
+</body>
+</html>

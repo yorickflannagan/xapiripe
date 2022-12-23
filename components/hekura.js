@@ -481,8 +481,9 @@ class SignService extends AbstractService
 			}
 
 			let param = {};
+			let json;
 			try {
-				let json = JSON.parse(body.toString(), (key, value) => {
+				json = JSON.parse(body.toString(), (key, value) => {
 					if (signProps.has(key)) return value;
 					throw new Error(sprintf('Propriedade não especificada %s encontrada', key));
 				});
@@ -517,7 +518,7 @@ class SignService extends AbstractService
 				return resolve(400);
 			}
 				
-			this.approvalCallback('sign', referer, param.toBeSigned).then((accept) => {
+			this.approvalCallback('sign', referer, json.toBeSigned).then((accept) => {
 				let status;
 				if (accept) {
 					try {

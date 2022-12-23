@@ -115,7 +115,7 @@ export class Sign {
 	 * @param { Object } options Parâmetros para a operação, onde:
 	 * <ul>
 	 * 	<li>certificate: certificado de assinatura, retornado por {@link enumerateCerts}</li>
-	 * 	<li>toBesigned: Documento ou transação a ser assinada. Pode tanto ser uma string quanto um ArrayBuffer</li>
+	 * 	<li>toBesigned: Documento ou transação a ser assinada. Pode tanto ser uma string ou um ArrayBuffer quanto um Uint8Array</li>
 	 * 	<li>attach: Indica se o documento toBeSigned deve ser anexado ao envelope CMS Signed Data. Opcional. Default: true</li>
 	 * 	<li>algorithm> Constante indicativa do algoritmo de assinatura a ser utilizado. Opcional. Default: CKM_SHA256_RSA_PKCS</li>
 	 * 	<li>cades: Oções CAdES da assinatura. Opcional</li>

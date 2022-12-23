@@ -5,3 +5,10 @@ Disponibilidade para uso na Intranet Caixa, no aplicativo CNS V2.
 - Correção da implementação da API Xabo: passagem de parâmetros inválida, com a correção correspondente na aplicação de teste app-client.js;
 - Correção na implementação dos reject() nas promises fornecidas pelas classes do módulo kryptonite.js;
 - Inclusão de método matchDN() na classe API do namespace Xabo para a comparação normativa entre distinguished names.
+
+# Versão 0.9.2
+- Correção de bug na passagem do parâmetro options.toBeSigned no método sign() da classe Sign de modo a assegurar que o contrato da documentação (o parâmetro pode tanto ser uma String quanto um ArrayBuffer) seja corretamente cumprido; admitido um Uint8Array como parâmetro;
+- Correção na exibição do número de versão do serviço na bandeja do sistema;
+- Correção de bug na janela de alerta de assinatura em caso de dados binários;
+- Suporte a caracteres de formatação no conteúdo da janela de alerta;
+- Garantia de capacidade de assinar arquivos muito grandes, limitado apenas pela memória disponível para o interpretador Javascript (arquivo de RE de 164 MB).

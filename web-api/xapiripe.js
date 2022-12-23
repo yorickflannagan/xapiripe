@@ -128,7 +128,10 @@ export class HekuraSign extends Sign {
 			if (typeof(options.toBeSigned) === 'string') altString.data = options.toBeSigned;
 			else {
 				let cv = new Base64();
-				altString.data = cv.btoa(options.toBeSigned);
+				let data;
+				if (options.toBeSigned instanceof Uint8Array) data = options.toBeSigned;
+				else data = new Uint8Array(options.toBeSigned);
+				altString.data = cv.btoa(data);
 				altString.binary = true;
 			}
 			params.toBeSigned = altString;
