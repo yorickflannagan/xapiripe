@@ -26,17 +26,18 @@
 /* jshint -W053 */
 'use strict';
 
-const path = require('path');
-const { Config } = require('./config');
-const { Logger, LogLevel, sprintf } = require('../components/wanhamou');
-const { CORSBlockade, HTTPServer } = require('../components/hekura');
-const { Message, WarnMessage } = require('./module');
-const { DelayedPromise } = require('../components/options');
 const alert = require('alert');
 
 
 
 (async function () {
+
+	const path = require('path');
+	const { Config } = require('./config');
+	const { Message, WarnMessage } = require('./module');
+	const { Logger, LogLevel, sprintf } = require('../components/wanhamou');
+	const { CORSBlockade, HTTPServer } = require('../components/hekura');
+	const { DelayedPromise } = require('../components/options');
 
 	/**
 	 * Instância de Hekura.HttpServer

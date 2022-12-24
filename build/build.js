@@ -109,6 +109,7 @@ function appInstaller(options) {
 			'test/',
 			'web-api/',
 			'.gitignore',
+			'.jshintrc',
 			'history.md',
 			'LEIA-ME.MD',
 			'package-lock.json',
@@ -146,16 +147,14 @@ function appInstaller(options) {
 	let buildOptions;
 	let excludeDirs;
 	let packageOptions;
-	let distributionFile;
 	let dependencies;
 	switch (target) {
 	case 'service':
 		source = path.join(project, 'appservice');
-		entryPoint = path.join(source, 'main.js');
+		entryPoint = './appservice/main.js';
 		buildOptions = svcBuildOptions;
 		excludeDirs = svcExcludeDirs;
 		packageOptions = svcPackageOptions;
-		distributionFile =  path.join(project, 'appservice', 'distribution.json');
 		dependencies = svcDependencies;
 		break;
 	case 'app':
@@ -182,6 +181,8 @@ function appInstaller(options) {
 	pack.version = version;
 	pack.main = entryPoint;
 	pack.dependencies = dependencies;
+	pack.scripts = (function () { return; })();
+	pack.gypfile = (function () { return; })();
 
 	try { fs.writeFileSync(distFile, JSON.stringify(signet)); }
 	catch(e) { throw new Error('Coult not generate signet file: ' + e.toString()); }
