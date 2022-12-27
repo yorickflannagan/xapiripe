@@ -101,7 +101,7 @@ function appInstaller(options) {
 		icon: svcIconFile,
 		ignore: [
 			'.vscode/',
-			'build/',
+			'^/build/',
 			'docs/',
 			'hamahiri/',
 			'pki/',

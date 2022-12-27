@@ -47,7 +47,7 @@ let config = {
 		filename: 'xapiripe.js',
 		library: 'xabo',
 		libraryExport: 'xabo',
-		path: path.resolve(__dirname, 'output'),
+		path: path.resolve(__dirname, 'output', 'web-api'),
 		pathinfo: false
 	},
 	plugins: [
