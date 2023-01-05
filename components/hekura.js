@@ -15,7 +15,6 @@ const net = require('net');
 const Aroari = require('./aroari');
 const { Logger, sprintf, beautify } = require('./wanhamou');
 
-
 /**
  * Callback chamada sempre que uma operação criptográfica está para ser realizada, visando obter a aprovação do usuário.
  * @callback approvalCallback
@@ -814,7 +813,7 @@ class PortChecker {
 		};	
 	}
 	onConnect() {
-		this.deferred.resolve(true);
+		this.deferred.resolve(false);
 		this.cleanUp();
 	}
 	onError(reason) {
@@ -842,12 +841,7 @@ class HTTPServer
 	 * Cria uma nova instância do serviço.
 	 * @param { Object } options Opções de inicialização. Ver {@link Hekura.ServerOptions}
 	 */
-	constructor({
-		port = 9171,
-		maxAge = 1800,
-		cors = new CORSBlockade(),
-		callback = approvalCallback
-	} = {}) {
+	constructor(port = 9171, maxAge = 1800, cors = new CORSBlockade(), callback = approvalCallback) {
 		this.logger = Logger.getLogger('Hekura Service');
 		this.blockade = cors;
 		this.services = new Map();
@@ -949,7 +943,7 @@ class HTTPServer
 	 */
 	start() {
 		return new Promise((resolve, reject) => {
-			return this.checkPort.check().then((ready) => {
+			this.checkPort.check().then((ready) => {
 				if (!ready) {
 					Logger.releaseLogger();
 					this.logger = null;

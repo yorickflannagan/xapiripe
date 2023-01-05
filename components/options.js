@@ -33,7 +33,8 @@ const DISTRIBUTION_PROPERTIES = [
 	'productDescription',
 	'company',
 	'distributorId',
-	'updateURL'
+	'updateURL',
+	'interval'
 ];
 const DISTRIBUTION_TEMPLATE = new Map()
 	.set('productId', 'string')
@@ -42,6 +43,7 @@ const DISTRIBUTION_TEMPLATE = new Map()
 	.set('company', 'string')
 	.set('distributorId', 'string')
 	.set('updateURL', 'string')
+	.set('interval', 'number')
 	.set('', 'object');
 
  /**
@@ -51,7 +53,8 @@ const DISTRIBUTION_TEMPLATE = new Map()
   * @property { String } productDescription descrição do produto
   * @property { String } company nome do fabricante
   * @property { String } distributorId identificador do distribuidor
-  * @property { String } updateURL URL de atualização do produto
+  * @property { String } updateURL URL de atualização do produto,
+  * @property { Number } interval intervalo (em segundos) entre cada verificação de atualização
   */
  class Distribution {
 	 /**
@@ -59,15 +62,15 @@ const DISTRIBUTION_TEMPLATE = new Map()
 	  * @param { String } id identificador do produto
 	  * @param { String } name nome do produto
 	  * @param { String } description descrição do produto
-	  * @param { String } exe nome do executável do produto (incluir extensão)
 	  */
-	 constructor(id, name, description, exe) {
-		 this.productId = id ? id :'';
-		 this.productName = name ? name : '';
-		 this.productDescription = description ? description : '';
+	 constructor() {
+		 this.productId = '';
+		 this.productName = '';
+		 this.productDescription = '';
 		 this.company = 'The Crypthing Initiative';
 		 this.distributorId = '';
 		 this.updateURL = '';
+		 this.interval = 60;
 	 }
  	 /**
 	  * Carrega a identificação da distribtuição a partir de um arquivo JSON, que deve existir

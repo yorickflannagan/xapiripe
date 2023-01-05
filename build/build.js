@@ -75,6 +75,7 @@ function appInstaller(options) {
  * 	--build: string definindo a aplicação a ser construída, a saber: service | app. Obrigatório
  * 	--arch: string indicando a arquitetura de CPU alvo, a saber: x64 | ia32. Opcional. Default: x64
  *  --distribution: caminho completo para o arquivo de configuração da distribuição. Obrigatório
+ * 	--installer: boolean indicando se o instalador deve ser incluído no build. Opcional. Default: true
  */
 (function () {
 	const argv = yargs(process.argv).argv;
@@ -84,6 +85,7 @@ function appInstaller(options) {
 	let signet;
 	try { signet = Distribution.load(path.resolve(argv.distribution)); }
 	catch (e) { throw new Error('Argument --distribution must point to a valid Distribution JSON file: ' + e.toString()); }
+	let buildInstaller = typeof(argv.installer) === 'string' && argv.installer === 'false' ? false : true;
 
 	const project = path.dirname(__dirname);
 	const svcIconFile = path.join(project, 'appservice', 'res', 'signature-32x32.ico');
@@ -138,7 +140,7 @@ function appInstaller(options) {
 		name : signet.productName,
 		iconUrl: svcIconFile,
 		setupIcon: svcIconFile,
-		setupExe: 'install-' + signet.productName.toLowerCase() + '.exe',
+		setupExe: 'install' + signet.productName.toLowerCase() + '.exe',
 		noMsi: true
 	}
 
@@ -167,7 +169,8 @@ function appInstaller(options) {
 		.concat('\n--build: ').concat(target)
 		.concat('\n--arch: ').concat(arch)
 		.concat('\n--distribution: \n')
-		.concat(JSON.stringify(signet, null, 2));
+		.concat(JSON.stringify(signet, null, 2))
+		.concat('\n--installer: ').concat(buildInstaller);
 	console.log(msg);
 
 	let distFile = path.join(source, 'distribution.json');
@@ -192,25 +195,32 @@ function appInstaller(options) {
 	catch (e) { throw new Error('Coult not create proper package.json: ' + e.toString()); }
 
 	msg = 'Standalone package will be built with the following definitions:'
+		.concat('\nversion: ').concat(pack.version)
 		.concat('\ndirectories to exclude: ').concat(JSON.stringify(excludeDirs, null, 2))
 		.concat('\nbuild options: ').concat(JSON.stringify(buildOptions, null, 2));
 	console.log(msg);
 	appPackage(buildOptions, excludeDirs).then((appPath) => {
 		console.log('Package built to path: ' + appPath);
-		packageOptions.appDirectory = appPath;
-		msg = 'Application installer will be generated with the following definitions:\n'
-			.concat(JSON.stringify(packageOptions, null, 2))
-			.concat('\nIt may take a long, long, long time. Please, be patient...');
-		console.log(msg);
-		appInstaller(packageOptions).then(() => {
-			console.log('Application installer has been built... at last!');
+		if (buildInstaller) {
+			packageOptions.appDirectory = appPath;
+			msg = 'Application installer will be generated with the following definitions:\n'
+				.concat(JSON.stringify(packageOptions, null, 2))
+				.concat('\nIt may take a long, long, long time. Please, be patient...');
+			console.log(msg);
+			appInstaller(packageOptions).then(() => {
+				console.log('Application installer has been built... at last!');
+				fs.unlinkSync(packageJSON);
+				fs.renameSync(backup, packageJSON);
+			}).catch((reason) => {
+				console.error(reason);
+				fs.unlinkSync(packageJSON);
+				fs.renameSync(backup, packageJSON);
+			});
+		}
+		else {
 			fs.unlinkSync(packageJSON);
 			fs.renameSync(backup, packageJSON);
-		}).catch((reason) => {
-			console.error(reason);
-			fs.unlinkSync(packageJSON);
-			fs.renameSync(backup, packageJSON);
-		});
+		}
 	}).catch((reason) => {
 		console.error(reason);
 		fs.unlinkSync(packageJSON);

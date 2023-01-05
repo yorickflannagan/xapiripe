@@ -36,7 +36,7 @@ const alert = require('alert');
 	const { Config } = require('./config');
 	const { Message, WarnMessage } = require('./module');
 	const { Logger, LogLevel, sprintf } = require('../components/wanhamou');
-	const { CORSBlockade, HTTPServer } = require('../components/hekura');
+	const { CORSBlockade, HTTPServer, ServiceError } = require('../components/hekura');
 	const { DelayedPromise } = require('../components/options');
 
 	/**
@@ -179,6 +179,7 @@ const alert = require('alert');
 		 * Finalização do processo. Libera recursos alocados
 		 */
 		process.on('exit', (code) => {
+			logger.info('Serviço finalizado');
 			Logger.releaseLogger();
 		});
 
@@ -219,16 +220,10 @@ const alert = require('alert');
 		svrOpt.trustedOrigins.origins.forEach((element) => {
 			origins.push(element.origin);
 		});
-		let serverOptions = {
-			port: svrOpt.port,
-			maxAge: svrOpt.maxAge,
-			cors: new CORSBlockade(origins),
-			callback: approvalCallback
-		};
 	
 		Logger.logConfig(logOpt);
 		logger = Logger.getLogger('Hekura Service App');
-		service = new HTTPServer(serverOptions);
+		service = new HTTPServer(svrOpt.port, svrOpt.maxAge,  new CORSBlockade(origins), approvalCallback);
 	
 		require('readline').createInterface({
 			input: process.stdin,
@@ -241,16 +236,10 @@ const alert = require('alert');
 		logger.info(sprintf('Log do serviço iniciado com as seguinte opções:\n%s\nServiço Hekura iniciado com as seguintes opções:\n%s', JSON.stringify(logOpt, null, 2), JSON.stringify(svrOpt, null, 2)));
 	}
 	catch (err) {
-		let msg = 'Ocorreu um erro fatal na operação do serviço, a saber: '.concat(err.toString(), '. O aplicativo precisa ser encerrado.');
-		alert(msg);
-		process.send({
-			signal: 'error-on-service',
-			error: msg
-		}, (err) => {
-			if (!err) {
-				if (service) service.stop();
-				process.exit();
-			}
-		});
+		let code = err.toString();
+		let msg;
+		if (code === ServiceError.HTTP_PORT_ALREADY_USED.toString()) msg = 'A porta de serviço já está em uso';
+		else msg = err.toString();
+		alert('Ocorreu um erro fatal na operação do serviço, a saber: '.concat(msg, '. O aplicativo precisa ser encerrado.'));
 	}
 }());

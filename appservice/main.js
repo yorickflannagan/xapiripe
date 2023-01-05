@@ -9,7 +9,7 @@
  * Xapiripe - Standalone Hekura service
  * See https://bitbucket.org/yakoana/xapiripe/src/master/appservice
  * main.js - Electron main process
- * @version 0.9.2
+ * @version 0.9.3
  * 
  * This application is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -106,6 +106,7 @@ let params = new Map();
  */
 let optionsFile = null;
 
+
 /**
  * Valor do mapa de mensagens enviadas
  * @property { DelayedPromise } promise: promise retornada por askUser(), resolvida quando da recepção do evento user-answer
@@ -175,10 +176,11 @@ function askUser(message) {
 function updateCallback(type, msg) {
 	switch(type) {
 	case UpdateManager.ERROR_MESSAGE:
+		// TODO: sub judice
 		tray.displayBalloon({
 			iconType: 'error',
 			title: APP_UPDATE,
-			content: msg,
+			content: 'Falha na atualização. Consulte o log.',
 			noSound: false
 		});
 		return true;
@@ -359,7 +361,7 @@ app.on('ready', () => {
 		launchError = sprintf(CONFIG_FAILURE, e.toString());
 		config = new Config();
 	}
-	config.logOptions.path = manager.appDir;
+	if (!config.logOptions.path) config.logOptions.path = manager.appDir;
 
 	let logArg = '--log='.concat(JSON.stringify(config.logOptions));
 	let svrArg = '--server='.concat(JSON.stringify(config.serverOptions));

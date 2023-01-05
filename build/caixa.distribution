@@ -4,5 +4,6 @@
   "productDescription": "CriptoCNS REST service",
   "company": "The Crypthing Initiative",
   "distributorId": "br.gov.caixa",
-  "updateURL": "http://hekura.crypthings.org:8090"
+  "updateURL": "http://127.0.0.1:8090",
+  "interval": 60
 }

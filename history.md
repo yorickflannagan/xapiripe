@@ -12,3 +12,9 @@ Disponibilidade para uso na Intranet Caixa, no aplicativo CNS V2.
 - Correção de bug na janela de alerta de assinatura em caso de dados binários;
 - Suporte a caracteres de formatação no conteúdo da janela de alerta;
 - Garantia de capacidade de assinar arquivos muito grandes, limitado apenas pela memória disponível para o interpretador Javascript (arquivo de RE de 164 MB).
+
+# Versão 0.9.3
+- Atualização da ajuda, incluindo instruções para a liberação do aplicativo pelos recursos de segurança do sistema operacional;
+- Correção do bug que não encerra corretamente o aplicativo caso a porta de serviço já esteja em uso;
+- Correção do bug que não assume a alteração feita no diretório de log;
+- Inclusão da capacidade de personalizar o intervalo entre cada busca por nova versão (arquivo distribution.json).

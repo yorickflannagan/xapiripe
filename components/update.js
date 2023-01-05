@@ -11,7 +11,7 @@ const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { autoUpdater } = require('electron');
-const { Logger, sprintf } = require('./wanhamou');
+const { sprintf } = require('./wanhamou');
 
 const REG_KEY = 'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run';
 const UPDATE_ERROR = 'Ocorreu o seguinte erro na atualização do aplicativo: %s. O serviço não está funcionando apropriadamente.';
@@ -86,7 +86,7 @@ class UpdateManager {
 		this.regDeleteArguments = null;							// Argumentos para execução do comando REG DELETE
 		this.appDir =  path.resolve(env.USERPROFILE, '.' + distribution.productName.toLowerCase());	// Diretório dos dados da aplicação
 		this.updateURL = distribution.updateURL;				// URL de atualização
-		this.updateInterval = this.debug? 1000 * 60 * 1 : 1000 * 60 * 15;	// Timeout de execução da verificação de atualização
+		this.updateInterval = distribution.interval * 1000;		// Timeout de execução da verificação de atualização
 		this.callback = callback;								// Função de controle da atualização
 		let offset = this.development && this.debug ? 1 : 0;	// Se offset = 1 os comandos Squirrel devem ser adicionados à mão
 		if (this.development && !this.debug) return;			// Se o Squirrel não é utilizado e a classe não está sendo depurada, nada é feito
@@ -143,22 +143,16 @@ class UpdateManager {
 	}
 	/**
 	 * Inicia a tarefa periódica de verificar se existem atualizações do produto.
-	 * Em produção, verifica a cada 15 minutos; se a variável de ambiente DEBUG estiver
-	 * definida, este intervalo é de 1 minuto.
 	 */
 	startAutoUpdater() {
-		if (this.development && !this.debug) return;	// Permite "depurar" a atualização, reduzindo o intervalo de buca
+		if (this.development && !this.debug) return;	// Permite "depurar" a atualização, reduzindo o intervalo de busca
 		autoUpdater.setFeedURL(this.updateURL);
 		autoUpdater.on('error', (error) => {
 			let msg = sprintf(UPDATE_ERROR, error.toString());
-			Logger.getLogger('Hekura Updater').error(msg);
-			Logger.releaseLogger();
 			this.callback(UpdateManager.ERROR_MESSAGE, msg);
 		});
 		autoUpdater.on('update-downloaded', (evt, releaseNotes, releaseName) => {
 			let msg = sprintf(RESTART_MSG, releaseName);
-			Logger.getLogger('Hekura Updater').debug(msg);
-			Logger.releaseLogger();
 			if (this.callback(UpdateManager.UPDATE_MESSAGE, msg)) autoUpdater.quitAndInstall();
 		});
 		setInterval(() => { autoUpdater.checkForUpdates(); }, this.updateInterval);

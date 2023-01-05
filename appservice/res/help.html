@@ -31,12 +31,36 @@
 		font-style: italic;
 		font-size: 90%;
 	}
+	div.note {
+		margin: 0;
+	}
+	td.note {
+		width: 50%;
+	}
+	p.note {
+		font-size: smaller;
+		font-style: italic;
+	}
 	</style>
 </head>
 <body>
-	<h1>Serviço Hekura &ndash; Ajuda</h1>
+	<h1>CriptoCNS &ndash; Ajuda</h1>
+	<div class="note">
+		<table>
+			<tr>
+				<td class="note"></td>
+				<td class="note">
+					<p class="note">
+						Neste documento você encontrará referências ao Serviço Hekura e não aparentemente ao CriptoCNS. Saiba que o CriptoCNS é a
+						distribuição patrocinada pela Caixa Econômica Federal do serviço criptográfico Hekura. Assim, todas as menções a Hekura neste
+						documento aplicam-se ao CriptoCNS.
+					</p>
+				</td>
+			</tr>
+		</table>
+	</div>
+	
 	<div>
-		<p>
 		O serviço Hekura fornece uma interface de programação para funções criptográficas destinadas a aplicações
 		web. Com ele, uma aplicação web de sua confiança pode emitir transações e documentos para que você
 		os assine com seu certificado digital. O serviço se aplica igualmente bem para que aplicações de
@@ -137,7 +161,7 @@
 			</div>
 		</div>
 
-		<h3>Alterar parâmetros do log</h3>
+		<h2>Alterar parâmetros do log</h2>
 		<div>
 			<p>
 			Todas as operações realizadas são registradas em arquivo pelo serviço. O objetivo disso é principalmente
@@ -167,6 +191,60 @@
 			sua localização no sistema de arquivos.
 			</p>
 		</div>
+
+		<h2>Recomendações para a operação regular do serviço</h2>
+		<div>
+			<p>
+			Como mencionamos, Hekura é um serviço HTTP como aqueles que você está habituado a utilizar ao navegar
+			na Internet. E como todo servidor web ele tem um endereço, no caso http://127.0.0.1:9171, indicando que
+			ele implementa o protocolo HTTP (<i>Hypertext Transfer Protocol</i>), no chamado endereço de <i>loopback</i>,
+			isto é, o próprio computador do usuário, utilizando a porta 9171. Esta porta foi escolhida porque não
+			temos notícia de nenhum software de uso relativamente extenso a utiliza. Isto é importante porque dois
+			softwares não podem se utilizar simultaneamente da mesma porta. Quem chegar primeiro leva tudo. E o outro
+			fica a ver navios.
+			</p>
+			<p>
+			De modo a prevenir mal funcionamento, é aconselhável verificar se a porta 9171 já está em uso no computador
+			a ser utilizado antes mesmo da instalação do serviço. Isso só pode ser feito por usuário com permissão de administrador
+			no computador local. Se você não tiver essa permissão, deverá entrar em contato com a administração da sua rede.
+			Note que a execução do serviço Hekura não requer permissões especiais para executar. No entanto, o aplicativo
+			disponível no Windows para verificar se uma porta está em uso requer permissão de administrador. Se você tiver essa
+			permissão, proceda da seguinte forma:
+			</p>
+			<ol>
+			<li>Na campo de pesquisa localizado na barra de tarefas, digite a palavra <i>prompt</i>;</li>
+			<li>Você encontrará o aplicativo <i>Prompt de comando</i> na lista de resultados de pesquisa. Com o botão direito
+			do mouse, clique no ícone correspondente;</li>
+			<li>Isso exibirá o menu de contexto disponível. Clique no item <i>Executar como administrador</i>;</li>
+			<li>Isso abrirá a console de linha de comando do Windows. Digite o comando <i>netstat -ab | findstr 9171</i> e tecle Enter.</li>
+			</ol>
+			<p>
+			Se a execução do utilitário não fornecer saída alguma, não haverá impedimentos ao uso do serviço. No entanto, se uma saída
+			parecida com a vista a seguir, é porque algum aplicativo está usando a porta. Para saber o nome do aplicativo, digite
+			somente o comando netstat -ab, sem o filtro, para listar todas as portas em uso, o que incluirá na saída o nome do executável.
+			</p>
+			<pre>
+	TCP    0.0.0.0:9171           DESKTOP:0              LISTENING
+	TCP    [::]:9171              DESKTOP:0              LISTENING
+			</pre>
+			<p>
+			Muitos usuários costumam utilizar o <i>Windows Defender Firewall</i>. Este aplicativo tem por política permitir a restrição da
+			comunicação entre os aplicativos instalados no computador do usuário e outros aplicativos. Ora, a finalidade do Serviço Hekura é
+			precisamente este: permitir a comunicação segura de uma aplicação web com os dispositivos criptográficos presentes no computador
+			do usuário através do navegador Internet. Se o <i>Windows Defender Firewall</i> estiver ativado, na primeira tentativa de uso
+			do serviço deverá ser exibida um diálogo como o que se segue: 
+			</p>
+			<figure>
+				<img src="defender.png" alt="Alerta de restrição do Windows Defender para o uso do serviço REST local" />
+				<figcaption>Figura 4: Alerta de restrição do Windows Defender para o uso do serviço REST local</figcaption>
+			</figure>
+			<p>
+			Autorizar a comunicação do serviço requer privilégios de administrador do computador local. Se você não tiver essa permissão,
+			precisará entrar em contato com o administrador da sua rede, para que essa alteração seja feita. Isso pode ser feito diretamente
+			no Painel de Controle, utilizando a opção <i>Permitir um aplicativo ou recurso através do Windows Defender Firewal</i>, disponível
+			na janela do <i>Defender</i>.
+			</p>
+	</div>
 	</div>
 </div>
 </body>
