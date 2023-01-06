@@ -59,9 +59,6 @@ const DISTRIBUTION_TEMPLATE = new Map()
  class Distribution {
 	 /**
 	  * Cria uma nova distribuição do produto especificado
-	  * @param { String } id identificador do produto
-	  * @param { String } name nome do produto
-	  * @param { String } description descrição do produto
 	  */
 	 constructor() {
 		 this.productId = '';
@@ -70,7 +67,7 @@ const DISTRIBUTION_TEMPLATE = new Map()
 		 this.company = 'The Crypthing Initiative';
 		 this.distributorId = '';
 		 this.updateURL = '';
-		 this.interval = 60;
+		 this.interval = 60 * 15;
 	 }
  	 /**
 	  * Carrega a identificação da distribtuição a partir de um arquivo JSON, que deve existir

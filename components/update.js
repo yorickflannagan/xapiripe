@@ -63,6 +63,10 @@ class UpdateManager {
 	 * @default 2
 	 */
 	static UPDATE_MESSAGE = 2;
+	/**
+	 * Sinal para logging da atualização
+	 */
+	static INFO_MESSAGE = 3;
 	/* jshint ignore:end */
 	/**
 	 * Cria uma nova instância do gerenciador de atualização
@@ -150,6 +154,9 @@ class UpdateManager {
 		autoUpdater.on('error', (error) => {
 			let msg = sprintf(UPDATE_ERROR, error.toString());
 			this.callback(UpdateManager.ERROR_MESSAGE, msg);
+		});
+		autoUpdater.on('update-available', () => {
+			this.callback(UpdateManager.INFO_MESSAGE, 'Nova versão disponível para download');
 		});
 		autoUpdater.on('update-downloaded', (evt, releaseNotes, releaseName) => {
 			let msg = sprintf(RESTART_MSG, releaseName);

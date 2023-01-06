@@ -31,6 +31,14 @@ class Message {
 	 * @default error-on-service
 	 */
 	static ERROR = 'error-on-service';
+	/**
+	 * Sinal para logar uma mensagem ao nível de WARN
+	 */
+	static LOG = 'log-warn';
+	/**
+	 * Sinal para logar mensagem ao nível de INFO
+	 */
+	static INFO = 'long-info';
 	/* jshint ignore:end */
 	/**
 	 * Cria uma nova instância do objeto
@@ -79,6 +87,30 @@ class ErrorMessage extends Message {
 	constructor(msg) {
 		super(Message.ERROR);
 		this.error = msg;
+	}
+}
+
+/**
+ * Mensagem indicando um erro passível de logging
+ * @property { String } signal: identificador da mensagem
+ * @property { String } message: mensagem de alerta
+ */
+class LogMessage extends Message {
+	constructor(msg) {
+		super(Message.LOG);
+		this.message = msg;
+	}
+}
+
+/**
+ * Mensagem indicando uma informação relevante para logging
+ * @property { String } signal: identificador da mensagem
+ * @property { String } info: mensagem indicativa
+ */
+class InfoMessage extends Message {
+	constructor(msg) {
+		super(Message.INFO);
+		this.info = msg;
 	}
 }
 
@@ -149,4 +181,13 @@ class UserAnswer extends WarnResponse {
 }
 
 
-module.exports = { Message, WarnMessage, ErrorMessage, WarnResponse, UserQuestion, UserAnswer };
+module.exports = {
+	Message,
+	WarnMessage,
+	ErrorMessage,
+	LogMessage,
+	InfoMessage,
+	WarnResponse,
+	UserQuestion,
+	UserAnswer
+};

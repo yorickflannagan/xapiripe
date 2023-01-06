@@ -17,4 +17,6 @@ Disponibilidade para uso na Intranet Caixa, no aplicativo CNS V2.
 - Atualização da ajuda, incluindo instruções para a liberação do aplicativo pelos recursos de segurança do sistema operacional;
 - Correção do bug que não encerra corretamente o aplicativo caso a porta de serviço já esteja em uso;
 - Correção do bug que não assume a alteração feita no diretório de log;
-- Inclusão da capacidade de personalizar o intervalo entre cada busca por nova versão (arquivo distribution.json).
+- Correção do problema da impossibilidade de logar erros ocorridos durante a atualização;
+- Inclusão da capacidade de personalizar o intervalo entre cada busca por nova versão (arquivo distribution.json);
+- Um link para o serviço é criado na Área de Trabalho do usuário corrente.

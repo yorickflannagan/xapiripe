@@ -93,7 +93,8 @@ function appInstaller(options) {
 	const svcDependencies = {
 		'alert': '^5.1.1',
 		'asn1js': '^2.3.2',
-		'node-addon-api': '^4.3.0'
+		'node-addon-api': '^4.3.0',
+		'create-desktop-shortcuts': '^1.10.1'
 	}
 	const svcBuildOptions = {
 		appCopyright: 'Copyleft (C) 2020-2022 The Crypthing Initiative. All rights reversed.',
@@ -201,25 +202,18 @@ function appInstaller(options) {
 	console.log(msg);
 	appPackage(buildOptions, excludeDirs).then((appPath) => {
 		console.log('Package built to path: ' + appPath);
+		fs.unlinkSync(packageJSON);
+		fs.renameSync(backup, packageJSON);
+
 		if (buildInstaller) {
 			packageOptions.appDirectory = appPath;
 			msg = 'Application installer will be generated with the following definitions:\n'
 				.concat(JSON.stringify(packageOptions, null, 2))
 				.concat('\nIt may take a long, long, long time. Please, be patient...');
 			console.log(msg);
-			appInstaller(packageOptions).then(() => {
-				console.log('Application installer has been built... at last!');
-				fs.unlinkSync(packageJSON);
-				fs.renameSync(backup, packageJSON);
-			}).catch((reason) => {
-				console.error(reason);
-				fs.unlinkSync(packageJSON);
-				fs.renameSync(backup, packageJSON);
-			});
-		}
-		else {
-			fs.unlinkSync(packageJSON);
-			fs.renameSync(backup, packageJSON);
+			appInstaller(packageOptions)
+			.then(() => { console.log('Application installer has been built... at last!');})
+			.catch((reason) => { console.error(reason); });
 		}
 	}).catch((reason) => {
 		console.error(reason);

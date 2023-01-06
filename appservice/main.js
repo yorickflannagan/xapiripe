@@ -31,7 +31,7 @@ const path = require('path');
 const cp = require('child_process');
 const { Config } = require('./config');
 const { sprintf } = require('../components/wanhamou');
-const { Message, WarnResponse, UserQuestion } = require('./module');
+const { Message, WarnResponse, UserQuestion, LogMessage, InfoMessage } = require('./module');
 const { Distribution, DelayedPromise } = require('../components/options');
 const { UpdateManager } = require('../components/update');
 
@@ -50,7 +50,8 @@ const APP_FAILURE = 'Falha no Serviço criptográfico';
 const UNKNOWN_PROPERTY = 'Valor da propriedade operationId do objeto de mensagem não conhecido';
 const ASK_MESSAGE = 'Você recebeu uma solicitação para %s do serviço web residente em %s. Deseja prosseguir?';
 const ASK_FAILURE = 'Ocorreu o seguinte erro ao solicitar a aprovação do usuário: %s';
-const IPC_FAILURE = 'Não foi possível processar a resposta fornecida pelo usuário por falha na comunicação interna do aplicativo.';
+const CHECK_LOG = 'Erro em processo interno. Consulte o log do aplicativo';
+const IPC_FAILURE = 'Erro desconhecido na comunicação interna do aplicativo';
 const DONT_ASK = 'Não perguntar novamente';
 const DISTRIBUTION_FAILURE = 'Ocorreu o seguinte erro ao carregar o arquivo de identificação da distribuição: %s. A aplicação não está funcionando apropriadamente e será fechada.';
 const CONFIG_FAILURE = 'Ocorreu o seguinte erro ao processar o arquivo de configuração: %s. Assumindo os valores padrão.';
@@ -176,11 +177,11 @@ function askUser(message) {
 function updateCallback(type, msg) {
 	switch(type) {
 	case UpdateManager.ERROR_MESSAGE:
-		// TODO: sub judice
+		if (msg.length > 64) service.send(new LogMessage(msg));
 		tray.displayBalloon({
 			iconType: 'error',
 			title: APP_UPDATE,
-			content: 'Falha na atualização. Consulte o log.',
+			content: msg.length > 64 ? CHECK_LOG : msg,
 			noSound: false
 		});
 		return true;
@@ -193,6 +194,8 @@ function updateCallback(type, msg) {
 			title: APP_UPDATE
 		});
 		return choice == 0;
+	case UpdateManager.INFO_MESSAGE:
+		service.send(new InfoMessage(msg));
 	}
 }
 
@@ -242,10 +245,11 @@ ipcMain.on('user-answer', (evt, answer) => {
  * @param { String } message: mensagem de erro
  */
 ipcMain.on('report-error', (evt, message) => {
+	if (message.length > 64) service.send(new LogMessage(message));
 	tray.displayBalloon({
 		iconType: 'error',
 		title: distribution.productName,
-		content: message,
+		content: message.length > 64 ? CHECK_LOG : message,
 		noSound: false
 	});
 	evt.returnValue = true;
@@ -373,10 +377,12 @@ app.on('ready', () => {
 				let response = new WarnResponse(message.msgId, accept);
 				service.send(response);
 			}).catch((reason) => {
+				let msg = sprintf(ASK_FAILURE, reason.toString());
+				if (msg.length > 64) service.send(new LogMessage(msg));
 				tray.displayBalloon({
 					iconType: 'error',
 					title: distribution.productName,
-					content: sprintf(ASK_FAILURE, reason.toString()),
+					content: msg.length > 64 ? CHECK_LOG : msg,
 					noSound: false
 				});
 			});
@@ -454,20 +460,22 @@ app.on('ready', () => {
 	tray.setToolTip(distribution.productName);
 
 	if (lastEventError) {
+		if (lastEventError.length > 64) service.send(new LogMessage(lastEventError));
 		tray.displayBalloon({
 			iconType: 'error',
 			title: APP_UPDATE,
-			content: lastEventError,
+			content: lastEventError.length > 64 ? CHECK_LOG : lastEventError,
 			noSound: false
 		});
 		lastEventError = null;
 	}
 	if (launchError) {
+		if (launchError.length > 64) service.send(new LogMessage(launchError));
 		setInterval(() => {
 			tray.displayBalloon({
 				iconType: 'error',
 				title: 'Lançamento do aplicativo',
-				content: launchError,
+				content: launchError.length > 64 ? CHECK_LOG : launchError,
 				noSound: false
 			});
 		}, 5000);

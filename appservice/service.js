@@ -179,7 +179,6 @@ const alert = require('alert');
 		 * Finalização do processo. Libera recursos alocados
 		 */
 		process.on('exit', (code) => {
-			logger.info('Serviço finalizado');
 			Logger.releaseLogger();
 		});
 
@@ -201,6 +200,8 @@ const alert = require('alert');
 				}
 				else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', JSON.stringify(message, null, 2)));
 			}
+			else if (message.signal === Message.LOG) { logger.warn(message.message); }
+			else if (message.signal === Message.INFO) { logger.info(message.info); }
 			else logger.error(sprintf('Mensagem desconhecida recebida:\n%s', JSON.stringify(message, null, 2)));
 		});
 
