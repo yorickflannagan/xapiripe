@@ -329,7 +329,6 @@ window.addEventListener('load', () => {
 			signBasicTest();
 			break;
 		case '3':
-			// TODO: Verificar pré condições
 			verifyBasicTest();
 			break;
 		case '4':
@@ -342,7 +341,6 @@ window.addEventListener('load', () => {
 			matchDNTest();
 			break;
 		default:
-			// TODO: Enviar sinal de teste não selecionado
 		}
 	});
 

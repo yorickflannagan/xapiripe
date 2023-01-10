@@ -25,7 +25,6 @@
  */
 'use strict';
 
-// TODO: Review distribution loading
 const { app, BrowserWindow, Menu, Tray, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const cp = require('child_process');

@@ -578,7 +578,6 @@ async function unit_test() {
 }
 
 function testHekura() {
-	//TODO: Clean-up request files after service test
 	let runService = false
 	if (argv.pki) {
 		PKIDir = path.resolve(argv.pki);

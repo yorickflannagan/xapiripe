@@ -19,4 +19,5 @@ Disponibilidade para uso na Intranet Caixa, no aplicativo CNS V2.
 - Correção do bug que não assume a alteração feita no diretório de log;
 - Correção do problema da impossibilidade de logar erros ocorridos durante a atualização;
 - Inclusão da capacidade de personalizar o intervalo entre cada busca por nova versão (arquivo distribution.json);
+- Mudança no nome do instalador por conta de incapacidade do Squirrel.Windows incorporar o ícone da aplicação no instalador caso este tenha caracteres não alfanuméricos no seu nome;
 - Criação de links para o serviço na Área de Trabalho e no Menu Iniciar do usuário corrente.
