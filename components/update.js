@@ -104,24 +104,38 @@ class UpdateManager {
 			this.updateArgument = argv[1 + offset];
 			this.updateEvent = true;
 			this.regDeleteArguments = [ 'DELETE', REG_KEY, '/v', distribution.productName, '/f' ];
-			break;
-		default: return;
 		}
 		// Se classe em depuração sem utilização do Squirrel, exibe o resultado da inicialização
 		if (this.debug && this.development) console.log(sprintf(DEBUG_INIT_MSG, this.updateArgument, this.regAddArguments, this.regDeleteArguments, this.appDir, this.updateURL));
 	}
-	createAppDir(appDir) {
-		try {
-			if (!fs.existsSync(appDir)) fs.mkdirSync(appDir);
-			return new HandleEvtResult(true);
+	createAppDir(appDir, evt) {
+		if (evt.success) {
+			try { if (!fs.existsSync(appDir)) fs.mkdirSync(appDir); }
+			catch (e) { evt.success = false; evt.stderror = e.toString(); }
 		}
-		catch (e) { return new HandleEvtResult(false, e.toString()); }
+		return evt;
 	}
-	updateRegistry(args) {
-		let ret = cp.spawnSync('REG', args, { encoding: 'utf-8', shell: true });
-		if (ret.signal) return new HandleEvtResult(false, ret.signal);
-		if (ret.status != 0) return new HandleEvtResult(false, ret.stderr);
-		return new HandleEvtResult(true);
+	execCommand(cmd, args, evt) {
+		if (evt.success) {
+			let ret = cp.spawnSync(cmd, args, { encoding: 'utf-8', shell: true });
+			if (ret.signal) { evt.success = false; evt.stderror = ret.signal; }
+			else if (ret.status != 0) { evt.success = false; evt.stderror = ret.stderr; }
+		}
+		return evt;
+	}
+	updateRegistry(args, evt) {
+		return this.execCommand('REG', args, evt);
+	}
+	shortcutIcon(cmd, evt) {
+		if (evt.success) {
+			let appExec = process.execPath;
+			let appFolder = path.dirname(appExec);
+			let updater = path.join(path.dirname(appFolder), 'Update.exe');
+			let ret = cp.spawnSync(updater, [ cmd, appExec ], { encoding: 'utf-8', shell: true });
+			if (ret.signal) { evt.success = false; evt.stderror = ret.signal; }
+			else if (ret.status != 0) { evt.success = false; evt.stderror = ret.stderr; }
+		}
+		return evt;
 	}
 	/**
 	 * Lida com os eventos de atualização, controlados pelo Squirrel
@@ -129,18 +143,21 @@ class UpdateManager {
 	 */
 	handleUpdateEvents() {
 		if ((this.development && !this.debug) || !this.updateEvent) return new HandleEvtResult(true).restart(false);
-		let ret;
+
+		let ret = new HandleEvtResult(true);
 		switch(this.updateArgument) {
 		case '--squirrel-install':
-			ret = this.createAppDir(this.appDir);
-			if (ret.success) ret = this.updateRegistry(this.regAddArguments);
-			return ret.restart(true);
+			ret = this.createAppDir(this.appDir, ret);
+			/* falls through */
 		case '--squirrel-updated':
+			ret = this.updateRegistry(this.regAddArguments, ret);
+			ret = this.shortcutIcon('--createShortcut', ret);
+			/* falls through */
 		case '--squirrel-obsolete':
-			ret = this.updateRegistry(this.regAddArguments);
 			return ret.restart(true);
 		case '--squirrel-uninstall':
-			ret = this.updateRegistry(this.regDeleteArguments);
+			ret = this.updateRegistry(this.regDeleteArguments, ret);
+			ret = this.shortcutIcon('--removeShortcut', ret);
 			return ret.restart(true);
 		default: return new HandleEvtResult(true).restart(false);
 		}

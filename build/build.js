@@ -85,7 +85,7 @@ function appInstaller(options) {
 	let signet;
 	try { signet = Distribution.load(path.resolve(argv.distribution)); }
 	catch (e) { throw new Error('Argument --distribution must point to a valid Distribution JSON file: ' + e.toString()); }
-	let buildInstaller = typeof(argv.installer) === 'string' && argv.installer === 'false' ? false : true;
+	let buildInstaller = argv.installer === 'false' ? false : true;
 
 	const project = path.dirname(__dirname);
 	const svcIconFile = path.join(project, 'appservice', 'res', 'signature-32x32.ico');
@@ -93,8 +93,7 @@ function appInstaller(options) {
 	const svcDependencies = {
 		'alert': '^5.1.1',
 		'asn1js': '^2.3.2',
-		'node-addon-api': '^4.3.0',
-		'create-desktop-shortcuts': '^1.10.1'
+		'node-addon-api': '^4.3.0'
 	}
 	const svcBuildOptions = {
 		appCopyright: 'Copyleft (C) 2020-2022 The Crypthing Initiative. All rights reversed.',
@@ -116,7 +115,8 @@ function appInstaller(options) {
 			'history.md',
 			'LEIA-ME.MD',
 			'package-lock.json',
-			'package-old.json'
+			'package-old.json',
+			'.*log'
 		],
 		name: signet.productName,
 		out: buildFolder,

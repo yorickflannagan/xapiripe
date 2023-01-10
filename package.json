@@ -7,17 +7,20 @@
 		"start-hekura": "node ./test/hekura-test.js --pki=./pki --service=true --check",
 		"start-app-server": "node ./test/app-server.js --host=userapp.crypthings.org",
 		"start-local": "node ./test/app-server.js",
+		
 		"service-test": "CHCP 65001>nul & electron ./appservice/main.js",
 		"hamahiri-test": "node --napi-modules ./test/hamahiri-test.js --pki=./pki --check",
 		"aroari-test": "node ./test/aroari-test.js --pki=./pki --check",
 		"wanhamou-test": "node ./test/wanhamou-test.js --check",
 		"hekura-test": "node ./test/hekura-test.js --pki=./pki --service=false --check",
 		"test": "CD test & node all-components.js --pki=../pki --service=false",
+		
 		"hamahiri-build": "cd hamahiri & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
 		"service-build": "node ./build/build.js --build=service --arch=x64 --distribution=./build/caixa.distribution",
 		"service-dev-build": "node ./build/build.js --build=service --arch=x64 --distribution=./build/caixa.distribution --installer=false",
 		"api-build": "webpack --config ./build/webpack.config.js",
 		"api-dev-build": "webpack --config ./build/webpack.config.js --env development & COPY build\\output\\xapiripe.js test",
+		
 		"hamahiri-docs": "node ./build/make-docs.js --components=hamahiri",
 		"aroari-docs": "node ./build/make-docs.js --components=aroari",
 		"wanhamou-docs": "node ./build/make-docs.js --components=wanhamou",
@@ -58,7 +61,6 @@
 		"assert": "^2.0.0",
 		"browserify-zlib": "^0.2.0",
 		"buffer": "^6.0.3",
-		"create-desktop-shortcuts": "^1.10.1",
 		"node-addon-api": "^4.3.0",
 		"process": "^0.11.10",
 		"setimmediate": "^1.0.5",

@@ -5,5 +5,5 @@
   "company": "The Crypthing Initiative",
   "distributorId": "br.gov.caixa",
   "updateURL": "http://127.0.0.1:8090",
-  "interval": 60
+  "interval": 900
 }
