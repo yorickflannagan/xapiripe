@@ -9,7 +9,7 @@
  * Xapiripe - Standalone Hekura service
  * See https://bitbucket.org/yakoana/xapiripe/src/master/appservice
  * main.js - Electron main process
- * @version 0.9.3
+ * @version 0.9.4
  * 
  * This application is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -33,6 +33,7 @@ const { sprintf } = require('../components/wanhamou');
 const { Message, WarnResponse, UserQuestion, LogMessage, InfoMessage } = require('./module');
 const { Distribution, DelayedPromise } = require('../components/options');
 const { UpdateManager } = require('../components/update');
+const { Lock } = require('../components/lock');
 
 
 const DISTRIBUTION_FILE = path.resolve(__dirname, 'distribution.json');
@@ -105,6 +106,11 @@ let params = new Map();
  * Localização do arquivo de opções (dependente da distribuição)
  */
 let optionsFile = null;
+
+/**
+ * Selo indicativo de instância inicializada. Arquivo para acesso exclusivo é criado no diretório da aplicação
+ */
+let locker = null;
 
 
 /**
@@ -318,15 +324,26 @@ ipcMain.on('relaunch-app', (evt) => {
 
 /**
  * Inicialização da aplicação, onde as seguintes tarefas são executadas:
- * (i)		carga do arquivo de distribuição da aplicação
- * (ii)		processamento dos eventos de atualização
- * (iii)	carga do arquivo de opções do aplicativo
- * (iv)		lançamento do processo de execução do serviço Hekura
- * (v)		criação da janela de Opções do serviço (invisível)
- * (vi)		inicialização do aplicativo junto Windows System Tray
- * (vii)	inicialização da atualizaçao
+ * (i)		criação do arquivo de lock exclusivo da aplicação
+ * (ii)		carga do arquivo de distribuição da aplicação
+ * (iii)	processamento dos eventos de atualização
+ * (iv)		carga do arquivo de opções do aplicativo
+ * (v)		lançamento do processo de execução do serviço Hekura
+ * (vi)		criação da janela de Opções do serviço (invisível)
+ * (vii)	inicialização do aplicativo junto Windows System Tray
+ * (viii)	inicialização da atualizaçao
  */
 app.on('ready', () => {
+	try {
+		locker = new Lock(__dirname);
+		locker.createLock();
+	}
+	catch (e) {
+		locker = null;
+		app.quit();
+		return;
+	}
+
 	try { distribution = Distribution.load(DISTRIBUTION_FILE); }
 	catch (e) {
 		setInterval(() => { app.quit(); }, 5000);
@@ -505,8 +522,9 @@ app.on('ready', () => {
 
 /**
  * Finalização do aplicativo, realizando as seguintes tarefas:
- * (i) salvar as configurações correntes do apliciativo
- * (ii) enviar sinal de finalização ao processo que executa o serviço Hekura em background
+ * (i)		salvar as configurações correntes do apliciativo
+ * (ii)		enviar sinal de finalização ao processo que executa o serviço Hekura em background
+ * (iii)	liberar o arquivo de lock exclusivo da aplicação
  */
 app.on('before-quit', () => {
 	isQuiting = true;
@@ -522,4 +540,6 @@ app.on('before-quit', () => {
 
 	try { if (service) service.send(new Message(Message.STOP)); }
 	catch (e) {}
+
+	if (locker) locker.releaseLock();
 });

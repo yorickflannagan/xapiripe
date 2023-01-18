@@ -221,7 +221,7 @@ class EnrollService extends AbstractService
 			let logger = Logger.getLogger('EnrollService');
 			let origin = headers['origin'];
 			let referer = headers['referer'];
-			this.approvalCallback('enumerateDevices', referer).then((accept) => {
+			this.approvalCallback('enumerateDevices', referer ? referer : origin).then((accept) => {
 				let status;
 				if (accept) {
 					try {
@@ -285,7 +285,7 @@ class EnrollService extends AbstractService
 				return resolve(400);
 			}
 
-			this.approvalCallback('generateCSR', referer).then((accept) => {
+			this.approvalCallback('generateCSR', referer ? referer : origin).then((accept) => {
 				let status;
 				if (accept) {
 					try {
@@ -351,7 +351,7 @@ class EnrollService extends AbstractService
 				return resolve(400);
 			}
 
-			this.approvalCallback('installCertificates', referer).then((accept) => {
+			this.approvalCallback('installCertificates', referer ? referer : origin).then((accept) => {
 				let status;
 				if (accept) {
 					try {
@@ -436,7 +436,7 @@ class SignService extends AbstractService
 			let logger = Logger.getLogger('SignService');
 			let referer = headers['referer'];
 			let origin = headers['origin'];
-			this.approvalCallback('enumerateCertificates', referer).then((accept) => {
+			this.approvalCallback('enumerateCertificates', referer ? referer : origin).then((accept) => {
 				let status;
 				if (accept) {
 					try {
@@ -517,7 +517,7 @@ class SignService extends AbstractService
 				return resolve(400);
 			}
 				
-			this.approvalCallback('sign', referer, json.toBeSigned).then((accept) => {
+			this.approvalCallback('sign', referer ? referer : origin, json.toBeSigned).then((accept) => {
 				let status;
 				if (accept) {
 					try {
@@ -681,7 +681,7 @@ class VerifyService extends AbstractService
 			let sid;
 			let eContent;
 			let signingTime;
-			this.approvalCallback('verify', referer).then((accept) => {
+			this.approvalCallback('verify', referer ? referer : origin).then((accept) => {
 				let status;
 				if (accept) {
 					try {

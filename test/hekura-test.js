@@ -33,7 +33,7 @@ class TestService
 		LOG.write('Testing HTTPServer initialization...');
 		assert(Hekura.HTTPServer, 'The exepected Hekura.HTTPServer class is undefined');
 		this.tests = 0;
-		this.service = new Hekura.HTTPServer({ cors: new Hekura.CORSBlockade(ORIGINS) });
+		this.service = new Hekura.HTTPServer(undefined, undefined, new Hekura.CORSBlockade(ORIGINS));
 		this.tests++;
 		LOG.write(' done!\n');
 	}
@@ -588,7 +588,7 @@ function testHekura() {
 	}
 	if (runService) {
 		Wanhamou.Logger.logConfig({ path: path.resolve(__dirname), level: Wanhamou.LogLevel.DEBUG });
-		let service = new Hekura.HTTPServer({ cors: new Hekura.CORSBlockade(ORIGINS) });
+		let service = new Hekura.HTTPServer(undefined, undefined, new Hekura.CORSBlockade(ORIGINS));
 		service.start();
 		console.log('Running Hekura service at http://127.0.0.1:9171');
 		console.log('Logging at debug level to ' + path.resolve(__dirname));

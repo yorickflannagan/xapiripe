@@ -102,6 +102,15 @@
 			a resposta do usuário, o processo principal envia uma <a href="appservice/warn-response.json" target="_blank">mensagem
 			de resposta</a> conforme especificado.
 			</p>
+			<p>
+			Uma vez que a aplicação existe apenas para embarcar e complementar um serviço HTTP local, não podem haver duas instâncias
+			dela coexistindo no computador, já que a segunda tentaria utilizar a mesma porta da outra instância, causando comportamento
+			potencialmente problemático. Para evitar isso, implementamos um mecanismo bastante simples, já que o Electron não dá suporte
+			a esse tipo de necessidade: sempre que a aplicação é iniciada, ela cria um arquivo xapiripe.lock~ e o bloqueia para acesso
+			exclusivo. Se isto não for possível é porque já existe uma instância da aplicação em execução. Neste caso, a nova instância
+			sai silenciosamente sem lançar o serviço Hekura. Para detalhes da implementação, consule a API <a href="lock/1.0.0/index.html"
+			target="_blank">Lock</a>.
+			</p>
 		</div>
 	</div>
 	

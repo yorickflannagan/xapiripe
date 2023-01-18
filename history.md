@@ -21,3 +21,8 @@ Disponibilidade para uso na Intranet Caixa, no aplicativo CNS V2.
 - Inclusão da capacidade de personalizar o intervalo entre cada busca por nova versão (arquivo distribution.json);
 - Mudança no nome do instalador por conta de incapacidade do Squirrel.Windows incorporar o ícone da aplicação no instalador caso este tenha caracteres não alfanuméricos no seu nome;
 - Criação de links para o serviço na Área de Trabalho e no Menu Iniciar do usuário corrente.
+
+# Versão 0.9.4
+- Correção do erro ocasionado pela ausência do header *referer* na requisição (mensagem com *undefined* em lugar
+da origem da requisição);
+- Prevenção de lançamento de uma nova instância da aplicação;
