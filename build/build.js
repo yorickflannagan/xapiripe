@@ -106,6 +106,7 @@ function appInstaller(options) {
 			'^/build/',
 			'docs/',
 			'hamahiri/',
+			'lock/',
 			'pki/',
 			'signthing/',
 			'test/',
@@ -128,12 +129,12 @@ function appInstaller(options) {
 			FileDescription: signet.productDescription
 		}
 	}
-	const svcExcludeDirs = [ '.vscode', 'build', 'docs', 'hamahiri', 'pki', 'signthing', 'test', 'web-api' ];
+	const svcExcludeDirs = [ '.vscode', 'build', 'docs', 'hamahiri', 'lock', 'pki', 'signthing', 'test', 'web-api' ];
 	const packageFolder = path.join(buildFolder, 'installer');
 	const svcPackageOptions = {
 		appDirectory: path.join(buildFolder, 'Hekura-win32-x64'),
 		outputDirectory: packageFolder,
-		loadingGif: path.resolve(__dirname, './install-spinner.gif'),
+		loadingGif: path.resolve(__dirname, signet.loadingGif),
 		authors: signet.company,
 		exe: signet.productName.toLowerCase() + '.exe',
 		description: signet.productDescription,

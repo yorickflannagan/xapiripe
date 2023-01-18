@@ -1,0 +1,10 @@
+{
+  "productId": "org.crypthing.hekura",
+  "productName": "Hekura",
+  "productDescription": "Hekura REST service",
+  "company": "The Crypthing Initiative",
+  "distributorId": "org.crypthing",
+  "updateURL": "http://127.0.0.1:8090",
+  "interval": 900,
+  "loadingGif": "install-spinner.gif"
+}

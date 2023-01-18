@@ -34,7 +34,8 @@ const DISTRIBUTION_PROPERTIES = [
 	'company',
 	'distributorId',
 	'updateURL',
-	'interval'
+	'interval',
+	'loadingGif'
 ];
 const DISTRIBUTION_TEMPLATE = new Map()
 	.set('productId', 'string')
@@ -44,17 +45,19 @@ const DISTRIBUTION_TEMPLATE = new Map()
 	.set('distributorId', 'string')
 	.set('updateURL', 'string')
 	.set('interval', 'number')
+	.set('loadingGif', 'string')
 	.set('', 'object');
 
  /**
   * Identificação da distribuição do produto
-  * @property { String } productId identificador do produto
-  * @property { String } productName nome do produto
-  * @property { String } productDescription descrição do produto
-  * @property { String } company nome do fabricante
-  * @property { String } distributorId identificador do distribuidor
-  * @property { String } updateURL URL de atualização do produto,
-  * @property { Number } interval intervalo (em segundos) entre cada verificação de atualização
+  * @property { String } productId			identificador do produto
+  * @property { String } productName		nome do produto
+  * @property { String } productDescription	descrição do produto
+  * @property { String } company			nome do fabricante
+  * @property { String } distributorId		identificador do distribuidor
+  * @property { String } updateURL			URL de atualização do produto,
+  * @property { Number } interval			intervalo (em segundos) entre cada verificação de atualização
+  * @property { String } loadingGif			logo do distribuidor (para o instalador)
   */
  class Distribution {
 	 /**
@@ -68,6 +71,7 @@ const DISTRIBUTION_TEMPLATE = new Map()
 		 this.distributorId = '';
 		 this.updateURL = '';
 		 this.interval = 60 * 15;
+		 this.loadingGif = 'install-spinner.gif'
 	 }
  	 /**
 	  * Carrega a identificação da distribtuição a partir de um arquivo JSON, que deve existir
