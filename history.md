@@ -26,4 +26,5 @@ Disponibilidade para uso na Intranet Caixa, no aplicativo CNS V2.
 - Correção do erro ocasionado pela ausência do header *referer* na requisição (mensagem com *undefined* em lugar
 da origem da requisição);
 - Prevenção de lançamento de uma nova instância da aplicação;
+- Remoção de / acrescentada ao final de um identificador de origem na tela de Origens Confiáveis, que causava o não reconhecimento da origem;
 - Inclusão de capacidade de personalização da animação do instalador.

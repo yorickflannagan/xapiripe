@@ -164,7 +164,7 @@ window.addEventListener('DOMContentLoaded', () => {
 		if (!optWindowOpen)
 		btnAddTrusted.addEventListener('click', () => {
 			let pattern = /^(http|https):\/\/(([a-zA-Z0-9$\-_.+!*'(),;:&=]|%[0-9a-fA-F]{2})+@)?(((25[0-5]|2[0-4][0-9]|[0-1][0-9][0-9]|[1-9][0-9]|[0-9])(\.(25[0-5]|2[0-4][0-9]|[0-1][0-9][0-9]|[1-9][0-9]|[0-9])){3})|localhost|([a-zA-Z0-9]+\.)+([a-zA-Z]{2,}))(:[0-9]+)?(\/(([a-zA-Z0-9$\-_.+!*'(),;:@&=]|%[0-9a-fA-F]{2})*(\/([a-zA-Z0-9$\-_.+!*'(),;:@&=]|%[0-9a-fA-F]{2})*)*)?(\?([a-zA-Z0-9$\-_.+!*'(),;:@&=\/?]|%[0-9a-fA-F]{2})*)?(\#([a-zA-Z0-9$\-_.+!*'(),;:@&=\/?]|%[0-9a-fA-F]{2})*)?)?$/;
-			let uri = inputTrusted.value;
+			let uri = inputTrusted.value.endsWith('/') ? inputTrusted.value.substring(0, inputTrusted.value.length - 1) : inputTrusted.value;
 			if (!uri.match(pattern)) {
 				ipcRenderer.sendSync('show-message', {
 					message: 'O valor informado não é uma URL válida',
