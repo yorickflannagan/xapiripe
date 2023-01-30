@@ -77,3 +77,7 @@ V	280117134726Z		4B	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End U
 V	280117134733Z		4C	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 32
 V	280117134747Z		4D	unknown	/CN=User CN to legacy CryptoAPI 33
 V	280117134759Z		4E	unknown	/CN=User CN to CNG API 34
+V	280129193136Z		4F	unknown	/CN=USER NAME bb1104b7-971a-4dbe-b93d-dec759694084
+V	280129193256Z		50	unknown	/CN=USER NAME 4ad93e91-a121-45a7-8b79-fe175fee5499
+V	280129193438Z		51	unknown	/CN=USER NAME 78828892-bb6a-4daa-a0e1-8ae83deebe80
+V	280129193739Z		52	unknown	/CN=USER NAME f4e71835-f708-48e9-a211-eb458cbc0b4f

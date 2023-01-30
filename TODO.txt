@@ -1,0 +1,24 @@
+Plano de implementação
+====================
+	Versão 0.9.4
+	1.	Correção do erro ocasionado pela ausência do header *referer* na requisição (mensagem com *undefined* em lugar
+da origem da requisição): PRONTO
+	2.	Prevenção de lançamento de uma nova instância da aplicação: PRONTO
+	3.	Remoção de / acrescentada ao final de um identificador de origem na tela de Origens Confiáveis, que causava o não reconhecimento da origem: PRONTO
+	4.	Inclusão de capacidade de personalização da animação do instalador: PRONTO
+	5.	Apontamentos do gestor:
+	5.1	Alterar mensagem para reinício após alteração da configuração: OK
+	5.2	Alterar mensagem de alerta na assinatura para igualá-la à da Kriptonita OK
+	5.3	Alterar mensagem de alerta da operação de enumeração de certificados digitais OK
+	5.4	Incluir nome do aplicativo na tela do instalador: PRONTO
+	6.	Inclusão das URLs de atualização do aplicativo:
+	6.1	PRD: https://www.caixa.gov.br/Downloads/FGTS-token-conectividade
+	6.2	TQS: https://tqs.intra.corerj.caixa:8705/criptocns
+	6.3	DES: https://des.intra.corerj.caixa:8618/criptocns
+
+	Backlog
+	1.	Alterações na configuração deverão ser assumidas sem reinício da aplicação
+	2.	Na configuração do aplicativo incluir aba para o usuário "ressuscitar" os alertas marcados para ignorar
+	3. 	Incluir URL do Conectividade como confiável? https://conectividadesocialv2.caixa
+	3.	Incluir suporte a XAdES
+		

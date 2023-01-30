@@ -47,8 +47,7 @@ process.on('message', async (message) => {
 });
 
 function approvalCallback(operationId, referer, value) {
-
-	// TODO:
+	// TODO: Implement a callback to Signthing
 	return true;
 }
 

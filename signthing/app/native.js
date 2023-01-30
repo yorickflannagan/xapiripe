@@ -3,7 +3,6 @@
  */
 const { SignerIdentifier } = require('./module');
 
-// TODO: Revisar a API exposta por conta do modelo Aroari
 module.exports.XPEBasicSign = () => {
 	return	'-----BEGIN PKCS7-----\n' +
 			'Fake PKCS #7s\n' +

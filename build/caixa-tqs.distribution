@@ -4,7 +4,7 @@
 	"productDescription": "CriptoCNS REST service",
 	"company": "The Crypthing Initiative",
 	"distributorId": "br.gov.caixa",
-	"updateURL": "https://des.intra.corerj.caixa:8618/criptocns",
+	"updateURL": "https://tqs.intra.corerj.caixa:8705/criptocns",
 	"interval": 900,
 	"loadingGif": "cripto-cns.gif"
 }

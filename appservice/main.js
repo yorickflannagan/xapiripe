@@ -48,7 +48,7 @@ const APP_UPDATE = 'Atualização do aplicativo';
 const APP_EXIT = 'Finalização do aplicativo';
 const APP_FAILURE = 'Falha no Serviço criptográfico';
 const UNKNOWN_PROPERTY = 'Valor da propriedade operationId do objeto de mensagem não conhecido';
-const ASK_MESSAGE = 'Você recebeu uma solicitação para %s do serviço web residente em %s. Deseja prosseguir?';
+const ASK_MESSAGE = 'Atenção! O aplicativo no endereço %s enviou %s. Você concorda em realizar essa operação?';
 const ASK_FAILURE = 'Ocorreu o seguinte erro ao solicitar a aprovação do usuário: %s';
 const CHECK_LOG = 'Erro em processo interno. Consulte o log do aplicativo';
 const IPC_FAILURE = 'Erro desconhecido na comunicação interna do aplicativo';
@@ -133,12 +133,12 @@ class RenderParams {
  */
 const OPERATIONS = [ 'enumerateDevices', 'generateCSR', 'installCertificates', 'enumerateCertificates', 'sign', 'verify' ];
 const ACTIONS = [
-	'enumerar dispositivos criptográficos presentes',
-	'assinar requisição de certificado digital',
-	'instalar certificado assinado',
-	'enumerar certificados de assinatura instalados',
-	'assinar o documento a seguir',
-	'verificar documento assinado'
+	'solicitação para enumerar dispositivos criptográficos presentes',
+	'solicitação para assinar requisição de certificado digital',
+	'solicitação para instalar certificado assinado',
+	'solicitação para enumerar certificados de assinatura instalados',
+	'o documento a seguir para ser assinado',
+	'o documento a seguir para ser verificado'
 ];
 function askUser(message) {
 	return new Promise((resolve, reject) => {
@@ -146,7 +146,7 @@ function askUser(message) {
 		if (idx < 0) return reject(new Error(UNKNOWN_PROPERTY));
 		if (config.everBeenDisturbed(message.referer, message.operationId)) return resolve(true);
 
-		let msg = sprintf(ASK_MESSAGE, ACTIONS[idx], message.referer);
+		let msg = sprintf(ASK_MESSAGE, message.referer, ACTIONS[idx]);
 		let question = new UserQuestion(message, msg);
 		params.set(question.msgId, new RenderParams(new DelayedPromise(resolve, reject), question));
 		let width = message.value ? 800 : 600;

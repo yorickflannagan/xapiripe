@@ -266,7 +266,7 @@ window.addEventListener('DOMContentLoaded', () => {
 				let restart = cfg.app.restartOnChange;
 				if (cfg.app.askToRestart) {
 					let answer = ipcRenderer.sendSync('ask-dialog', {
-						message: 'Para que as alterações tenha efeito, o serviço precisa reiniciar. Deseja fazer isso agora?',
+						message: 'Para que as alterações tenham efeito, o serviço do criptoCNS precisará ser reiniciado. Deseja fazer isso agora?',
 						title: 'Salvar opções'
 					});
 					cfg.app.askToRestart = !answer.checkboxChecked;
