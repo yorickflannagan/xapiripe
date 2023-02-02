@@ -117,7 +117,8 @@ function appInstaller(options) {
 			'LEIA-ME.MD',
 			'package-lock.json',
 			'package-old.json',
-			'.*log'
+			'.*log',
+			'TODO.txt'
 		],
 		name: signet.productName,
 		out: buildFolder,

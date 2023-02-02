@@ -18,7 +18,7 @@
 		
 		"hamahiri-build": "cd hamahiri & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
 		"lock-build": "cd lock & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
-		"service-build": "node ./build/build.js --build=service --arch=x64 --distribution=./build/caixa.distribution",
+		"service-build": "node ./build/build.js --build=service --arch=x64 --distribution=./build/caixa-prd.distribution",
 		"service-dev-build": "node ./build/build.js --build=service --arch=x64 --distribution=./build/caixa.distribution --installer=false",
 		"api-build": "webpack --config ./build/webpack.config.js",
 		"api-dev-build": "webpack --config ./build/webpack.config.js --env development & COPY build\\output\\xapiripe.js test",
