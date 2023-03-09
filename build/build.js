@@ -96,7 +96,7 @@ function appInstaller(options) {
 		'node-addon-api': '^4.3.0'
 	}
 	const svcBuildOptions = {
-		appCopyright: 'Copyleft (C) 2020-2022 The Crypthing Initiative. All rights reversed.',
+		appCopyright: 'Copyleft (C) 2020-2023 The Crypthing Initiative. All rights reversed.',
 		arch: '',
 		dir: project,
 		executableName: signet.productName.toLowerCase(),

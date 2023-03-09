@@ -1059,7 +1059,7 @@ void enumCerts(const Napi::Env& env, std::vector<Certificate>& out)
 		if
 		(
 			!CertVerifyTimeValidity(NULL, hCert->pCertInfo) &&
-			CryptAcquireCertificatePrivateKey(hCert, CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG, NULL, &hKey, &dwKeySpec, &mustFree)
+			CryptAcquireCertificatePrivateKey(hCert, CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG, NULL, &hKey, &dwKeySpec, &mustFree)
 		)
 		{
 			if (mustFree)
@@ -1129,7 +1129,7 @@ Napi::Value sign(const Napi::Env env, const BYTE* pbEncoded, const DWORD cbEncod
 	HCRYPTPROV_OR_NCRYPT_KEY_HANDLE hKey;
 	DWORD dwKeySpec;
 	BOOL mustFree;
-	if (!CryptAcquireCertificatePrivateKey(hCert, CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG, NULL, &hKey, &dwKeySpec, &mustFree))
+	if (!CryptAcquireCertificatePrivateKey(hCert, CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG, NULL, &hKey, &dwKeySpec, &mustFree))
 	{
 		THROW_JS_ERROR(env, "Could not acquire key from certificate context", "sign", HH_ACQUIRE_KEY_ERRROR, GetLastError());
 		CertFreeCertificateContext(hCert);

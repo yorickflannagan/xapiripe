@@ -29,4 +29,8 @@ da origem da requisição);
 - Remoção de / acrescentada ao final de um identificador de origem na tela de Origens Confiáveis, que causava o não reconhecimento da origem;
 - Inclusão de capacidade de personalização da animação do instalador;
 - Alterações solicitadas pelo gestor;
-- Inclusão das URL de atualização.
+- Inclusão das URL de atualiCRYPT_ACQUIRE_COMPARE_KEY_FLAGzação.
+
+# Versão 1.0.1
+- Exclusão do flag CRYPT_ACQUIRE_COMPARE_KEY_FLAG nas buscas pela chave privada para assegurar compatibilidade com o provider BirdID.
+-  Change to ensure compatibility with the BirdID provider: flag CRYPT_ACQUIRE_COMPARE_KEY_FLAG exclusion.
