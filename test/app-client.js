@@ -58,6 +58,7 @@ function sprintf() {
 	return output;
 }
 
+/* globals performance: true */
 function generateUUID() { // Public Domain/MIT
     var d = new Date().getTime();//Timestamp
     var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
@@ -242,12 +243,12 @@ function zipBasicTest() {
 								}
 								else {
 									txtOutput.value += ZIP_BASIC_NOT_MATCH;
-									txtResult.value = '1:' + reason.reason;
+									txtResult.value = '1';
 								}
 							})
 							.catch((reason) => {
 								txtOutput.value += sprintf(UNSUCCESSFUL_TEST, reason.toString());
-								txtResult.value = '1:' + reason.reason;
+								txtResult.value = '1';
 							});
 						})
 						.catch((reason) => {
@@ -278,7 +279,7 @@ function zipBasicTest() {
 }
 
 function matchDNTest() {
-	const from = 'C = FR, O = INRIA, CN = Christian Huitema'
+	const from = 'C = FR, O = INRIA, CN = Christian Huitema';
 	let to = [
 		'CN=Christian Huitema, O=INRIA, C=FR', 
 		'CN = Christian Huitema, O = INRIA, C = FR',
@@ -345,6 +346,7 @@ window.addEventListener('load', () => {
 	});
 
 	txtOutput.value = GET_API_TEST;
+	/* globals xabo: true */
 	xabo.queryInterface({ compatibilityMode: true }).then((api) => {
 		success++;
 		txtOutput.value += sprintf(GET_API_SUCCESS, api.signet);

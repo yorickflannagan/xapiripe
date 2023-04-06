@@ -32,6 +32,58 @@ const yargs = require('yargs');
 const { Distribution, uriPattern } = require('../components/options');
 
 
+const TARGET_SERVICE = 0;
+const TARGET_APP = 1;
+const BUILD_PACKAGE = 1;
+const BUILD_INSTALLER = 2;
+const BUILD_ALL = 3;
+function getCmdLine() {
+	const argv = yargs(process.argv).argv;
+	let distFile = path.resolve(argv.distribution);
+	let ret = {
+		install: path.basename(distFile, '.distribution'),
+		target: TARGET_SERVICE,
+		signet: null,
+		arch: 'x64',
+		build: BUILD_ALL,
+		verbose: false
+	};
+	switch (argv.target) {
+	case 'service':
+		break;
+	case 'app':
+		ret.target = TARGET_APP;
+		throw new Error('--target=app not implemented yet');
+	default:
+		throw new Error('Invalid --target argument');
+	}
+	try { ret.signet = Distribution.load(distFile); }
+	catch (e) { throw new Error('Argument --distribution must point to a valid Distribution JSON file: ' + e.toString()); }
+	if (argv.arch === 'ia32') ret.arch = 'ia32';
+	switch(argv.build) {
+	case 'package':
+		ret.build = BUILD_PACKAGE;
+		break;
+	case 'installer':
+		ret.build = BUILD_INSTALLER;
+		break;
+	default:
+	}
+	if (argv.verbose) {
+		ret.verbose = true;
+		console.log(
+			'Build arguments:'
+			.concat('\n--target: ').concat(ret.target)
+			.concat('\n--distribution: \n')
+			.concat(JSON.stringify(ret.signet, null, 2))
+			.concat('\n--arch: ').concat(ret.arch)
+			.concat('\n--build: ').concat(ret.build)
+			.concat('\n--verbose: ').concat(ret.verbose)		
+		);
+	}
+	return ret;
+}
+
 function getVersion(jsfile) {
 	let src = fs.readFileSync(jsfile, { encoding: 'utf-8' });
 	let lines = src.split(/\r?\n/);
@@ -42,6 +94,130 @@ function getVersion(jsfile) {
 		if (idx > -1)  return line.substring(idx + 8).trim();
 	}
 	throw new Error('File does not contains a version reference');
+}
+
+function getServiceOptions(args) {
+	const project = path.dirname(__dirname);
+	const svcIconFile = path.join(project, 'appservice', 'res', 'signature-32x32.ico');
+	const buildFolder = path.resolve(__dirname, 'output');
+	const entryPoint = path.resolve('./appservice/main.js');
+	const svcDependencies = {
+		'alert': '^5.1.1',
+		'asn1js': '^2.3.2',
+		'node-addon-api': '^4.3.0'
+	};
+	const svcBuildOptions = {
+		appCopyright: 'Copyleft (C) 2020-2023 The Crypthing Initiative. All rights reversed.',
+		arch: args.arch,
+		dir: project,
+		executableName: args.signet.productName.toLowerCase(),
+		icon: svcIconFile,
+		ignore: [
+			'.vscode/',
+			'^/build/',
+			'docs/',
+			'hamahiri/',
+			'lock/',
+			'pki/',
+			'signthing/',
+			'test/',
+			'web-api/',
+			'.gitignore',
+			'.jshintrc',
+			'history.md',
+			'LEIA-ME.MD',
+			'package-lock.json',
+			'package-old.json',
+			'.*log',
+			'TODO.txt'
+		],
+		name: args.signet.productName,
+		out: buildFolder,
+		overwrite: true,
+		platform: 'win32',
+		win32metadata: {
+			CompanyName: args.signet.company,
+			ProductName:  args.signet.productName,
+			FileDescription: args.signet.productDescription
+		}
+	};
+	const svcExcludeDirs = [ '.vscode', 'build', 'docs', 'hamahiri', 'lock', 'pki', 'signthing', 'test', 'web-api' ];
+	const packageFolder = path.join(buildFolder, 'installer_' + args.install + '-' + getVersion(entryPoint));
+	const svcPackageOptions = {
+		appDirectory: path.join(buildFolder, args.signet.productName + '-win32-' + args.arch),
+		outputDirectory: packageFolder,
+		loadingGif: path.resolve(__dirname, args.signet.loadingGif),
+		authors: args.signet.company,
+		exe: args.signet.productName.toLowerCase() + '.exe',
+		description: args.signet.productDescription,
+		title: args.signet.productName,
+		name : args.signet.productName,
+		iconUrl: svcIconFile,
+		setupIcon: svcIconFile,
+		setupExe: 'install' + args.signet.productName.toLowerCase() + '.exe',
+		noMsi: true
+	};
+	let ret = {
+		home: project,
+		source: path.join(project, 'appservice'),
+		entryPoint: entryPoint,
+		buildOptions: svcBuildOptions,
+		excludeDirs: svcExcludeDirs,
+		packageOptions: svcPackageOptions,
+		dependencies: svcDependencies
+	};
+	if (args.verbose) {
+		console.log(
+			'Service options:\n'
+			.concat('home: ').concat(ret.home).concat('\n')
+			.concat('source: ').concat(ret.source).concat('\n')
+			.concat('entryPoint: ').concat(ret.entryPoint).concat('\n')
+			.concat('buildOptions: ').concat(JSON.stringify(ret.buildOptions, null, 2)).concat('\n')
+			.concat('excludeDirs: ').concat(ret.excludeDirs).concat('\n')
+			.concat('packageOptions: ').concat(JSON.stringify(ret.packageOptions, null, 2)).concat('\n')
+			.concat('dependencies: ').concat(JSON.stringify(ret.dependencies, null, 2))
+		);
+	}
+	return ret;
+}
+
+function getAppOptions(args) {
+	// TODO:
+	return null;
+}
+
+function generateNPMDescriptor(args, opts) {
+	let packageJSON = path.join(opts.home, 'package.json');
+	let backup = path.join(opts.home, 'package-old.json');
+	let version = getVersion(opts.entryPoint);
+	let pack;
+	try { pack = JSON.parse(fs.readFileSync(packageJSON)); }
+	catch(e) { throw new Error('Could not load package.json file: ' + e.toString()); }
+	pack.name = args.signet.productName.toLowerCase();
+	pack.version = version;
+	pack.main = opts.entryPoint;
+	pack.description = args.signet.productDescription;
+	pack.dependencies = opts.dependencies;
+	pack.scripts = (function () { return; })();
+	pack.gypfile = (function () { return; })();
+	try { fs.renameSync(packageJSON, backup); }
+	catch(e) { throw new Error('Coult not create a package.json backup: ' + e.toString()); }
+	try { fs.writeFileSync(packageJSON, JSON.stringify(pack)); }
+	catch (e) { throw new Error('Coult not create proper package.json: ' + e.toString()); }
+	if (args.verbose) console.log('The following package.json was generated: \n'.concat(JSON.stringify(pack, null, 2)));
+	return { original: packageJSON, backup: backup };
+}
+
+function restoreNPMDescriptor(descriptor) {
+	fs.unlinkSync(descriptor.original);
+	fs.renameSync(descriptor.backup, descriptor.original);
+}
+
+function generateDistributionFile(args, target) {
+	let distFile = path.join(target, 'distribution.json');
+	try { fs.writeFileSync(distFile, JSON.stringify(args.signet)); }
+	catch(e) { throw new Error('Coult not generate signet file: ' + e.toString()); }
+	if (args.verbose) console.log('The following distribution file was generated: \n'.concat(JSON.stringify(args.signet, null, 2)));
 }
 
 function appPackage(options, excludeDirs) {
@@ -72,155 +248,52 @@ function appInstaller(options) {
 
 /**
  * Linha de comando: node build.js [options], onde:
- * 	--build: string definindo a aplicação a ser construída, a saber: service | app. Obrigatório
+ *  --target: string definindo a aplicação a ser construída, a saber: service | app. Obrigatório
+ *  --distribution: caminho para o arquivo de configuração da distribuição. Obrigatório
  * 	--arch: string indicando a arquitetura de CPU alvo, a saber: x64 | ia32. Opcional. Default: x64
- *  --distribution: caminho completo para o arquivo de configuração da distribuição. Obrigatório
- * 	--installer: boolean indicando se o instalador deve ser incluído no build. Opcional. Default: true
+ *  --build: string definindo o tipo de construção, a saber: package | installer | all. Opcional. Default: all
+ *  --verbose: indicador para a exibição em tela de todas as configurações utilizadas. Opcional
  */
 (function () {
-	const argv = yargs(process.argv).argv;
-	let target = argv.build;
-	if (!target) throw new Error('Missing --build argument');
-	let arch = argv.arch ? argv.arch : 'x64';
-	let signet;
-	try { signet = Distribution.load(path.resolve(argv.distribution)); }
-	catch (e) { throw new Error('Argument --distribution must point to a valid Distribution JSON file: ' + e.toString()); }
-	let buildInstaller = argv.installer === 'false' ? false : true;
 
-	const project = path.dirname(__dirname);
-	const svcIconFile = path.join(project, 'appservice', 'res', 'signature-32x32.ico');
-	const buildFolder = path.resolve(__dirname, 'output');
-	const svcDependencies = {
-		'alert': '^5.1.1',
-		'asn1js': '^2.3.2',
-		'node-addon-api': '^4.3.0'
-	}
-	const svcBuildOptions = {
-		appCopyright: 'Copyleft (C) 2020-2023 The Crypthing Initiative. All rights reversed.',
-		arch: '',
-		dir: project,
-		executableName: signet.productName.toLowerCase(),
-		icon: svcIconFile,
-		ignore: [
-			'.vscode/',
-			'^/build/',
-			'docs/',
-			'hamahiri/',
-			'lock/',
-			'pki/',
-			'signthing/',
-			'test/',
-			'web-api/',
-			'.gitignore',
-			'.jshintrc',
-			'history.md',
-			'LEIA-ME.MD',
-			'package-lock.json',
-			'package-old.json',
-			'.*log',
-			'TODO.txt'
-		],
-		name: signet.productName,
-		out: buildFolder,
-		overwrite: true,
-		platform: 'win32',
-		win32metadata: {
-			CompanyName: signet.company,
-			ProductName:  signet.productName,
-			FileDescription: signet.productDescription
+	let args = getCmdLine();
+	let opts = args.target === TARGET_SERVICE ? getServiceOptions(args) : getAppOptions(args);
+	let backup = generateNPMDescriptor(args, opts);
+
+	if ((args.build & BUILD_PACKAGE) === BUILD_PACKAGE) {
+		try { generateDistributionFile(args, opts.source); }
+		catch (e) { 
+			restoreNPMDescriptor(backup); 
+			throw e;
 		}
+		console.log('Generating standalone package...');
+		appPackage(opts.buildOptions, opts.excludeDirs)
+		.then((appPath) => {
+			console.log('Package built to path: ' + appPath);
+			restoreNPMDescriptor(backup);
+			if (args.build === BUILD_ALL) {
+				console.log('Generating install package. It may take a long, long, long time. Please, be patient...');
+				appInstaller(opts.packageOptions)
+					.then(() => { console.log('Application installer has been built... at last!');})
+					.catch((reason) => { console.error(reason); });
+			}
+		}).catch((reason) => {
+			console.log(reason);
+			restoreNPMDescriptor(backup);
+		});
 	}
-	const svcExcludeDirs = [ '.vscode', 'build', 'docs', 'hamahiri', 'lock', 'pki', 'signthing', 'test', 'web-api' ];
-	const packageFolder = path.join(buildFolder, 'installer');
-	const svcPackageOptions = {
-		appDirectory: path.join(buildFolder, 'Hekura-win32-x64'),
-		outputDirectory: packageFolder,
-		loadingGif: path.resolve(__dirname, signet.loadingGif),
-		authors: signet.company,
-		exe: signet.productName.toLowerCase() + '.exe',
-		description: signet.productDescription,
-		title: signet.productName,
-		name : signet.productName,
-		iconUrl: svcIconFile,
-		setupIcon: svcIconFile,
-		setupExe: 'install' + signet.productName.toLowerCase() + '.exe',
-		noMsi: true
-	}
 
-	let source;
-	let entryPoint;
-	let buildOptions;
-	let excludeDirs;
-	let packageOptions;
-	let dependencies;
-	switch (target) {
-	case 'service':
-		source = path.join(project, 'appservice');
-		entryPoint = './appservice/main.js';
-		buildOptions = svcBuildOptions;
-		excludeDirs = svcExcludeDirs;
-		packageOptions = svcPackageOptions;
-		dependencies = svcDependencies;
-		break;
-	case 'app':
-		throw new Error('--build=app not implemented yet');
-		break;
-	default: throw new Error('Invalid --build argument');
-	}
-	buildOptions.arch = arch;
-	let msg = 'Build arguments:'
-		.concat('\n--build: ').concat(target)
-		.concat('\n--arch: ').concat(arch)
-		.concat('\n--distribution: \n')
-		.concat(JSON.stringify(signet, null, 2))
-		.concat('\n--installer: ').concat(buildInstaller);
-	console.log(msg);
-
-	let distFile = path.join(source, 'distribution.json');
-	let packageJSON = path.join(project, 'package.json');
-	let backup = path.join(project, 'package-old.json');
-	let version = getVersion(entryPoint);
-	let pack;
-	try { pack = JSON.parse(fs.readFileSync(packageJSON)); }
-	catch(e) { throw new Error('Could not load package.json file: ' + e.toString()); }
-	pack.name = signet.productName.toLowerCase();
-	pack.version = version;
-	pack.main = entryPoint;
-	pack.dependencies = dependencies;
-	pack.scripts = (function () { return; })();
-	pack.gypfile = (function () { return; })();
-
-	try { fs.writeFileSync(distFile, JSON.stringify(signet)); }
-	catch(e) { throw new Error('Coult not generate signet file: ' + e.toString()); }
-	try { fs.renameSync(packageJSON, backup); }
-	catch(e) { throw new Error('Coult not create a package.json backup: ' + e.toString()); }
-	try { fs.writeFileSync(packageJSON, JSON.stringify(pack)); }
-	catch (e) { throw new Error('Coult not create proper package.json: ' + e.toString()); }
-
-	msg = 'Standalone package will be built with the following definitions:'
-		.concat('\nversion: ').concat(pack.version)
-		.concat('\ndirectories to exclude: ').concat(JSON.stringify(excludeDirs, null, 2))
-		.concat('\nbuild options: ').concat(JSON.stringify(buildOptions, null, 2));
-	console.log(msg);
-	appPackage(buildOptions, excludeDirs).then((appPath) => {
-		console.log('Package built to path: ' + appPath);
-		fs.unlinkSync(packageJSON);
-		fs.renameSync(backup, packageJSON);
-
-		if (buildInstaller) {
-			packageOptions.appDirectory = appPath;
-			msg = 'Application installer will be generated with the following definitions:\n'
-				.concat(JSON.stringify(packageOptions, null, 2))
-				.concat('\nIt may take a long, long, long time. Please, be patient...');
-			console.log(msg);
-			appInstaller(packageOptions)
+	if ((args.build & BUILD_INSTALLER) === BUILD_INSTALLER && args.build !== BUILD_ALL) {
+		try { generateDistributionFile(args, path.join(opts.packageOptions.appDirectory, 'resources', 'app', 'appservice')); }
+		catch (e) { 
+			restoreNPMDescriptor(backup); 
+			throw e;
+		}
+		restoreNPMDescriptor(backup);
+		console.log('Generating install package. It may take a long, long, long time. Please, be patient...');
+		appInstaller(opts.packageOptions)
 			.then(() => { console.log('Application installer has been built... at last!');})
 			.catch((reason) => { console.error(reason); });
-		}
-	}).catch((reason) => {
-		console.error(reason);
-		fs.unlinkSync(packageJSON);
-		fs.renameSync(backup, packageJSON);
-	});
+	}
 
 }());

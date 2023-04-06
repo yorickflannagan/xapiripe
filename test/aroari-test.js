@@ -59,7 +59,7 @@ class EnrollTest
 		this.tests++;
 		return csr;
 	}
-	#signRequest(csr, fName) {
+	signRequest(csr, fName) {
 		let request = path.resolve(__dirname, fName);
 		fs.writeFileSync(request, Buffer.from(csr));
 		let openSSL = new OpenSSLWrapper();
@@ -73,7 +73,7 @@ class EnrollTest
 	}
 	installChainTestCase(csr, fName) {
 		LOG.write('Testing install signed certificate chain...');
-		let pkcs7 = this.#signRequest(csr, fName);
+		let pkcs7 = this.signRequest(csr, fName);
 		let b64 = pkcs7.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
 		let derPKCS7 = Aroari.Base64.atob(b64);
 		assert(this.component.installCertificates, 'The expected Enroll.installCertificates method is undefined');
@@ -114,7 +114,7 @@ class SignTest
 		this.tests++;
 		return certs;		
 	}
-	#selectCert(certs, expression) {
+	selectCert(certs, expression) {
 		let i = 0;
 		while (i < certs.length)
 		{
@@ -124,7 +124,7 @@ class SignTest
 		return null;
 	}
 	basicSignTestCase(certs, expression) {
-		let cert = this.#selectCert(certs, expression);
+		let cert = this.selectCert(certs, expression);
 		assert(cert, 'Certificate select expression does not return a value. Cannot execute test');
 		LOG.write('Testing basic CAdES signature by certificate ');
 		LOG.write(cert.subject);
@@ -142,7 +142,7 @@ class SignTest
 		return pkcs7;
 	}
 	signCommitmentTypeTestCase(certs, expression) {
-		let cert = this.#selectCert(certs, expression);
+		let cert = this.selectCert(certs, expression);
 		assert(cert, 'Certificate select expression does not return a value. Cannot execute test');
 		LOG.write('Testing CAdES signature with CommitmentType by certificate ');
 		LOG.write(cert.subject);
@@ -206,7 +206,7 @@ class SignTest
 		return sid;
 	}
 	getEncapsulatedContentTestCase(cms) {
-		LOG.write('Testing get encapsulated content info...')
+		LOG.write('Testing get encapsulated content info...');
 		assert(cms.getSignedContent, 'The expected CMSSignedData.getSignedContent() method is undefined');
 		let eContent = cms.getSignedContent();
 		assert(eContent, 'Returned value is undefined');
@@ -218,7 +218,7 @@ class SignTest
 		return value;
 	}
 	getSigningTimeTestCase(cms) {
-		LOG.write('Testing get signing time signed attribute...')
+		LOG.write('Testing get signing time signed attribute...');
 		assert(cms.getSigningTime, 'The expected CMSSignedData.getSigningTime() method is undefined');
 		let signingTime = cms.getSigningTime();
 		assert(signingTime, 'Signed attribute must be present');
@@ -233,7 +233,7 @@ function testAroari() {
 	// Initialization
 	if (argv.pki) PKIDir = path.resolve(argv.pki);
 	let indexFile = path.join(PKIDir, 'CNindex.txt');
-	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
+	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile);
 	else fs.writeFileSync(indexFile, indexCN.toString());
 	new OpenSSLWrapper();
 
@@ -241,14 +241,16 @@ function testAroari() {
 	console.log('Enrollment test case battery');
 	let enrollTest = new EnrollTest();
 	let devices = enrollTest.enumDevicesTestCase();
-	console.log('Installed devices:')
+	console.log('Installed devices:');
 	console.log(devices);
-	let capiCN = 'User CN to legacy CryptoAPI ' + ++indexCN;
+	++indexCN;
+	let capiCN = 'User CN to legacy CryptoAPI ' + indexCN;
 	let capiCSR = enrollTest.generateCSRTestCase(LEGACY_PROVIDER, capiCN);
 	console.log('Request generated:');
 	console.log(capiCSR);
 	enrollTest.installChainTestCase(capiCSR, 'capi-request.req');
-	let cngCN = 'User CN to CNG API ' + ++indexCN;
+	++indexCN;
+	let cngCN = 'User CN to CNG API ' + indexCN;
 	let cngCSR = enrollTest.generateCSRTestCase(CNG_PROVIDER, cngCN);
 	console.log('Request generated:');
 	console.log(cngCSR);
@@ -324,7 +326,7 @@ function testAroari() {
 	let tests = enrollTest.tests;
 	tests += signTest.tests;
 	LOG.write(tests.toString());
-	LOG.write(' test cases performed.\n')
+	LOG.write(' test cases performed.\n');
 	fs.writeFileSync(indexFile, indexCN.toString());
 }
 

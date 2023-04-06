@@ -4,7 +4,7 @@
 	"productDescription": "CriptoCNS REST service",
 	"company": "The Crypthing Initiative",
 	"distributorId": "br.gov.caixa",
-	"updateURL": "https://www.caixa.gov.br/Downloads/FGTS-token-conectividade",
+	"updateURL": "https://conectividadesocialv2.caixa/criptocns",
 	"interval": 900,
 	"loadingGif": "cripto-cns.gif"
 }

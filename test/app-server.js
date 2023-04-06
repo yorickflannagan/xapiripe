@@ -64,7 +64,7 @@ const WRITE_ERROR = 'The following error has occurred while trying to write data
 			part++;
 			fname = resolve(folder, 'temp' + part.toString(16) + ext);
 		}
-		while (existsSync(fname))
+		while (existsSync(fname));
 		return fname;
 	}
 	function store(fname, data) {

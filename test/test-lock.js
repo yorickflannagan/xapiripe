@@ -1,4 +1,4 @@
-const Lock = require('../components/lock');
+const { Lock } = require('../components/lock');
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
@@ -12,7 +12,7 @@ assert(Lock, "The expected module is undefined");
 LOG.write(' done!\n');
 let tests = 1;
 console.log(__dirname);
-console.log(__filename)
+console.log(__filename);
 
 function testHappyPath() {
 	LOG.write('Testing happy path to current folder...');

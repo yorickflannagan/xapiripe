@@ -458,13 +458,13 @@ async function unit_test() {
 	try {
 		// Initialization
 		let indexFile = path.join(PKIDir, 'CNindex.txt');
-		if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
+		if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile);
 		else fs.writeFileSync(indexFile, indexCN.toString());
 		new OpenSSLWrapper();
 		let current = path.resolve(__dirname);
 		Wanhamou.Logger.logConfig({ path: current, level: Wanhamou.LogLevel.DEBUG });
 
-		console.log('Hekura test case battery')
+		console.log('Hekura test case battery');
 		let test = new TestService();
 		await test.startServerTestCase();
 		test.tests++;
@@ -567,7 +567,7 @@ async function unit_test() {
 		LOG.write(' done!\n');
 
 		LOG.write(test.tests.toString());
-		LOG.write(' test cases performed.\n')
+		LOG.write(' test cases performed.\n');
 		fs.unlinkSync(path.join(current, 'xapiripe-0.log'));
 	}
 	catch (e) {
@@ -578,7 +578,7 @@ async function unit_test() {
 }
 
 function testHekura() {
-	let runService = false
+	let runService = false;
 	if (argv.pki) {
 		PKIDir = path.resolve(argv.pki);
 		if (!fs.existsSync(PKIDir)) throw new Error('Argument pki must be an existing directory');
@@ -592,7 +592,7 @@ function testHekura() {
 		service.start();
 		console.log('Running Hekura service at http://127.0.0.1:9171');
 		console.log('Logging at debug level to ' + path.resolve(__dirname));
-		console.log('Hit CTRL-C to stop the server')
+		console.log('Hit CTRL-C to stop the server');
 	}
 	else unit_test();
 }

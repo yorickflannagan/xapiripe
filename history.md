@@ -33,4 +33,3 @@ da origem da requisição);
 
 # Versão 1.0.1
 - Exclusão do flag CRYPT_ACQUIRE_COMPARE_KEY_FLAG nas buscas pela chave privada para assegurar compatibilidade com o provider BirdID.
--  Change to ensure compatibility with the BirdID provider: flag CRYPT_ACQUIRE_COMPARE_KEY_FLAG exclusion.

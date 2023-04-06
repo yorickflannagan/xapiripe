@@ -94,7 +94,7 @@ class Base64
 		var charlen = base64.length;
 		var byteoff = 0;
 		var byteLength = Math.round(((charlen) / 4 * 3)+1);
-		var bytes = new Uint8Array(byteLength)
+		var bytes = new Uint8Array(byteLength);
 		var chunk = 0;
 		var i = 0;
 		var code;
@@ -135,9 +135,13 @@ class Base64
 			}
 			switch(stage)
 			{
+				/* falls through */
 				case content_1: throw new Error("A codificação recebida como base64 é inválida");
+				/* falls through */
 				case content_4:	bytes[byteoff + 2] = chunk &  255;
+				/* falls through */
 				case content_3:	bytes[byteoff + 1] = chunk >> 8;
+				/* falls through */
 				case content_2:	bytes[byteoff    ] = chunk >> 16;
 			}
 			byteoff += stage-1;
@@ -171,7 +175,7 @@ class EnrollTest
 		LOG.write(' done!\n');
 		this.tests++;
 	}
-	#genKeyPair(provider)
+	genKeyPair(provider)
 	{
 		assert(this.enroll.generateKeyPair, 'The expected Enroll.generateKeyPair() method is undefined');
 		let keyPair = this.enroll.generateKeyPair(provider, 2048);
@@ -198,7 +202,7 @@ class EnrollTest
 		assert(subjectPublicKey.valueBlock.valueHex.byteLength == 270, 'subjectPublicKey must have the proper size');
 		return keyPair;
 	}
-	#makeCertificationRequestInfo(rawPubKey, cn) {
+	makeCertificationRequestInfo(rawPubKey, cn) {
 		let ver = new asn1js.Integer({ value: 1 });
 		let name = new asn1js.Sequence({ value: [
 			new asn1js.Set({ value: [
@@ -245,7 +249,7 @@ class EnrollTest
 		});
 		return new asn1js.Sequence({ value: [ ver, name, pubKeyInfo, attrs ]});
 	}
-	#makeCertificationRequest(certificateRequestInfo, signed) {
+	makeCertificationRequest(certificateRequestInfo, signed) {
 		let request = new asn1js.Sequence({ value: [
 			certificateRequestInfo,
 			new asn1js.Sequence({ value: [
@@ -256,9 +260,9 @@ class EnrollTest
 		] });
 		return new Uint8Array(request.toBER(false));
 	}
-	#signRequest(keyPair, cn)
+	signRequest(keyPair, cn)
 	{
-		let certificateRequestInfo = this.#makeCertificationRequestInfo(keyPair.pubKey, cn);
+		let certificateRequestInfo = this.makeCertificationRequestInfo(keyPair.pubKey, cn);
 		let toBeSigned = Buffer.from(certificateRequestInfo.toBER(false));
 		let hash = crypto.createHash('sha256');
 		hash.update(toBeSigned);
@@ -266,9 +270,9 @@ class EnrollTest
 		let signed = this.enroll.signRequest(hash.digest(), Hamahiri.SignMechanism.CKM_SHA256_RSA_PKCS, keyPair.privKey);
 		assert(signed, 'Signature failure');
 		assert(signed instanceof Uint8Array, 'Data returned member must be a Uint8Array');
-		return this.#makeCertificationRequest(certificateRequestInfo, signed);
+		return this.makeCertificationRequest(certificateRequestInfo, signed);
 	}
-	#signCertificate(csr, fname) {
+	signCertificate(csr, fname) {
 		let pem = '-----BEGIN CERTIFICATE REQUEST-----\n' + Base64.btoa(csr) + '\n-----END CERTIFICATE REQUEST-----';
 		let request = path.resolve(__dirname, fname);
 		fs.writeFileSync(request, Buffer.from(pem));
@@ -283,9 +287,9 @@ class EnrollTest
 		fs.unlinkSync(p7b);
 		return ret;
 	}
-	#getCertificates(pkcs7) {
+	getCertificates(pkcs7) {
 		let contentInfo = asn1js.fromBER(pkcs7.buffer);
-		if (contentInfo.offset == -1) throw 'Invalid PKCS #7 format'
+		if (contentInfo.offset == -1) throw 'Invalid PKCS #7 format';
 		let content = contentInfo.result.valueBlock.value[1];
 		assert(content, 'Invalid PKCS #7 file: missing content');
 		let signedData = content.valueBlock.value[0];
@@ -317,7 +321,7 @@ class EnrollTest
 				j++;
 			}
 			if (!caCert) ret.signer = new Uint8Array(certificates[i].valueBeforeDecode);
-			i++
+			i++;
 		}
 		assert(ret.signer && ret.signer instanceof Uint8Array, 'Invalid certificates chain: missing signer certificate');
 		assert(ret.chain.length > 0, 'Invalid certificates chain: missing issuer certificate');
@@ -353,7 +357,7 @@ class EnrollTest
 		LOG.write('Testing RSA key pair generation with provider ');
 		LOG.write(provider);
 		LOG.write('...');
-		let keyPair = this.#genKeyPair(provider);
+		let keyPair = this.genKeyPair(provider);
 		this.tests++;
 		LOG.write(' done!\n');
 		return keyPair;
@@ -362,15 +366,15 @@ class EnrollTest
 		LOG.write('Testing signature of a certificate request to ');
 		LOG.write(cn);
 		LOG.write('...');
-		let csr = this.#signRequest(keyPair, cn);
+		let csr = this.signRequest(keyPair, cn);
 		this.tests++;
 		LOG.write(' done!\n');
 		return csr;
 	}
 	installCertTestCase(csr, requestFile) {
 		LOG.write('Testing install user certificate...');
-		let pkcs7 = this.#signCertificate(csr, requestFile);
-		let certs = this.#getCertificates(pkcs7);
+		let pkcs7 = this.signCertificate(csr, requestFile);
+		let certs = this.getCertificates(pkcs7);
 		assert(this.enroll.installCertificate, 'The expected Enroll.installCertificate() method is undefined');
 		let added = this.enroll.installCertificate(certs.signer);
 		let msg = added ? '  done!\n' :' certificate already installed\n';
@@ -450,7 +454,7 @@ class SignTest
 		}
 		return null;
 	}
-	#assertSign(cert) {
+	assertSign(cert) {
 		assert(this.sign.sign, 'The expected Sign.sign() method is undefined');
 		let hash = crypto.createHash('sha256');
 		hash.update('Transaction to sign');
@@ -461,20 +465,20 @@ class SignTest
 	}
 	signWithLegacyKeyTestCase(cert) {
 		LOG.write('Testing sign with legacy CryptoAPI key...');
-		let signature = this.#assertSign(cert);
+		let signature = this.assertSign(cert);
 		LOG.write(' done!\n');
 		this.tests++;
 		return signature;
 	}
 	signWithCNGKeyTestCase(cert) {
 		LOG.write('Testing sign with CNG key...');
-		let signature = this.#assertSign(cert);
+		let signature = this.assertSign(cert);
 		LOG.write(' done!\n');
 		this.tests++;
 		return signature;
 	}
 	getChainTestCase(cert) {
-		LOG.write('Testing get certificate chain...')
+		LOG.write('Testing get certificate chain...');
 		assert(this.sign.getCertificateChain, 'The expected Sign.getCertificateChain() method is undefined');
 		let chain = this.sign.getCertificateChain(cert.handle);
 		assert(chain, 'Failure on get certificate chain');
@@ -509,7 +513,7 @@ class SignTest
 function testHamahiri() {
 	if (argv.pki) PKIDir = path.resolve(argv.pki);
 	let indexFile = path.join(PKIDir, 'CNindex.txt');
-	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile)
+	if (fs.existsSync(indexFile)) indexCN = fs.readFileSync(indexFile);
 	else fs.writeFileSync(indexFile, indexCN.toString());
 
 	// Enroll tests
@@ -544,7 +548,7 @@ function testHamahiri() {
 	{
 		console.log('Selected signing certificate issued to ' + signCert.subject);
 		let signature = sign.signWithLegacyKeyTestCase(signCert);
-		if (!signature) console.log('Warning! Signature Uint8Array did not return!')
+		if (!signature) console.log('Warning! Signature Uint8Array did not return!');
 		chain = sign.getChainTestCase(signCert);
 	}
 	else console.log('Warning! Could not find a signing legacy certificate. Cannot complete test battery!');
@@ -555,7 +559,7 @@ function testHamahiri() {
 	{
 		console.log('Selected signing certificate issued to ' + signCert.subject);
 		let signature = sign.signWithCNGKeyTestCase(signCert);
-		if (!signature) console.log('Warning! Signature Uint8Array did not return!')
+		if (!signature) console.log('Warning! Signature Uint8Array did not return!');
 		chain = sign.getChainTestCase(signCert);
 	}
 	else console.log('Warning! Could not find a signing CNG certificate. Cannot complete test battery!');
@@ -565,7 +569,7 @@ function testHamahiri() {
 	LOG.write('Clean-up basic tests:\n');
 	enroll.deleteKeyTestCase(capiKeyPair.privKey);
 	enroll.deleteCertificateTestCase(capiCN, END_CA_NAME);
-	enroll.deleteKeyTestCase(cngKeyPair.privKey)
+	enroll.deleteKeyTestCase(cngKeyPair.privKey);
 	enroll.deleteCertificateTestCase(cngCN, END_CA_NAME);
 	enroll.deleteCertificateTestCase(END_CA_NAME, INTER_CA_NAME);
 	enroll.deleteCertificateTestCase(INTER_CA_NAME, ROOT_CA_NAME);
@@ -573,7 +577,7 @@ function testHamahiri() {
 
 	let tests = enroll.tests + sign.tests;
 	LOG.write(tests.toString());
-	LOG.write(' test cases performed.\n')
+	LOG.write(' test cases performed.\n');
 	fs.writeFileSync(indexFile, indexCN.toString());
 }  //testHamahiri();
 

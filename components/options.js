@@ -71,7 +71,7 @@ const DISTRIBUTION_TEMPLATE = new Map()
 		 this.distributorId = '';
 		 this.updateURL = '';
 		 this.interval = 60 * 15;
-		 this.loadingGif = 'install-spinner.gif'
+		 this.loadingGif = 'install-spinner.gif';
 	 }
  	 /**
 	  * Carrega a identificação da distribtuição a partir de um arquivo JSON, que deve existir
