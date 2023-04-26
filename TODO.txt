@@ -16,10 +16,21 @@ da origem da requisição): PRONTO
 	6.2	TQS: https://tqs.intra.corerj.caixa:8705/criptocns e https://tqs.inter.corerj.caixa:8618/criptocns
 	6.3	DES: https://des.intra.corerj.caixa:8618/criptocns e https://des.inter.corerj.caixa:8618/criptocns
 
+	Tag build-automation
+	Automatização do build com Grunt
+	Atualizar documentação com elenco dos scripts disponíveis em package.json
+
+	Versão 1.1.0
+	1.	Na instalação, incluir URLs confiáveis por default (https://conectividadesocialv2.caixa.gov.br)
+		Incluir campo no arquivo distribution.json
+		Na instalação/atualização, criar, caso não exista, arquivo C:\Users\[user name]\.criptocns\options.json default
+		Caso o arquivo exista, apenas adicionar as entradas default, se não estiverem declaradas
+		Impacto:
+			components/options.js
+			components/update.js
+
 	Backlog
 	1.	Alterações na configuração deverão ser assumidas sem reinício da aplicação
 	2.	Na configuração do aplicativo incluir aba para o usuário "ressuscitar" os alertas marcados para ignorar
-	3.  Incluir URL do Conectividade como confiável? https://conectividadesocialv2.caixa
 	3.	Incluir suporte a XAdES
-	4.  Automatizar build com Grunt
 		
