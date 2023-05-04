@@ -374,7 +374,7 @@ app.on('ready', () => {
 		return;
 	}
 
-	optionsFile = path.resolve(process.env.USERPROFILE, '.' + distribution.productName.toLowerCase(), 'options.json');
+	optionsFile = path.resolve(manager.appDir, 'options.json');
 	let launchError = null;
 	try { config = Config.load(optionsFile); }
 	catch (e) {

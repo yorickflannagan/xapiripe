@@ -22,12 +22,6 @@ da origem da requisição): PRONTO
 
 	Versão 1.1.0
 	1.	Na instalação, incluir URLs confiáveis por default (https://conectividadesocialv2.caixa.gov.br)
-		Incluir campo no arquivo distribution.json
-		Na instalação/atualização, criar, caso não exista, arquivo C:\Users\[user name]\.criptocns\options.json default
-		Caso o arquivo exista, apenas adicionar as entradas default, se não estiverem declaradas
-		Impacto:
-			components/options.js
-			components/update.js
 
 	Backlog
 	1.	Alterações na configuração deverão ser assumidas sem reinício da aplicação

@@ -15,8 +15,16 @@ function jsonValidator(json, props, template, strict) {
 	let properties = new Set(props);
 	JSON.parse(json, (key, value) => {
 		let tp = template.get(key);
+		let keyIsArray = !Number.isNaN(Number.parseInt(key));
 		if (typeof tp === 'undefined') {
-			if (key.match(/^-?\d+$/)) tp = 'object';
+			if (key.match(/^-?\d+$/)) {
+				if (keyIsArray) {
+					if (typeof value === 'string') tp = 'string';
+					else if (typeof value === 'number') tp = 'number';
+					else tp = 'object';
+				}
+				else tp = 'object';
+			}
 		}
 		if (typeof tp === 'undefined') throw new Error('Propriedade ' + key + ' não reconhecida');
 		if (typeof value !== tp) throw new Error('O tipo da propriedade ' + key + ' precisa ser ' + tp);
@@ -35,7 +43,8 @@ const DISTRIBUTION_PROPERTIES = [
 	'distributorId',
 	'updateURL',
 	'interval',
-	'loadingGif'
+	'loadingGif',
+	'trusted'
 ];
 const DISTRIBUTION_TEMPLATE = new Map()
 	.set('productId', 'string')
@@ -46,6 +55,7 @@ const DISTRIBUTION_TEMPLATE = new Map()
 	.set('updateURL', 'string')
 	.set('interval', 'number')
 	.set('loadingGif', 'string')
+	.set('trusted', 'object')
 	.set('', 'object');
 
  /**
@@ -58,6 +68,7 @@ const DISTRIBUTION_TEMPLATE = new Map()
   * @property { String } updateURL			URL de atualização do produto,
   * @property { Number } interval			intervalo (em segundos) entre cada verificação de atualização
   * @property { String } loadingGif			logo do distribuidor (para o instalador)
+  * @property { Object } trusted			array de URLs confiáveis por default
   */
  class Distribution {
 	 /**
@@ -72,6 +83,7 @@ const DISTRIBUTION_TEMPLATE = new Map()
 		 this.updateURL = '';
 		 this.interval = 60 * 15;
 		 this.loadingGif = 'install-spinner.gif';
+		 this.trusted = [];
 	 }
  	 /**
 	  * Carrega a identificação da distribtuição a partir de um arquivo JSON, que deve existir

@@ -18,3 +18,4 @@ test/xapiripe.js
 test/*.req
 test/*.pem
 test/*.p7b
+test/CNindex.txt

@@ -100,7 +100,7 @@ function getServiceOptions(args) {
 	const project = path.dirname(__dirname);
 	const svcIconFile = path.join(project, 'appservice', 'res', 'signature-32x32.ico');
 	const buildFolder = path.resolve(__dirname, 'output');
-	const entryPoint = path.resolve('./appservice/main.js');
+	const entryPoint = './appservice/main.js';
 	const svcDependencies = {
 		'alert': '^5.1.1',
 		'asn1js': '^2.3.2',

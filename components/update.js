@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const { autoUpdater } = require('electron');
 const { sprintf } = require('./wanhamou');
+const { Config } = require('../appservice/config');
 
 const REG_KEY = 'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run';
 const UPDATE_ERROR = 'Ocorreu o seguinte erro na atualização do aplicativo: %s. O serviço não está funcionando apropriadamente.';
@@ -82,18 +83,19 @@ class UpdateManager {
 	constructor(nodeProcess, distribution, callback) {
 		let argv = nodeProcess.argv;
 		let env = nodeProcess.env;
-		this.debug = (typeof env.DEBUG !== 'undefined');		// env.DEBUG indica que esta classe está sendo depurada (com ou sem Squirrel)
-		this.development = argv[0].endsWith('electron.exe');	// Indicador de não utilização do Squirrel
-		this.updateArgument = '';								// Comando Squirrel
-		this.updateEvent = false;								// Indicador de execução sob controle do Squirrel
-		this.regAddArguments = null;							// Argumentos para execução do comando REG ADD
-		this.regDeleteArguments = null;							// Argumentos para execução do comando REG DELETE
+		this.debug = (typeof env.DEBUG !== 'undefined') || false;		// env.DEBUG indica que esta classe está sendo depurada (com ou sem Squirrel)
+		this.development = (argv[0].endsWith('electron.exe')) || false;	// Indicador de não utilização do Squirrel
+		this.updateArgument = '';										// Comando Squirrel
+		this.updateEvent = false;										// Indicador de execução sob controle do Squirrel
+		this.regAddArguments = null;									// Argumentos para execução do comando REG ADD
+		this.regDeleteArguments = null;									// Argumentos para execução do comando REG DELETE
 		this.appDir =  path.resolve(env.USERPROFILE, '.' + distribution.productName.toLowerCase());	// Diretório dos dados da aplicação
-		this.updateURL = distribution.updateURL;				// URL de atualização
-		this.updateInterval = distribution.interval * 1000;		// Timeout de execução da verificação de atualização
-		this.callback = callback;								// Função de controle da atualização
-		let offset = this.development && this.debug ? 1 : 0;	// Se offset = 1 os comandos Squirrel devem ser adicionados à mão
-		if (this.development && !this.debug) return;			// Se o Squirrel não é utilizado e a classe não está sendo depurada, nada é feito
+		this.updateURL = distribution.updateURL;						// URL de atualização
+		this.updateInterval = distribution.interval * 1000;				// Timeout de execução da verificação de atualização
+		this.callback = callback;										// Função de controle da atualização
+		this.trustedEntries = distribution.trusted;						// 
+		let offset = this.development && this.debug ? 1 : 0;			// Se offset = 1 os comandos Squirrel devem ser adicionados à mão
+		if (this.development && !this.debug) return;					// Se o Squirrel não é utilizado e a classe não está sendo depurada, nada é feito
 
 		switch(argv.length) {
 		case 3 + offset:
@@ -137,6 +139,21 @@ class UpdateManager {
 		}
 		return evt;
 	}
+	initializeOptionsFile(dir, entries, evt) {
+		if (evt.success) {
+			let options = path.join(dir, 'options.json');
+			let config = Config.load(options);
+			entries.forEach((item) => {
+				let idx = config.serverOptions.trustedOrigins.origins.findIndex((elem) => {
+					return (elem.origin === item);
+				});
+				if (idx === -1) config.setOrigin(item);
+			});
+			try { config.store(options); }
+			catch (e) {}
+		}
+		return evt;
+	}
 	/**
 	 * Lida com os eventos de atualização, controlados pelo Squirrel
 	 * @returns uma instância de HandleEvtResult, com o resultado do processamento dos eventos
@@ -151,15 +168,16 @@ class UpdateManager {
 			/* falls through */
 		case '--squirrel-updated':
 			ret = this.updateRegistry(this.regAddArguments, ret);
-			ret = this.shortcutIcon('--createShortcut', ret);
+			if (!this.debug) ret = this.shortcutIcon('--createShortcut', ret);
+			ret = this.initializeOptionsFile(this.appDir, this.trustedEntries, ret);
 			/* falls through */
 		case '--squirrel-obsolete':
 			return ret.restart(true);
 		case '--squirrel-uninstall':
 			ret = this.updateRegistry(this.regDeleteArguments, ret);
-			ret = this.shortcutIcon('--removeShortcut', ret);
+			if (!this.debug) ret = this.shortcutIcon('--removeShortcut', ret);
 			return ret.restart(true);
-		default: return new HandleEvtResult(true).restart(false);
+		default: return ret.restart(false);
 		}
 	}
 	/**

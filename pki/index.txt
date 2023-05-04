@@ -102,3 +102,21 @@ V	280404160648Z		64	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End U
 V	280404160654Z		65	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 48
 V	280404160714Z		66	unknown	/CN=User CN to legacy CryptoAPI 49
 V	280404160726Z		67	unknown	/CN=User CN to CNG API 50
+V	280424141626Z		68	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 1
+V	280424141633Z		69	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 2
+V	280424141651Z		6A	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 3
+V	280424141658Z		6B	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 4
+V	280424141707Z		6C	unknown	/CN=User CN to legacy CryptoAPI 5
+V	280424141713Z		6D	unknown	/CN=User CN to CNG API 6
+V	280501174608Z		6E	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 49
+V	280501174615Z		6F	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 50
+V	280501194520Z		70	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 51
+V	280501194527Z		71	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 52
+V	280501194543Z		72	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 53
+V	280501194554Z		73	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 54
+V	280501195005Z		74	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 55
+V	280501195013Z		75	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 56
+V	280501195038Z		76	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 57
+V	280501195045Z		77	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 58
+V	280501195113Z		78	unknown	/CN=User CN to legacy CryptoAPI 59
+V	280501195120Z		79	unknown	/CN=User CN to CNG API 60
