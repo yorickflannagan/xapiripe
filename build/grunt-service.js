@@ -23,8 +23,9 @@ module.exports = function(grunt) {
 			}
 		},
 		test: {
-			hamahiri: [ '--napi-modules', './test/hamahiri-test.js', '--pki=./pki', '--check' ],
+			misc:     [ './test/test-options.js', '--check'],
 			lock:     [ '--napi-modules', './test/test-lock.js', '--check' ],
+			hamahiri: [ '--napi-modules', './test/hamahiri-test.js', '--pki=./pki', '--check' ],
 			aroari:   [ './test/aroari-test.js', '--pki=./pki', '--check' ],
 			wanhamou: [ './test/wanhamou-test.js', '--check' ],
 			hekura:   [ './test/hekura-test.js', '--pki=./pki', '--service=false', '--check' ]
@@ -38,7 +39,10 @@ module.exports = function(grunt) {
 		installer: {
 			caixa_intra_prd: [ '--target=service', '--distribution=./build/caixa-prd_intra.distribution', '--arch=x64', '--verbose' ],
 			caixa_intra_tqs: [ '--target=service', '--distribution=./build/caixa-tqs_intra.distribution', '--arch=x64', '--verbose' ],
-			caixa_intra_des: [ '--target=service', '--distribution=./build/caixa-des_intra.distribution', '--arch=x64', '--verbose' ]
+			caixa_intra_des: [ '--target=service', '--distribution=./build/caixa-des_intra.distribution', '--arch=x64', '--verbose' ],
+			caixa_inter_prd: [ '--target=service', '--distribution=./build/caixa-prd_inter.distribution', '--arch=x64', '--verbose' ],
+			caixa_inter_tqs: [ '--target=service', '--distribution=./build/caixa-tqs_inter.distribution', '--arch=x64', '--verbose' ],
+			caixa_inter_des: [ '--target=service', '--distribution=./build/caixa-des_inter.distribution', '--arch=x64', '--verbose' ]
 		}
 	});
 	grunt.file.setBase('..');

@@ -6,8 +6,9 @@ const { testAroari } = require('./aroari-test');
 const { testWanhamou } = require('./wanhamou-test');
 const { testHekura } = require('./hekura-test');
 const { testLock } = require('./test-lock');
+const { testOptions } = require('./test-options');
 
-const components = [ testHamahiri, testAroari, testWanhamou, testHekura, testLock ];
+const components = [ testHamahiri, testAroari, testWanhamou, testHekura, testLock, testOptions ];
 
 (function () {
 

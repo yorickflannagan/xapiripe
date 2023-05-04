@@ -33,3 +33,6 @@ da origem da requisição);
 
 # Versão 1.0.1
 - Exclusão do flag CRYPT_ACQUIRE_COMPARE_KEY_FLAG nas buscas pela chave privada para assegurar compatibilidade com o provider BirdID.
+
+# Versão 1.1.0
+- Inclusão do recurso de inserir na aplicação URLs consideradas previamente como confiáveis.

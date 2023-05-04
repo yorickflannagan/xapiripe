@@ -6,5 +6,6 @@
 	"distributorId": "br.gov.caixa",
 	"updateURL": "https://conectividadesocialv2.caixa/criptocns",
 	"interval": 900,
-	"loadingGif": "cripto-cns.gif"
+	"loadingGif": "cripto-cns.gif",
+	"trusted": [ "https://conectividadesocialv2.caixa.gov.br" ]
 }
