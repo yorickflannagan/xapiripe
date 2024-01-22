@@ -28,7 +28,7 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>Distribution<span class="signature">(id, name, description, exe)</span><span class="type-signature"></span></h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>Distribution<span class="signature">()</span><span class="type-signature"></span></h2>
         
             <div class="class-description">Identificação da distribuição do produto</div>
         
@@ -45,7 +45,7 @@
     
 
     
-    <h4 class="name" id="Distribution"><span class="type-signature"></span>new Distribution<span class="signature">(id, name, description, exe)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="Distribution"><span class="type-signature"></span>new Distribution<span class="signature">()</span><span class="type-signature"></span></h4>
     
 
     
@@ -62,124 +62,6 @@
 
 
 
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>id</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">identificador do produto</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>name</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">nome do produto</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>description</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">descrição do produto</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>exe</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">nome do executável do produto (incluir extensão)</td>
-        </tr>
-
-    
-    </tbody>
-</table>
 
 
 
@@ -281,29 +163,6 @@
 
         <tr>
             
-                <td class="name"><code>exe</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">nome do arquivo executável</td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>company</code></td>
             
 
@@ -366,7 +225,76 @@
 
             
 
-            <td class="description last">URL de atualização do produto</td>
+            <td class="description last">URL de atualização do produto,</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>interval</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">intervalo (em segundos) entre cada verificação de atualização</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>loadingGif</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">logo do distribuidor (para o instalador)</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>trusted</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">array de URLs confiáveis por default</td>
         </tr>
 
     
@@ -405,7 +333,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="options.js.html">options.js</a>, <a href="options.js.html#line60">line 60</a>
+        <a href="options.js.html">options.js</a>, <a href="options.js.html#line73">line 73</a>
     </li></ul></dd>
     
 
@@ -562,7 +490,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="options.js.html">options.js</a>, <a href="options.js.html#line82">line 82</a>
+        <a href="options.js.html">options.js</a>, <a href="options.js.html#line93">line 93</a>
     </li></ul></dd>
     
 
@@ -624,7 +552,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sat Dec 10 2022 10:16:27 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu May 11 2023 12:23:16 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

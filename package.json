@@ -3,31 +3,14 @@
 	"version": "1.0.0",
 	"description": "Digital signatures for web applications solution",
 	"scripts": {
-		"sign-request": "node ./pki/pki.js --issue ./pki/usr/request.req",
-		"start-hekura": "node ./test/hekura-test.js --pki=./pki --service=true --check",
-		"start-app-server": "node ./test/app-server.js --host=userapp.crypthings.org",
 		"start-local": "node ./test/app-server.js",
 		"service-test": "CHCP 65001>nul & electron ./appservice/main.js",
-		"test": "grunt check --gruntfile=./build/grunt-service.js --stack --verbose",
-		
+		"test": "grunt test --gruntfile=./build/grunt-service.js --stack --verbose",
 		"hamahiri-build": "cd hamahiri & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
 		"lock-build": "cd lock & SET PROJECT_DIR=%USERPROFILE%/development/xapiripe & node-gyp rebuild",
-		"service-build": "grunt --gruntfile=./build/grunt-service.js --stack --verbose",
-		"service-dev-build": "grunt develop --gruntfile=./build/grunt-service.js --stack --verbose",
-		"api-build": "grunt --gruntfile=./build/grunt-api.js --stack --verbose",
-		"api-dev-build": "grunt develop --gruntfile=./build/grunt-api.js --stack --verbose",
-		
-		"hamahiri-docs": "node ./build/make-docs.js --components=hamahiri",
-		"lock-docs": "node ./build/make-docs.js --components=lock",
-		"aroari-docs": "node ./build/make-docs.js --components=aroari",
-		"wanhamou-docs": "node ./build/make-docs.js --components=wanhamou",
-		"hekura-docs": "node ./build/make-docs.js --components=hekura",
-		"options-docs": "node ./build/make-docs.js --components=options",
-		"update-docs": "node ./build/make-docs.js --components=update",
-		"api-docs": "node ./build/make-docs.js --webapi=api",
-		"fittings-docs": "node ./build/make-docs.js --webapi=fittings",
-		"xabo-docs": "node ./build/make-docs.js --webapi=xabo",
-		"all-docs": "node ./build/make-docs.js --components=hamahiri,aroari,wanhamou,hekura,options,update,lock --webapi=api,fittings,xabo"
+		"build": "grunt --gruntfile=./build/grunt-service.js --stack --verbose",
+		"dev-build": "grunt dev_build --gruntfile=./build/grunt-service.js --stack --verbose",
+		"all-docs": "grunt document --gruntfile=./build/grunt-service.js --stack --verbose"
 	},
 	"repository": {
 		"type": "git",
@@ -50,7 +33,6 @@
 		"electron-winstaller": "^5.0.0",
 		"grunt": "^1.6.1",
 		"grunt-contrib-copy": "^1.0.0",
-		"grunt-contrib-jshint": "^3.2.0",
 		"webpack": "^5.72.1",
 		"webpack-cli": "^4.9.2",
 		"yargs": "^17.4.1"

@@ -8,8 +8,9 @@ const argv = yargs(process.argv).argv;
 const fs = require('fs');
 const { Distribution } = require('../components/options');
 const { UpdateManager } = require('../components/update');
+/* jshint ignore:start */
 const { Config } = require('../appservice/config');
-
+/* jshint ignore:end */
 
 let tests = 0;
 function testDistribution() {
@@ -46,16 +47,18 @@ function testDefaultOrigins() {
 
 		let manager = new UpdateManager(node, dist, callback);
 		manager.handleUpdateEvents();
-		let result = Config.load(target);
-		let origins = result.serverOptions.trustedOrigins.origins;
 		let ret = Number.MIN_SAFE_INTEGER;
+		/* jshint ignore:start */
+		let result = Config.load(target);
 		let i = 0;
+		let origins = result.serverOptions.trustedOrigins.origins;
 		while (i < dist.trusted.length && ret !== -1) {
 			ret = origins.findIndex((elem) => {
 				return (elem.origin === dist.trusted[i]);
 			});
 			i++;
 		}
+		/* jshint ignore:end */
 
 		node.argv = argv;
 		fs.unlinkSync(target);

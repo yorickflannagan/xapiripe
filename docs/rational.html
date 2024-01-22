@@ -84,47 +84,18 @@
 		<h2>Revisão arquitetural</h2>
 		<div>
 			<p>
-			Uma abordagem inicial para o problema é proceder a uma simplificação geral da arquitura de
-			implementação da Kriptonita, contando com os novos cenários tecnológicos e as novas políticas
-			de hospedagem da Chrome Web Store, além de incorporar ao projeto nossa experiência com a
-			tentativa de suporte ao Mozilla Firefox. Um diagrama ilustrativo dessa abordagem pode ser
-			visto na Figura 1, a seguir: 
+			A abordagem primária para o problema é proceder a uma simplificação geral da arquitura de
+			implementação da solução, contando com os novos cenários tecnológicos e incorporando ao projeto
+			nossa experiência com a tentativa de suporte ao Mozilla Firefox.
 			</p>
-			<figure>
-				<img src="res/extension-deployment.png" alt="Nova arquitetura para a(s) extensão(ões) Chrome" />
-				<figcaption>Figura 1: Nova arquitetura para a(s) extensão(ões) Chrome</figcaption>
-			</figure>
 			<p>
 			A primeira simplificação é a condensação das três extensões criptográficas hoje existentes
-			numa única, rebatizada na ilustração. A escolha por dividir a funcionalidade criptográfica
-			em três extensões deveu-se, em primeiro lugar, à nossa interpretação das políticas de
-			hospedagem da Chrome Web Store à época, que parecia favorecer um único propósito o mais
-			atômico possível para a extensão. Além disso, essa escolha permitiria que os usuários pudessem
-			optar por diferentes funcionalidades, de acordo com o seu uso. Essa escolha revelou-se
-			problemática.
-			</p>
-			Logo de saída, observamos, através das estatísticas da loja, que os usuários não optavam por
-			reduzir o escopo da sua instalação, preferindo simplificar o processo de instalar o produto.
-			O fato de distribuir quatro extensões numa única instalação implicou também em problemas de
-			instalação. Em inúmeros casos, o navegador parava de solicitar a aprovação das extensões
-			antes de todas terem sido exibidas, com impacto direto no atendimento ao usuário.
-			A distribuição funcional também não favoreceu à manutenção: na maioria das vezes, as
-			mudanças requeridas no produto foram aplicadas a todas as extensões, em vista de afetarem
-			o código comum que caracteriza uma extensão de navegador. Por fim, as políticas de hospedagem
-			da Chrome Web Store não se revelaram hostis a uma única extensão criptográfica.
-			</p>
-			<p>
-			A segunda simplificação, de pequeno mas relevante impacto,  é a remoção da extensão de Zip do
-			navegador. Isso se deve ao fato de ela não requerer privilégios típicos de extensões, podendo
-			residir inteiramente na camada web, como um componente distribuído à parte e incorporado ao
-			acervo da aplicação.
-			</p>
-			<p>
-			A terceira simplificação arquitetural é possível por conta do amadurecimento das tecnologias
-			e produtos baseados no Javascript. Trata-se da redução das responsabilidades do componente
-			nativo e sua transferência para a extensão, incoporadas a um novo componente, implementado
-			em Javascript. Ao novo componente nativo, provisoriamente batizado <i>Hamahiri</i> e
-			desenvolvido em C como um <a href="https://nodejs.org/api/addons.html" target="_blank" >
+			numa única interface. A segunda simplificação, de pequeno mas relevante impacto,  é a remoção
+			da funcionalidade de Zip do domínio da solução. A terceira simplificação arquitetural é possível
+			por conta do amadurecimento das tecnologias e produtos baseados no Javascript. Trata-se da redução
+			das responsabilidades do componente nativo e sua transferência para a extensão, incoporadas a um
+			novo componente, implementado em Javascript. Ao novo componente nativo, provisoriamente batizado
+			<i>Hamahiri</i> e desenvolvido em C como um <a href="https://nodejs.org/api/addons.html" target="_blank" >
 			<i>add-on</i> para Node.js</a>, caberia exclusivamente o acesso aos dispositivos
 			criptográficos de software e hardware mantidos pelo sistema operacional, a saber:
 			</p>

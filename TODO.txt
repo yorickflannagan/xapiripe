@@ -17,11 +17,17 @@ da origem da requisição): PRONTO
 	6.3	DES: https://des.intra.corerj.caixa:8618/criptocns e https://des.inter.corerj.caixa:8618/criptocns
 
 	Tag build-automation
-	Automatização do build com Grunt
-	Atualizar documentação com elenco dos scripts disponíveis em package.json
+	Rever documentação do projeto
+		Atualizar documentação com elenco dos scripts disponíveis em package.json
+		Arquivo LEIA-ME.MD: descrever diretórios
 
 	Versão 1.1.0
 	1.	Na instalação, incluir URLs confiáveis por default (https://conectividadesocialv2.caixa.gov.br)
+
+	Versão 1.1.1
+	1. Alterar o título da janela para Srviço criptocns
+	2. Registro de log: alterar nome da entidade e hora de GMT para local
+	3. Alterar nome do arquivo de log
 
 	Backlog
 	1.	Alterações na configuração deverão ser assumidas sem reinício da aplicação

@@ -29,7 +29,7 @@ const fs = require('fs');
 const packager = require('electron-packager');
 const installer = require('electron-winstaller');
 const yargs = require('yargs');
-const { Distribution, uriPattern } = require('../components/options');
+const { Distribution } = require('../components/options');
 
 
 const TARGET_SERVICE = 0;

@@ -841,8 +841,8 @@ class HTTPServer
 	 * Cria uma nova instância do serviço.
 	 * @param { Object } options Opções de inicialização. Ver {@link Hekura.ServerOptions}
 	 */
-	constructor(port = 9171, maxAge = 1800, cors = new CORSBlockade(), callback = approvalCallback) {
-		this.logger = Logger.getLogger('Hekura Service');
+	constructor(port = 9171, maxAge = 1800, cors = new CORSBlockade(), callback = approvalCallback, name = 'Hekura') {
+		this.logger = Logger.getLogger(name + ' REST Service');
 		this.blockade = cors;
 		this.services = new Map();
 		this.services.set('/', new RootService(maxAge, callback));

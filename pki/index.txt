@@ -120,3 +120,20 @@ V	280501195038Z		76	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End U
 V	280501195045Z		77	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 58
 V	280501195113Z		78	unknown	/CN=User CN to legacy CryptoAPI 59
 V	280501195120Z		79	unknown	/CN=User CN to CNG API 60
+V	280507141518Z		7A	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 59
+V	280507141531Z		7B	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 60
+V	280507141550Z		7C	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 61
+V	280507141555Z		7D	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 62
+V	280507141611Z		7E	unknown	/CN=User CN to legacy CryptoAPI 63
+V	280507141616Z		7F	unknown	/CN=User CN to CNG API 64
+V	280710121839Z		80	unknown	/CN=USER NAME 0ceea29b-8d33-4caf-b4f2-0430f8717c10
+V	290120190324Z		81	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 63
+V	290120190334Z		82	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 64
+V	290120190530Z		83	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 65
+V	290120190539Z		84	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 66
+V	290120192540Z		85	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 67
+V	290120192548Z		86	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to Windows CNG 68
+V	290120192609Z		87	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to legacy CryptoAPI 69
+V	290120192627Z		88	unknown	/C=BR/O=PKI Brazil/OU=Common Name for All Cats End User CA/CN=User CN to CNG API 70
+V	290120192641Z		89	unknown	/CN=User CN to legacy CryptoAPI 71
+V	290120192648Z		8A	unknown	/CN=User CN to CNG API 72

@@ -36,3 +36,7 @@ da origem da requisição);
 
 # Versão 1.1.0
 - Inclusão do recurso de inserir na aplicação URLs consideradas previamente como confiáveis.
+
+# Versão 1.1.1
+- Alteração nas referências hard coded ao serviço Hekura para utilização do arquivo de distribuição
+- Utilização de hora local nos registros de log

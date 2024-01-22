@@ -157,7 +157,9 @@ const alert = require('alert');
 				};
 			}
 		
+			let name = args.has('--service') ? args.get('--service') : 'Hekura';
 			let ret = new Map();
+			ret.set('name', name);
 			if (config) ret.set('config', config);
 			if (logOptions)	ret.set('log', logOptions);
 			if (serverOptions) ret.set('server', serverOptions);
@@ -223,8 +225,8 @@ const alert = require('alert');
 		});
 	
 		Logger.logConfig(logOpt);
-		logger = Logger.getLogger('Hekura Service App');
-		service = new HTTPServer(svrOpt.port, svrOpt.maxAge,  new CORSBlockade(origins), approvalCallback);
+		logger = Logger.getLogger(args.get('name') + ' Service App');
+		service = new HTTPServer(svrOpt.port, svrOpt.maxAge,  new CORSBlockade(origins), approvalCallback, args.get('name'));
 	
 		require('readline').createInterface({
 			input: process.stdin,
@@ -234,7 +236,7 @@ const alert = require('alert');
 		});
 	
 		await service.start();
-		logger.info(sprintf('Log do serviço iniciado com as seguinte opções:\n%s\nServiço Hekura iniciado com as seguintes opções:\n%s', JSON.stringify(logOpt, null, 2), JSON.stringify(svrOpt, null, 2)));
+		logger.info(sprintf('Log do serviço iniciado com as seguinte opções:\n%s\nServiço iniciado com as seguintes opções:\n%s', JSON.stringify(logOpt, null, 2), JSON.stringify(svrOpt, null, 2)));
 	}
 	catch (err) {
 		let code = err.toString();

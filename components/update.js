@@ -83,13 +83,14 @@ class UpdateManager {
 	constructor(nodeProcess, distribution, callback) {
 		let argv = nodeProcess.argv;
 		let env = nodeProcess.env;
+		this.product = distribution.productName.toLowerCase();
 		this.debug = (typeof env.DEBUG !== 'undefined') || false;		// env.DEBUG indica que esta classe está sendo depurada (com ou sem Squirrel)
 		this.development = (argv[0].endsWith('electron.exe')) || false;	// Indicador de não utilização do Squirrel
 		this.updateArgument = '';										// Comando Squirrel
 		this.updateEvent = false;										// Indicador de execução sob controle do Squirrel
 		this.regAddArguments = null;									// Argumentos para execução do comando REG ADD
 		this.regDeleteArguments = null;									// Argumentos para execução do comando REG DELETE
-		this.appDir =  path.resolve(env.USERPROFILE, '.' + distribution.productName.toLowerCase());	// Diretório dos dados da aplicação
+		this.appDir =  path.resolve(env.USERPROFILE, '.' + this.product);	// Diretório dos dados da aplicação
 		this.updateURL = distribution.updateURL;						// URL de atualização
 		this.updateInterval = distribution.interval * 1000;				// Timeout de execução da verificação de atualização
 		this.callback = callback;										// Função de controle da atualização
@@ -139,10 +140,12 @@ class UpdateManager {
 		}
 		return evt;
 	}
-	initializeOptionsFile(dir, entries, evt) {
+	initializeOptionsFile(dir, entries, name, evt) {
 		if (evt.success) {
 			let options = path.join(dir, 'options.json');
-			let config = Config.load(options);
+			let config;
+			try { config = Config.load(options); }
+			catch (e) { config = new Config(name); }
 			entries.forEach((item) => {
 				let idx = config.serverOptions.trustedOrigins.origins.findIndex((elem) => {
 					return (elem.origin === item);
@@ -169,7 +172,7 @@ class UpdateManager {
 		case '--squirrel-updated':
 			ret = this.updateRegistry(this.regAddArguments, ret);
 			if (!this.debug) ret = this.shortcutIcon('--createShortcut', ret);
-			ret = this.initializeOptionsFile(this.appDir, this.trustedEntries, ret);
+			ret = this.initializeOptionsFile(this.appDir, this.trustedEntries, this.product, ret);
 			/* falls through */
 		case '--squirrel-obsolete':
 			return ret.restart(true);

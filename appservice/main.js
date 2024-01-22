@@ -9,7 +9,7 @@
  * Xapiripe - Standalone Hekura service
  * See https://bitbucket.org/yakoana/xapiripe/src/master/appservice
  * main.js - Electron main process
- * @version 1.1.0
+ * @version 1.1.1
  * 
  * This application is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -34,6 +34,7 @@ const { Message, WarnResponse, UserQuestion, LogMessage, InfoMessage } = require
 const { Distribution, DelayedPromise } = require('../components/options');
 const { UpdateManager } = require('../components/update');
 const { Lock } = require('../components/lock');
+const fs = require('fs');
 
 
 const DISTRIBUTION_FILE = path.resolve(__dirname, 'distribution.json');
@@ -376,16 +377,15 @@ app.on('ready', () => {
 
 	optionsFile = path.resolve(manager.appDir, 'options.json');
 	let launchError = null;
-	try { config = Config.load(optionsFile); }
-	catch (e) {
-		launchError = sprintf(CONFIG_FAILURE, e.toString());
-		config = new Config();
-	}
+	config = new Config(distribution.productName);
+	try { if (fs.existsSync(optionsFile)) config = Config.load(optionsFile); }
+	catch (e) { launchError = sprintf(CONFIG_FAILURE, e.toString()); }
 	if (!config.logOptions.path) config.logOptions.path = manager.appDir;
 
 	let logArg = '--log='.concat(JSON.stringify(config.logOptions));
 	let svrArg = '--server='.concat(JSON.stringify(config.serverOptions));
-	service = cp.fork(`${__dirname}/service.js`, [ logArg, svrArg ], { cwd: __dirname, detached: false });
+	let restArg = '--service='.concat(distribution.productName);
+	service = cp.fork(`${__dirname}/service.js`, [ logArg, svrArg,restArg ], { cwd: __dirname, detached: false });
 	service.on('message', (message) => {
 		switch(message.signal) {
 		case Message.WARN:
@@ -487,15 +487,14 @@ app.on('ready', () => {
 	}
 	if (launchError) {
 		if (launchError.length > 64) service.send(new LogMessage(launchError));
-		setInterval(() => {
-			tray.displayBalloon({
-				iconType: 'error',
-				title: 'Lançamento do aplicativo',
-				content: launchError.length > 64 ? CHECK_LOG : launchError,
-				noSound: false
-			});
-		}, 5000);
+		tray.displayBalloon({
+			iconType: 'error',
+			title: 'Lançamento do aplicativo',
+			content: launchError.length > 64 ? CHECK_LOG : launchError,
+			noSound: false
+		});
 	}
+	launchError = null;
 	manager.startAutoUpdater();
 
 	/**

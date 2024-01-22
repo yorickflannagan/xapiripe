@@ -39,7 +39,8 @@ const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { autoUpdater } = require('electron');
-const { Logger, sprintf } = require('./wanhamou');
+const { sprintf } = require('./wanhamou');
+const { Config } = require('../appservice/config');
 
 const REG_KEY = 'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run';
 const UPDATE_ERROR = 'Ocorreu o seguinte erro na atualização do aplicativo: %s. O serviço não está funcionando apropriadamente.';
@@ -61,7 +62,7 @@ class HandleEvtResult {
 	constructor(success, stderror) {
 		this.success = success;
 		this.stderror = stderror;
-		this.restart;
+		this.mustRestart = false;
 	}
 	/**
 	 * Define o indicador de reinício do aplicativo
@@ -69,7 +70,7 @@ class HandleEvtResult {
 	 * @returns a instância corrente
 	 */
 	restart(yes) {
-		this.restart = yes;
+		this.mustRestart = yes;
 		return this;
 	}
 }
@@ -78,6 +79,7 @@ class HandleEvtResult {
  * Lida com os eventos Squirrel de atualização da aplicação
  */
 class UpdateManager {
+	/* jshint ignore:start */
 	/**
 	 * Mensagem de erro durante a atualização
 	 * @member { Number }
@@ -90,6 +92,11 @@ class UpdateManager {
 	 * @default 2
 	 */
 	static UPDATE_MESSAGE = 2;
+	/**
+	 * Sinal para logging da atualização
+	 */
+	static INFO_MESSAGE = 3;
+	/* jshint ignore:end */
 	/**
 	 * Cria uma nova instância do gerenciador de atualização
 	 * @param { Process } nodeProcess instância do objeto global process
@@ -104,45 +111,79 @@ class UpdateManager {
 	constructor(nodeProcess, distribution, callback) {
 		let argv = nodeProcess.argv;
 		let env = nodeProcess.env;
-		this.debug = (typeof env.DEBUG !== 'undefined');		// env.DEBUG indica que esta classe está sendo depurada (com ou sem Squirrel)
-		this.development = argv[0].endsWith('electron.exe');	// Indicador de não utilização do Squirrel
-		this.updateArgument;									// Comando Squirrel
-		this.updateEvent = false;								// Indicador de execução sob controle do Squirrel
-		this.regAddArguments;									// Argumentos para execução do comando REG ADD
-		this.regDeleteArguments;								// Argumentos para execução do comando REG DELETE
-		this.appDir =  path.resolve(env.USERPROFILE, '.' + distribution.productName.toLowerCase());	// Diretório dos dados da aplicação
-		this.updateURL = distribution.updateURL;				// URL de atualização
-		this.updateInterval = this.debug? 1000 * 60 * 1 : 1000 * 60 * 15;	// Timeout de execução da verificação de atualização
-		this.callback = callback;								// Função de controle da atualização
-		let offset = this.development &amp;&amp; this.debug ? 1 : 0;	// Se offset = 1 os comandos Squirrel devem ser adicionados à mão
-		if (this.development &amp;&amp; !this.debug) return;			// Se o Squirrel não é utilizado e a classe não está sendo depurada, nada é feito
+		this.product = distribution.productName.toLowerCase();
+		this.debug = (typeof env.DEBUG !== 'undefined') || false;		// env.DEBUG indica que esta classe está sendo depurada (com ou sem Squirrel)
+		this.development = (argv[0].endsWith('electron.exe')) || false;	// Indicador de não utilização do Squirrel
+		this.updateArgument = '';										// Comando Squirrel
+		this.updateEvent = false;										// Indicador de execução sob controle do Squirrel
+		this.regAddArguments = null;									// Argumentos para execução do comando REG ADD
+		this.regDeleteArguments = null;									// Argumentos para execução do comando REG DELETE
+		this.appDir =  path.resolve(env.USERPROFILE, '.' + this.product);	// Diretório dos dados da aplicação
+		this.updateURL = distribution.updateURL;						// URL de atualização
+		this.updateInterval = distribution.interval * 1000;				// Timeout de execução da verificação de atualização
+		this.callback = callback;										// Função de controle da atualização
+		this.trustedEntries = distribution.trusted;						// 
+		let offset = this.development &amp;&amp; this.debug ? 1 : 0;			// Se offset = 1 os comandos Squirrel devem ser adicionados à mão
+		if (this.development &amp;&amp; !this.debug) return;					// Se o Squirrel não é utilizado e a classe não está sendo depurada, nada é feito
 
 		switch(argv.length) {
 		case 3 + offset:
-			let registryData = path.resolve(nodeProcess.env.LOCALAPPDATA, distribution.productName, 'app-' + argv[2 + offset], distribution.exe);
+			let registryData = path.resolve(nodeProcess.env.LOCALAPPDATA, distribution.productName, 'app-' + argv[2 + offset], distribution.productName.toLowerCase() + '.exe');
 			this.regAddArguments = [ 'ADD', REG_KEY, '/v', distribution.productName, '/t', 'REG_SZ', '/d', registryData, '/f' ];
+			/* falls through */
 		case 2 + offset:
 			this.updateArgument = argv[1 + offset];
 			this.updateEvent = true;
 			this.regDeleteArguments = [ 'DELETE', REG_KEY, '/v', distribution.productName, '/f' ];
-			break;
-		default: return;
 		}
 		// Se classe em depuração sem utilização do Squirrel, exibe o resultado da inicialização
 		if (this.debug &amp;&amp; this.development) console.log(sprintf(DEBUG_INIT_MSG, this.updateArgument, this.regAddArguments, this.regDeleteArguments, this.appDir, this.updateURL));
 	}
-	#createAppDir(appDir) {
-		try {
-			if (!fs.existsSync(appDir)) fs.mkdirSync(appDir);
-			return new HandleEvtResult(true);
+	createAppDir(appDir, evt) {
+		if (evt.success) {
+			try { if (!fs.existsSync(appDir)) fs.mkdirSync(appDir); }
+			catch (e) { evt.success = false; evt.stderror = e.toString(); }
 		}
-		catch (e) { return new HandleEvtResult(false, e.toString()); }
+		return evt;
 	}
-	#updateRegistry(args) {
-		let ret = cp.spawnSync('REG', args, { encoding: 'utf-8', shell: true });
-		if (ret.signal) return new HandleEvtResult(false, ret.signal);
-		if (ret.status != 0) return new HandleEvtResult(false, ret.stderr);
-		return new HandleEvtResult(true);
+	execCommand(cmd, args, evt) {
+		if (evt.success) {
+			let ret = cp.spawnSync(cmd, args, { encoding: 'utf-8', shell: true });
+			if (ret.signal) { evt.success = false; evt.stderror = ret.signal; }
+			else if (ret.status != 0) { evt.success = false; evt.stderror = ret.stderr; }
+		}
+		return evt;
+	}
+	updateRegistry(args, evt) {
+		return this.execCommand('REG', args, evt);
+	}
+	shortcutIcon(cmd, evt) {
+		if (evt.success) {
+			let appExec = process.execPath;
+			let appFolder = path.dirname(appExec);
+			let updater = path.join(path.dirname(appFolder), 'Update.exe');
+			let ret = cp.spawnSync(updater, [ cmd, appExec ], { encoding: 'utf-8', shell: true });
+			if (ret.signal) { evt.success = false; evt.stderror = ret.signal; }
+			else if (ret.status != 0) { evt.success = false; evt.stderror = ret.stderr; }
+		}
+		return evt;
+	}
+	initializeOptionsFile(dir, entries, name, evt) {
+		if (evt.success) {
+			let options = path.join(dir, 'options.json');
+			let config;
+			try { config = Config.load(options); }
+			catch (e) { config = new Config(name); }
+			entries.forEach((item) => {
+				let idx = config.serverOptions.trustedOrigins.origins.findIndex((elem) => {
+					return (elem.origin === item);
+				});
+				if (idx === -1) config.setOrigin(item);
+			});
+			try { config.store(options); }
+			catch (e) {}
+		}
+		return evt;
 	}
 	/**
 	 * Lida com os eventos de atualização, controlados pelo Squirrel
@@ -150,40 +191,41 @@ class UpdateManager {
 	 */
 	handleUpdateEvents() {
 		if ((this.development &amp;&amp; !this.debug) || !this.updateEvent) return new HandleEvtResult(true).restart(false);
-		let ret;
+
+		let ret = new HandleEvtResult(true);
 		switch(this.updateArgument) {
 		case '--squirrel-install':
-			ret = this.#createAppDir(this.appDir);
-			if (ret.success) ret = this.#updateRegistry(this.regAddArguments);
-			return ret.restart(true);
+			ret = this.createAppDir(this.appDir, ret);
+			/* falls through */
 		case '--squirrel-updated':
+			ret = this.updateRegistry(this.regAddArguments, ret);
+			if (!this.debug) ret = this.shortcutIcon('--createShortcut', ret);
+			ret = this.initializeOptionsFile(this.appDir, this.trustedEntries, this.product, ret);
+			/* falls through */
 		case '--squirrel-obsolete':
-			ret = this.#updateRegistry(this.regAddArguments);
 			return ret.restart(true);
 		case '--squirrel-uninstall':
-			ret = this.#updateRegistry(this.regDeleteArguments);
+			ret = this.updateRegistry(this.regDeleteArguments, ret);
+			if (!this.debug) ret = this.shortcutIcon('--removeShortcut', ret);
 			return ret.restart(true);
-		default: return new HandleEvtResult(true).restart(false);
+		default: return ret.restart(false);
 		}
 	}
 	/**
 	 * Inicia a tarefa periódica de verificar se existem atualizações do produto.
-	 * Em produção, verifica a cada 15 minutos; se a variável de ambiente DEBUG estiver
-	 * definida, este intervalo é de 1 minuto.
 	 */
 	startAutoUpdater() {
-		if (this.development &amp;&amp; !this.debug) return;	// Permite "depurar" a atualização, reduzindo o intervalo de buca
+		if (this.development &amp;&amp; !this.debug) return;	// Permite "depurar" a atualização, reduzindo o intervalo de busca
 		autoUpdater.setFeedURL(this.updateURL);
 		autoUpdater.on('error', (error) => {
 			let msg = sprintf(UPDATE_ERROR, error.toString());
-			Logger.getLogger('Hekura Updater').error(msg);
-			Logger.releaseLogger();
 			this.callback(UpdateManager.ERROR_MESSAGE, msg);
+		});
+		autoUpdater.on('update-available', () => {
+			this.callback(UpdateManager.INFO_MESSAGE, 'Nova versão disponível para download');
 		});
 		autoUpdater.on('update-downloaded', (evt, releaseNotes, releaseName) => {
 			let msg = sprintf(RESTART_MSG, releaseName);
-			Logger.getLogger('Hekura Updater').debug(msg);
-			Logger.releaseLogger();
 			if (this.callback(UpdateManager.UPDATE_MESSAGE, msg)) autoUpdater.quitAndInstall();
 		});
 		setInterval(() => { autoUpdater.checkForUpdates(); }, this.updateInterval);
@@ -206,7 +248,7 @@ module.exports = { UpdateManager };</code></pre>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sat Dec 10 2022 10:16:28 GMT-0300 (Horário Padrão de Brasília)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Thu May 11 2023 12:23:17 GMT-0300 (Horário Padrão de Brasília)
 </footer>
 
 <script> prettyPrint(); </script>

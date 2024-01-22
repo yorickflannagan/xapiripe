@@ -2,7 +2,6 @@ const { Lock } = require('../components/lock');
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
-const { Worker } = require('worker_threads');
 const yargs = require('yargs');
 const argv = yargs(process.argv).argv;
 const LOG = process.stdout;

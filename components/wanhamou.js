@@ -195,7 +195,7 @@ class LogDevice {
 		if (level >= LogDevice.cfgLogLevel) {
 			this.rotate();
 			let cur = new Date();
-			let logged = this.origin.concat(' - ', cur.toUTCString(), ' - ', this.getLevelInfo(level), msg, '\r\n');
+			let logged = this.origin.concat(' - ', cur.toString(), ' - ', this.getLevelInfo(level), msg, '\r\n');
 			try { fs.writeSync(LogDevice.globalFD, logged); }
 			catch(e) {
 				switch (level) {

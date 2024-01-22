@@ -61,9 +61,10 @@ class ServerOptions {
  * @property { Number } level: nível de log a ser adotado pela aplicação. Default: 1 (info). Ver a documentação do componente Wanhamou.
  */
 class LogOptions {
-	constructor() {
+	constructor(product) {
+		let name = product ? product : 'xapiripe';
 		this.path = '';
-		this.fname = 'xapiripe-n.log';
+		this.fname = name.toLowerCase() + '-n.log';
 		this.maxSize = 2048;
 		this.rotate = 5;
 		this.level = 1;
@@ -142,8 +143,8 @@ const cfgTemplate = new Map()
  */
 class Config
 {
-	constructor() {
-		this.logOptions = new LogOptions();
+	constructor(product) {
+		this.logOptions = new LogOptions(product);
 		this.serverOptions = new ServerOptions();
 		this.doNotDisturb = [];
 		this.app = new AppOptions();
@@ -160,13 +161,14 @@ class Config
 	 * @returns uma instância do objeto
 	 */
 	static load(options) {
-		let ret = new Config();
+		let ret = null;
 		let json = JSON.stringify(ret);
 		if (fs.existsSync(options)) {
 			json = fs.readFileSync(options, 'utf-8');
 			this.validate(json, true);
 			ret = Object.setPrototypeOf(JSON.parse(json), Config.prototype);
 		}
+		else throw new Error('Arquivo de configuração não encontrado: ' + options);
 		return ret;
 	}
 	/**

@@ -525,12 +525,14 @@ function testHamahiri() {
 	enroll.keyGenFewArgumentsTestCase();
 	enroll.keyGenInvalidProviderTestCase();
 	let capiKeyPair = enroll.keyGenTestCase(LEGACY_PROVIDER);
-	let capiCN = 'User CN to legacy CryptoAPI ' + ++indexCN;
+	++indexCN;
+	let capiCN = 'User CN to legacy CryptoAPI ' + indexCN;
 	let capiCSR = enroll.signCSRTestCase(capiKeyPair, capiCN);
 	let chain = enroll.installCertTestCase(capiCSR, 'legacy-request.req');
 	enroll.installChainTestCase(chain);
 	let cngKeyPair = enroll.keyGenTestCase(CNG_PROVIDER);
-	let cngCN = 'User CN to Windows CNG ' + ++indexCN;
+	++indexCN;
+	let cngCN = 'User CN to Windows CNG ' + indexCN;
 	let cngCSR = enroll.signCSRTestCase(cngKeyPair, cngCN);
 	chain = enroll.installCertTestCase(cngCSR, 'cng-request.req');
 	enroll.installChainTestCase(chain);

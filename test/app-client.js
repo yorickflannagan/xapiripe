@@ -28,7 +28,7 @@ const VERIFY_BASIC_RESULT = 'Recebido o resultado da verificação: [%s]\n';
 const MATCH_DN_TEST_INIT = 'Testando a comparação com o DN [%s]...\n';
 const MATCH_DN = 'Comparando com o DN [%s]... %s\n';
 
-const REMOTE_SERVER = 'http://userapp.crypthings.org:8080';
+// const REMOTE_SERVER = 'http://userapp.crypthings.org:8080';
 const LOCAL_SERVER = 'http://localhost:8080';
 const APP_SERVER = LOCAL_SERVER;
 
@@ -77,7 +77,7 @@ function generateUUID() { // Public Domain/MIT
 
 // Testes de emissão:
 const DEFAULT_PROVIDER = 'Microsoft Software Key Storage Provider';
-const LEGACY_PROVIDER = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
+// const LEGACY_PROVIDER = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
 function enrollBasicTest() {
 	let user = 'USER NAME ' + generateUUID();
 	txtOutput.value += sprintf(ISSUE_BASIC_TEST, user);

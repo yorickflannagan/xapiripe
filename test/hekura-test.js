@@ -492,7 +492,8 @@ async function unit_test() {
 		console.log(devices);
 
 		// Enroll tests
-		let capiCN = 'User CN to legacy CryptoAPI ' + ++indexCN;
+		++indexCN;
+		let capiCN = 'User CN to legacy CryptoAPI ' + indexCN;
 		let capiCSR = await test.generateCSRTestCase(LEGACY_PROVIDER, capiCN);
 		test.tests++;
 		LOG.write(' done!\n');
@@ -504,7 +505,8 @@ async function unit_test() {
 		let msg = statusCode == 201 ? ' done!\n' : ' at least one certificate was already installed\n';
 		LOG.write(msg);
 
-		let cngCN = 'User CN to CNG API ' + ++indexCN;
+		++indexCN;
+		let cngCN = 'User CN to CNG API ' + indexCN;
 		let cngCSR = await test.generateCSRTestCase(CNG_PROVIDER, cngCN);
 		test.tests++;
 		LOG.write(' done!\n');
