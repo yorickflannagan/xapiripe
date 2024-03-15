@@ -40,3 +40,7 @@ da origem da requisição);
 # Versão 1.1.1
 - Alteração nas referências hard coded ao serviço Hekura para utilização do arquivo de distribuição
 - Utilização de hora local nos registros de log
+
+# Versão 1.1.2
+- Correção da exibição do DN dos certificados
+- Correção da verificação de cadeias desordenadas

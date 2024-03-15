@@ -229,6 +229,25 @@ class SignTest
 	}
 }
 
+function testUnorderedChain() {
+	console.log('Testing ordered certificates chain bug correction...');
+	let enroll = new Aroari.Enroll();
+	console.log('Ordered PKCS#7 chain:');
+	let input = fs.readFileSync(path.resolve(__dirname, 'ordered.p7b'), { encoding: 'utf-8'});
+	let b64 = input.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
+	let derPKCS7 = Aroari.Base64.atob(b64);
+	enroll.validateChain(enroll.readChain(derPKCS7));
+	console.log('Test case done');
+
+	console.log('Unordered PKCS#7 chain:');
+	input = fs.readFileSync(path.resolve(__dirname, 'unordered.p7b'), { encoding: 'utf-8'});
+	b64 = input.replace('-----BEGIN PKCS7-----', '').replace('-----END PKCS7-----', '').replace('-----BEGIN CMS-----', '').replace('-----END CMS-----', '').replace(/\r?\n|\r/g, '');
+	derPKCS7 = Aroari.Base64.atob(b64);
+	enroll.validateChain(enroll.readChain(derPKCS7));
+	console.log('Test case done');
+	return 2;
+}
+
 function testAroari() {
 	// Initialization
 	if (argv.pki) PKIDir = path.resolve(argv.pki);
@@ -322,6 +341,8 @@ function testAroari() {
 	console.log(sid.serialNumber);
 	eContent = signTest.getEncapsulatedContentTestCase(cms);
 	console.log('Signed content: ' + eContent);
+
+	indexCN = testUnorderedChain();
 
 	let tests = enrollTest.tests;
 	tests += signTest.tests;

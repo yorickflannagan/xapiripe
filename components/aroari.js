@@ -864,18 +864,12 @@ class Enroll {
 		return '-----BEGIN CERTIFICATE REQUEST-----\r\n' + Base64.btoa(csr, true) + '\r\n-----END CERTIFICATE REQUEST-----';
 	}
 
-	/**
-	 * Instala o certificado assinado e sua cadeia. O certificado de usuário final somente é instalado se for
-	 * encontrada uma chave privada associada à sua chave pública no repositório do Windows. Toda a cadeia de
-	 * certificados é criptograficamente verificada antes de sua instalação, sendo requerido o certificado
-	 * de uma AC raiz.
-	 * @param   { String   } pkcs7 Documento PKCS #7 codificado em Base64 de acordo com a convenção PEM, emitido pela 
-	 * AC para transporte do certificado do titular e a cadeia de Autoridades Certificadoras associada.
-	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
-	 * @returns { Boolean  } Retorna true se toda a cadeia de certificados de AC for instalada; caso um dos certificados
-	 * de AC já esteja presente no repositório do Windows, retorna false.
+	/* Corrige o problema de só aceitar cadeias ordenadas
+	 * Ver RFC 5652
+	 * certificates [0] IMPLICIT CertificateSet OPTIONAL
+	 * CertificateSet ::= SET OF CertificateChoices
 	 */
-	installCertificates(pkcs7) {
+	readChain(pkcs7) {
 		if (!pkcs7) throw new APIError('Argumento pkcs7 é obrigatório', 'installCertificates', APIError.ARGUMENT_ERROR);
 		let decoded = asn1js.fromBER(pkcs7.buffer);
 		if (decoded.offset == -1) throw new APIError('Falha ao decodificar de DER o documento PKCS #7', 'installCertificates', APIError.DER_DECODE_CMS_ERROR);
@@ -895,28 +889,70 @@ class Enroll {
 			signedData.valueBlock.value.length >= 4 &&
 			Array.isArray(signedData.valueBlock.value[3].valueBlock.value)
 		))	throw new APIError('Documento CMS SignedData inválido', 'installCertificates', APIError.INVALID_SIGNED_DATA_ERROR);
-		
-		let certificates = signedData.valueBlock.value[3];
-		let i = 0;
-		while (i < certificates.valueBlock.value.length) {
-			let subject = certificates.valueBlock.value[i];
-			let issuer = (i + 1 < certificates.valueBlock.value.length) ? certificates.valueBlock.value[i + 1] : subject;
-			let certSubject, certIssuer;
-			try {
-				certSubject = new crypto.X509Certificate(Buffer.from(subject.valueBeforeDecode));
-				certIssuer = new crypto.X509Certificate(Buffer.from(issuer.valueBeforeDecode));
+		return signedData.valueBlock.value[3];
+	}
+	validateChain(certificates) {
+		function findLeaf(chain) {
+			let i = 0;
+			while (i < chain.length) {
+				if (!chain[i].ca) return i;
+				i++
 			}
-			catch (err) { throw new APIError(err.toString(), 'installCertificates', APIError.INVALID_SIGNED_DATA_ERROR); }
-			if (!certSubject.verify(certIssuer.publicKey)) throw new APIError('Assinatura de um emissor inválida na cadeia de certificados', 'installCertificates', APIError.CERTIFICATE_CHAIN_VERIFY_ERROR);
-			i++;
+			return -1;
+		}
+		function findIssuer(cert, chain) {
+			let i = 0;
+			while (i < chain.length) {
+				if (chain[i] && cert.checkIssued(chain[i])) return i;
+				i++;
+			}
+			return -1;
+		}
+		function isEmpty(chain) {
+			let i = 0;
+			while (i < chain.length) if (chain[i++]) return false;
+			return true;
 		}
 
+		let chain = [];
+		let i = 0;
+		while (i < certificates.valueBlock.value.length) {
+			chain.push(new crypto.X509Certificate(Buffer.from(certificates.valueBlock.value[i].valueBeforeDecode)));
+			i++;
+		}
+		i = findLeaf(chain);
+		if (i < 0) throw new APIError('Cadeia fornecida não contém certificado de entidade final', 'installCertificates', APIError.CERTIFICATE_CHAIN_VERIFY_ERROR);
+		let leaf = chain[i];
+		chain[i] = null;
+		while (!isEmpty(chain)) {
+			i = findIssuer(leaf, chain);
+			if (i < 0) throw new APIError('Pelo menos um dos emissores não foi encontrado na cadeia', 'installCertificates', APIError.CERTIFICATE_CHAIN_VERIFY_ERROR);
+			let issuer = chain[i];
+			chain[i] = null; 
+			if (!leaf.verify(issuer.publicKey)) throw new APIError('Pelo menos uma das assinaturas da cadeia nã confere', 'installCertificates', APIError.CERTIFICATE_CHAIN_VERIFY_ERROR);
+			leaf = issuer;
+		}
+	}
+	/**
+	 * Instala o certificado assinado e sua cadeia. O certificado de usuário final somente é instalado se for
+	 * encontrada uma chave privada associada à sua chave pública no repositório do Windows. Toda a cadeia de
+	 * certificados é criptograficamente verificada antes de sua instalação, sendo requerido o certificado
+	 * de uma AC raiz.
+	 * @param   { String   } pkcs7 Documento PKCS #7 codificado em Base64 de acordo com a convenção PEM, emitido pela 
+	 * AC para transporte do certificado do titular e a cadeia de Autoridades Certificadoras associada.
+	 * @throws  { APIError } Dispara uma instância de {@link Aroari.APIErrors} em caso de falha.
+	 * @returns { Boolean  } Retorna true se toda a cadeia de certificados de AC for instalada; caso um dos certificados
+	 * de AC já esteja presente no repositório do Windows, retorna false.
+	 */
+	installCertificates(pkcs7) {
+		let certificates = this.readChain(pkcs7);
+		this.validateChain(certificates);
 		let signer = certificates.valueBlock.value[0].valueBeforeDecode;
 		let done;
 		try { done = this.addon.installCertificate(new Uint8Array(signer)); }
 		catch (err) { throw new APIError('Falha na instalação do certificado do assinante', 'installCertificates', APIError.INSTALL_SIGNER_CERT_ERROR, err); }
 		if (!done) throw new APIError('Certificado do assinante já instalado', 'installCertificates', APIError.SIGNER_CERT_ALREADY_INSTALLED_ERROR);
-		i = 1;
+		let i = 1;
 		let chain = [];
 		while (i < certificates.valueBlock.value.length) chain.push(new Uint8Array(certificates.valueBlock.value[i++].valueBeforeDecode));
 		try { done = this.addon.installChain(chain); }

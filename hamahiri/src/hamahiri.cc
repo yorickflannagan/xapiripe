@@ -1068,11 +1068,11 @@ void enumCerts(const Napi::Env& env, std::vector<Certificate>& out)
 				else CryptReleaseContext(hKey, 0);
 			}
 
-			CHAR szName[1024];
+			CHAR szName[2048];
 			DWORD cbName = sizeof(szName);
-			CertGetNameStringA(hCert, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, NULL, szName, cbName);
+			CertNameToStr(hCert->dwCertEncodingType, &(hCert->pCertInfo->Subject), CERT_X500_NAME_STR, szName, cbName);
 			std::string subject(szName);
-			CertGetNameStringA(hCert, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_NAME_ISSUER_FLAG, NULL, szName, cbName);
+			CertNameToStr(hCert->dwCertEncodingType, &(hCert->pCertInfo->Issuer), CERT_X500_NAME_STR, szName, cbName);
 			std::string issuer(szName);
 			std::stringbuf buffer;
 			std::ostream os(&buffer);
