@@ -716,6 +716,8 @@ class ASN1FieldOID {
 	 * @default  2.5.29.14
 	 */
 	static x509SubjectKeyIdentifier = '2.5.29.14';
+
+	static friendlyName = '1.2.840.113549.1.9.20';
 	/* jshint ignore:end */
 }
 
@@ -739,7 +741,7 @@ class Enroll {
 	}
 
 	makeCertificateRequestInfo(rdn, pubKey, signOID) {
-		let ver = new asn1js.Integer({ value: 1 });
+		let ver = new asn1js.Integer({ value: 0 });
 		let name = new asn1js.Sequence({ value: [] });
 		if (rdn.c) name.valueBlock.value.push(
 			new asn1js.Set({ value: [
@@ -832,7 +834,7 @@ class Enroll {
 			this.addon.deleteKeyPair(keyPair.privKey);
 			throw new APIError('Falha na decodificação DER da chave púbica gerada', 'generateCSR', APIError.DER_ENCODE_PUBKEY_ERROR);
 		}
-		let certificateRequestInfo = this.makeCertificateRequestInfo(options.rdn, decoded.result, signOID);
+		let certificateRequestInfo = this.makeCertificateRequestInfo(options.rdn, decoded.result, ASN1FieldOID.friendlyName);
 		let toBeSigned = Buffer.from(certificateRequestInfo.toBER(false));
 		if (certificateRequestInfo.error != '' && toBeSigned.length == 0) {
 			this.addon.deleteKeyPair(keyPair.privKey);

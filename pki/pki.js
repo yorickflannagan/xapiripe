@@ -14,7 +14,8 @@ const platform = require('os').platform();
 
 class OpenSSLWrapper
 {
-	constructor() {
+	constructor(verbose) {
+		this.verbose = verbose;
 		this.pki = path.resolve(__dirname);
 		this.openSSL = path.resolve(this.pki, platform === 'win32' ? 'openssl.exe' : 'openssl');
 		this.caConf = path.resolve(this.pki, 'caend.cnf');
@@ -33,8 +34,10 @@ class OpenSSLWrapper
 		))	throw 'Some of the PKI required files does not found';
 	}
 	execOpenSSL(args) {
-		console.log('OpenSSL will be executed with following arguments:');
-		console.log(args);
+		if (this.verbose) {
+			console.log('OpenSSL will be executed with following arguments:');
+			console.log(args);
+		}
 		let ret = cp.spawnSync(this.openSSL, args, this.options);
 		if (ret.stdout) console.log(new TextDecoder().decode(ret.stdout));
 		if (ret.stderr) console.log(new TextDecoder().decode(ret.stderr));
@@ -52,6 +55,7 @@ class OpenSSLWrapper
 			'-CAfile',
 			this.rootCert
 		];
+		
 		return this.execOpenSSL(args);
 	}
 	signCert(request) {
@@ -80,6 +84,7 @@ class OpenSSLWrapper
 			'-extensions',
 			'altv3sign'
 		];
+		
 		if (!fs.existsSync(request)) throw 'Request file must exists at working directory';
 		if (fs.existsSync(out)) throw 'Request file must not have extension .pem';
 		let ret = this.execOpenSSL(args);
@@ -109,6 +114,7 @@ class OpenSSLWrapper
 			'-out',
 			out
 		];
+		
 		let ret = this.execOpenSSL(args);
 		if (ret != 0) throw 'Assembly PKCS #7 failed with error code ' + ret.toString();
 		return out;

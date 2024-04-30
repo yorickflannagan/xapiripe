@@ -10,6 +10,11 @@ const addon = require('./hamahiri-native');
 const asn1js = require('asn1js');
 
 /**
+ * Acesso aos dispositivos criptográficos instalados no computador local
+ * @namespace Hamahiri
+ */
+
+/**
  * Certificate object
  * @property { Number } handle Handle para acesso à chave privada associada ao certificado
  * @property { string } subject Titular do certificado
@@ -32,19 +37,41 @@ class Certificate {
 }
 
 /**
- * Acesso aos dispositivos criptográficos instalados no computador local
- * @namespace Hamahiri
- */
-/**
  * Detalhamento dos erros ocorridos no processamento nativo
- * @class Failure
- * @extends Error
- * @memberof Hamahiri
  * @property { string } component - Componente que disparou o erro
+ * @property { String } message - Mensagem descritiva
  * @property { string } method    - Método ou função que disparou o erro
  * @property { Number } errorCode - Código Xapiripë do erro
  * @property { Number } apiError  - Código do erro gerado pela API de terceiros (por exemplo, a Windows CryptoAPI)
  */
+class Failure extends Error {
+
+	/**
+	 * Cria uma nova instância da falha
+	 * @param { String } component - Componente que disparou o erro
+	 * @param { String } msg - Mensagem descritiva
+	 * @param { string } method - Método ou função que disparou o erro
+	 * @param { Number } errorCode - Código Xapiripë do erro
+	 * @param { Number } apiError - Código do erro gerado pela API de terceiros (por exemplo, a Windows CryptoAPI)
+	 */
+	constructor(component, msg, method, errorCode, apiError) {
+		super(msg);
+		this.component = component;
+		this.method = method;
+		this.errorCode = errorCode;
+		this.apiError = apiError
+	}
+
+	toString() {
+		return	' Native error message: '.concat(this.message,
+				' Component: ', this.component,
+				' Method: ', this.method,
+				' Error code: ', this.errorCode.toString(),
+				' Third party API error code: ', this.apiError.toString()
+		);
+	}
+}
+
 /**
  * Representação interna de um par de chaves RSA
  * @class KeyPair
@@ -331,6 +358,7 @@ class Sign extends Hamahiri
 }
 
 module.exports = {
+	Failure:       Failure,
 	SignMechanism: SignMechanism,
 	Enroll:        Enroll,
 	Sign:          Sign
